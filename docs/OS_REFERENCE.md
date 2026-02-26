@@ -87,6 +87,24 @@ This document provides a comprehensive mapping between `ansible_os_family` and `
 | **RedHat**                      | `Virtuozzo`                           | `yum`                  | Virtuozzo Linux                       |
 | **RedHat**                      | `XenServer`                           | `yum`                  | Citrix XenServer                      |
 | **RedHat**                      | `Ovs` / `OEL`                         | `yum`                  | Oracle VM Server                      |
+| **RedHat**                      | `Ascendos`                            | `yum`                  | Ascendos Enterprise Linux             |
+| **RedHat**                      | `PSBM`                                | `yum`                  | Parallels Server Bare Metal           |
+| **RedHat**                      | `MIRACLE`                             | `yum` / `dnf`          | MIRACLE LINUX                         |
+| **RedHat**                      | `Alibaba`                             | `yum` / `dnf`          | Alibaba Cloud Linux                   |
+| **Debian**                      | `Pardus GNU/Linux`                    | `apt`                  | Turkish National OS                   |
+| **Debian**                      | `OSMC`                                | `apt`                  | Open Source Media Center              |
+| **Debian**                      | `Univention Corporate Server`         | `apt`                  | Univention (UCS)                      |
+| **Debian**                      | `Linux Mint Debian Edition`           | `apt`                  | LMDE                                  |
+| **Suse**                        | `SLED`                                | `zypper`               | SUSE Linux Enterprise Desktop         |
+| **Suse**                        | `SLES_SAP`                            | `zypper`               | SUSE for SAP Applications             |
+| **Suse**                        | `ALP-Dolomite`                        | `zypper`               | SUSE Adaptable Linux Platform         |
+| **Suse**                        | `SL-Micro`                            | `zypper`               | SUSE Linux Micro                      |
+| **Suse**                        | `openSUSE MicroOS`                    | `zypper`               | Immutable openSUSE                    |
+| **Archlinux**                   | `Antergos`                            | `pacman`               | Discontinued Arch derivative          |
+| **Mandrake**                    | `Mandriva`                            | `urpmi`                | Mandriva Linux                        |
+| **Gentoo**                      | `Funtoo`                              | `emerge`               | Gentoo variant                        |
+| **BSD**                         | `TrueOS`                              | `pkg`                  | Discontinued FreeBSD distro           |
+| **SMGL**                        | `SMGL`                                | `cast`                 | Source Mage GNU/Linux                 |
 | **Windows**                     | `Windows`                             | `powershell`           | Windows (via WinRM/SSH)               |
 
 ## 2. Release Codename Reference (Major Distros)
