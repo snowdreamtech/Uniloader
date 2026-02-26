@@ -1,0 +1,32 @@
+# =====================================================================
+# inventory/localhost.yml
+#
+# Purpose:
+#   Local controller inventory configuration.
+#   Defines the local machine as a managed host for orchestration 
+#   tasks that must run on the Ansible controller.
+#
+# Simple Usage:
+#   ansible-playbook -i inventory/localhost.yml site.yml
+#
+# Comprehensive Usage:
+#   ansible-playbook -i inventory/localhost.yml site.yml -c local
+#
+# =====================================================================
+
+all:
+  hosts:
+    localhost:
+      ansible_connection: "local"
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
+      node_tags:
+        - "dev"
+        - "vscode_node"
+        - "antigravity_node"
+        - "cn_mainland"
+        - "host"
+        - "docker_host"
+        # - "server"
+        # - "desktop"
+        # - "develop"
+        - "deploy"

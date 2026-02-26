@@ -1,0 +1,15 @@
+# =====================================================================
+# inventory/group_vars/prod/services.yml
+#
+# Purpose:
+#   Variables specific to the production environment.
+#   Enforces security hardening and disables development/debug tools
+#   for mission-critical hosts.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Security & Performance:
+# ---------------------------------------------------------------------
+enable_debug: false
+install_dev_tools: false
+enable_hardening: true

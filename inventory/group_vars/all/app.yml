@@ -1,0 +1,23 @@
+# =====================================================================
+# inventory/group_vars/all/app.yml
+#
+# Purpose:
+#   Global application-level structure and runtime identity.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Unified Application Directory Structure
+# ---------------------------------------------------------------------
+# base_dir: "/opt"
+# config_root: "/etc"
+# log_root: "/var/log"
+# app_name: "myapp"
+# app_dir: "{{ base_dir }}/{{ app_name }}"
+# config_dir: "{{ config_root }}/{{ app_name }}"
+# log_dir: "{{ log_root }}/{{ app_name }}/{{ env }}"
+
+# ---------------------------------------------------------------------
+# Application Runtime Identity
+# ---------------------------------------------------------------------
+app_user: "{{ app_name | default('myapp') }}"
+app_group: "{{ app_name | default('myapp') }}"
