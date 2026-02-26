@@ -1,23 +1,33 @@
 # =====================================================================
-# roles/common/bootstrap/tasks/python/main.yml
+# roles/bootstrap/tasks/python/main.yml
 #
 # Purpose:
 #   Main orchestrator for Python environment provisioning.
-#   Routes the execution to node-specific tasks (Control vs Managed) 
-#   based on the assigned node tags and performs final node-wide 
-#   initialization.
+#   Routes the execution to node-specific tasks (Control vs Managed)
+#   based on the assigned node tags.
 #
 # Simple Usage:
-#   - import_tasks: "python/main.yml"
+#   - ansible.builtin.include_tasks: "python/main.yml"
 #
 # Comprehensive Usage:
-#   - import_tasks: "python/main.yml"
+#   - ansible.builtin.include_tasks: "python/main.yml"
 #     vars:
 #       node_tags: ["control"]
 #
 # =====================================================================
-- ansible.builtin.include_role:
-    name: "native"
-    tasks_from: "os_loader"
-  vars:
-    module_name: "python"
+---
+# ---------------------------------------------------------------------
+# Controller: Execute specialized venv and runtime setup for the
+# Ansible Control Node.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "python_control_node.yml"
+  when:
+    - "'control' in (node_tags | default([], true))"
+
+# ---------------------------------------------------------------------
+# Managed: Execute minimal Python detection and installer for
+# standard inventory hosts.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "python_managed_node.yml"
+  when:
+    - "'managed' in (node_tags | default([], true)) or 'control' not in (node_tags | default([], true))"
