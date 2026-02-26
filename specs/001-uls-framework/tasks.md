@@ -19,9 +19,9 @@ description: "Task list template for ULS Framework implementation"
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Ansible collection/framework structure according to `plan.md`.
-- [ ] T002 [P] Establish local Docker Compose test environment mimicking Alpine, Debian, and RHEL per `quickstart.md`.
-- [ ] T003 [P] Configure `ansible-lint` to enforce 100% FQCN compliance and `changed_when` rules.
+- [x] T001 Initialize Ansible collection/framework structure according to `plan.md`.
+- [x] T002 [P] Establish local Docker Compose test environment mimicking Alpine, Debian, and RHEL per `quickstart.md`.
+- [x] T003 [P] Configure `ansible-lint` to enforce 100% FQCN compliance and `changed_when` rules.
 
 ---
 
@@ -31,9 +31,9 @@ description: "Task list template for ULS Framework implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Define the meta-directories for the 14 categorized roles (`base`, `bootstrap`, `container`, `native`, `apps`, `scenarios`, `init`, `security`, etc.).
-- [ ] T005 Construct `playbooks/orchestrator.yml` and `playbooks/bootstrap.yml` stub files.
-- [ ] T006 Implement dynamic `node_tags` inventory parsing mechanisms to extract tag conditions universally.
+- [x] T004 Define the meta-directories for the 14 categorized roles (`base`, `bootstrap`, `container`, `native`, `apps`, `scenarios`, `init`, `security`, etc.).
+- [x] T005 Construct `playbooks/orchestrator.yml` and `playbooks/bootstrap.yml` stub files.
+- [x] T006 Implement dynamic `node_tags` inventory parsing mechanisms to extract tag conditions universally.
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
 
@@ -46,10 +46,10 @@ description: "Task list template for ULS Framework implementation"
 
 ### Implementation for User Story 1
 
-- [ ] T007 [P] [US1] Create `roles/base/facts_loader/tasks/main.yml` to normalize distribution facts statically.
-- [ ] T008 [P] [US1] Create `roles/base/os_loader/tasks/main.yml` to define OS boundary mapping.
-- [ ] T009 [US1] Implement permission escalation abstraction logic handling isolated vs non-isolated targets.
-- [ ] T010 [US1] Ensure all shell/command implementations within `base` roles pipe state using `changed_when: false` or regex targeting `result.stdout text`.
+- [x] T007 [P] [US1] Create `roles/base/facts_loader/tasks/main.yml` to normalize distribution facts statically.
+- [x] T008 [P] [US1] Create `roles/base/os_loader/tasks/main.yml` to define OS boundary mapping.
+- [x] T009 [US1] Implement permission escalation abstraction logic handling isolated vs non-isolated targets.
+- [x] T010 [US1] Ensure all shell/command implementations within `base` roles pipe state using `changed_when: false` or regex targeting `result.stdout text`.
 
 **Checkpoint**: User Story 1 functional. The system can successfully map underlying OS differences on Alpine, Debian, and RHEL targets.
 
@@ -62,11 +62,11 @@ description: "Task list template for ULS Framework implementation"
 
 ### Implementation for User Story 2
 
-- [ ] T011 [P] [US2] Implement the `payload` dictionary parser within `package_loader` mirroring `data-model.md` definitions.
-- [ ] T012 [P] [US2] Create OS-level routing (apt, apk, dnf) upstream tasks within the loader.
-- [ ] T013 [P] [US2] Create language-ecosystem routing (pip, npm, cargo, go, gem) upstream tasks within the loader.
-- [ ] T014 [P] [US2] Create platform-specific routing (mas:, winget:, choco:) upstream tasks within the loader.
-- [ ] T015 [US2] Centralize idempotency across all package sub-routers (`changed_when` rules).
+- [x] T011 [P] [US2] Implement the `payload` dictionary parser within `package_loader` mirroring `data-model.md` definitions.
+- [x] T012 [P] [US2] Create OS-level routing (apt, apk, dnf) upstream tasks within the loader.
+- [x] T013 [P] [US2] Create language-ecosystem routing (pip, npm, cargo, go, gem) upstream tasks within the loader.
+- [x] T014 [P] [US2] Create platform-specific routing (mas:, winget:, choco:) upstream tasks within the loader.
+- [x] T015 [US2] Centralize idempotency across all package sub-routers (`changed_when` rules).
 
 **Checkpoint**: Packages can be successfully routed to any of the 38+ interfaces transparently.
 
@@ -79,11 +79,11 @@ description: "Task list template for ULS Framework implementation"
 
 ### Implementation for User Story 3
 
-- [ ] T016 [P] [US3] Create the core `roles/container/container_loader/tasks/main.yml`.
-- [ ] T017 [US3] Implement Docker backend support leveraging FQCN `community.docker.docker_container`.
-- [ ] T018 [US3] Implement Podman backend support leveraging FQCN `containers.podman.podman_container`.
-- [ ] T019 [US3] Finalize generic abstraction inputs allowing `apps` roles to pass uniform variables mapped to either runtime.
-- [ ] T020 [US3] Construct baseline API compliance testing following `contracts/app_api.md`.
+- [x] T016 [P] [US3] Create the core `roles/container/container_loader/tasks/main.yml`.
+- [x] T017 [US3] Implement Docker backend support leveraging FQCN `community.docker.docker_container`.
+- [x] T018 [US3] Implement Podman backend support leveraging FQCN `containers.podman.podman_container`.
+- [x] T019 [US3] Finalize generic abstraction inputs allowing `apps` roles to pass uniform variables mapped to either runtime.
+- [x] T020 [US3] Construct baseline API compliance testing following `contracts/app_api.md`.
 
 **Checkpoint**: Containers spin up agnostic of runtime.
 
@@ -96,9 +96,9 @@ description: "Task list template for ULS Framework implementation"
 
 ### Implementation for User Story 4
 
-- [ ] T021 [P] [US4] Configure global assertions in the `bootstrap.yml` orchestrator checking `node_tags` limits (e.g., stopping intersecting `dev` and `prod`).
-- [ ] T022 [US4] Inject `when: "'restricted' in node_tags"` conditionals within critical execution boundary roles.
-- [ ] T023 [US4] Provide baseline app templates taking advantage of contextual configuration.
+- [x] T021 [P] [US4] Configure global assertions in the `bootstrap.yml` orchestrator checking `node_tags` limits (e.g., stopping intersecting `dev` and `prod`).
+- [x] T022 [US4] Inject `when: "'restricted' in node_tags"` conditionals within critical execution boundary roles.
+- [x] T023 [US4] Provide baseline app templates taking advantage of contextual configuration.
 
 ---
 
@@ -106,10 +106,10 @@ description: "Task list template for ULS Framework implementation"
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T024 [P] Verify 100% Fully Qualified Collection Name (FQCN) compliance using `ansible-lint`.
-- [ ] T025 [P] Audit all tasks across the 14 directories for absolute idempotency (mandatory `changed_when`/`failed_when` parameters on ad-hoc shell runs).
-- [ ] T026 Update `/docs` and repo README referencing the Four-Layer Architecture Map and App API Contract.
-- [ ] T027 Validate Quickstart deployment run against the Local Docker Compose test targets per `SC-001` and `SC-002`.
+- [x] T024 [P] Verify 100% Fully Qualified Collection Name (FQCN) compliance using `ansible-lint`.
+- [x] T025 [P] Audit all tasks across the 14 directories for absolute idempotency (mandatory `changed_when`/`failed_when` parameters on ad-hoc shell runs).
+- [x] T026 Update `/docs` and repo README referencing the Four-Layer Architecture Map and App API Contract.
+- [x] T027 Validate Quickstart deployment run against the Local Docker Compose test targets per `SC-001` and `SC-002`.
 
 ---
 

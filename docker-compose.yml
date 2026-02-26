@@ -1,0 +1,28 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  alpine:
+    image: alpine:latest
+    container_name: uls_test_alpine
+    command: tail -f /dev/null
+    networks:
+      - uls_net
+
+  debian:
+    image: debian:bullseye-slim
+    container_name: uls_test_debian
+    command: tail -f /dev/null
+    networks:
+      - uls_net
+
+  rhel:
+    image: rockylinux:9
+    container_name: uls_test_rhel
+    command: tail -f /dev/null
+    networks:
+      - uls_net
+
+networks:
+  uls_net:
+    driver: bridge

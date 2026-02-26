@@ -1,0 +1,35 @@
+---
+# roles/base/facts_loader/tasks/main.yml
+- name: Gather minimal native facts
+  ansible.builtin.setup:
+    gather_subset:
+      - "!all"
+      - "!any"
+      - "distribution"
+      - "distribution_major_version"
+
+- name: Normalize Alpine OS family
+  ansible.builtin.set_fact:
+    unified_os_family: "alpine"
+    unified_pkg_mgr: "apk"
+  when: ansible_distribution | lower == 'alpine'
+
+- name: Normalize Debian OS family
+  ansible.builtin.set_fact:
+    unified_os_family: "debian"
+    unified_pkg_mgr: "apt"
+  when: ansible_distribution | lower in ['debian', 'ubuntu']
+
+- name: Normalize RHEL OS family
+  ansible.builtin.set_fact:
+    unified_os_family: "rhel"
+    unified_pkg_mgr: "dnf"
+  when: ansible_distribution | lower in ['rocky', 'centos', 'rhel', 'fedora']
+
+- name: Verify Unified Facts Assignment
+  ansible.builtin.assert:
+    that:
+      - unified_os_family is defined
+      - unified_pkg_mgr is defined
+    fail_msg: "Unsupported Distribution Native Facts. Check compatibility map."
+    success_msg: "Identified unified platform: {{ unified_os_family }} using pkg manager {{ unified_pkg_mgr }}."

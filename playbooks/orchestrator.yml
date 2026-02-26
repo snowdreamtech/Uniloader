@@ -1,0 +1,14 @@
+---
+# playbooks/orchestrator.yml
+- name: ULS Core Orchestrator
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Execute bootstrap constraints
+      ansible.builtin.import_playbook: bootstrap.yml
+
+    - name: Load Base OS Layer constraints
+      ansible.builtin.import_role:
+        name: base/os_loader
+
+    # Implementation loaders (Container/Native) and App APIs would execute here based on roles.
