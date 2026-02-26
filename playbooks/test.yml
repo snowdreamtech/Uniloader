@@ -42,8 +42,8 @@
       # vars:
       #   project_name: "test"
 
-    # # 1. Setup fundamental environment.
-    # - role: "bootstrap"
+    # 1. Setup fundamental environment.
+    - role: "bootstrap"
 
     # # 2. Deploy Native App Test.
     # - role: "apps/native/helloworld"

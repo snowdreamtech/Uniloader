@@ -47,8 +47,6 @@
   when: _platform_vars_stat.stat.exists
   tags: ["always"]
 
-
-
 # =====================================================================
 #  SET PATHS
 # =====================================================================
@@ -60,8 +58,6 @@
   ansible.builtin.set_fact:
     bootstrap_flag_path: "/opt/.ansible_bootstrap_done"
   tags: ["always"]
-
-
 
 # WHY: Determine Python venv path for POSIX systems.
 - name: "Set python venv path"
@@ -109,16 +105,16 @@
   become: true
   tags: ["always"]
 
-# WHY: Log status for audit/debug.
-- name: "DEBUG: bootstrap_flag"
-  ansible.builtin.debug:
-    msg: "{{ bootstrap_flag | to_nice_yaml(indent=2) }}"
-  tags: ["always"]
+# # WHY: Log status for audit/debug.
+# - name: "DEBUG: bootstrap_flag"
+#   ansible.builtin.debug:
+#     msg: "{{ bootstrap_flag | to_nice_yaml(indent=2) }}"
+#   tags: ["always"]
 
-- name: "DEBUG: python_venv_flag"
-  ansible.builtin.debug:
-    msg: "{{ python_venv_flag | to_nice_yaml(indent=2) }}"
-  tags: ["always"]
+# - name: "DEBUG: python_venv_flag"
+#   ansible.builtin.debug:
+#     msg: "{{ python_venv_flag | to_nice_yaml(indent=2) }}"
+#   tags: ["always"]
 
 # =====================================================================
 #  RUN BOOTSTRAP (ONLY WHEN FLAG DOES NOT EXIST)
