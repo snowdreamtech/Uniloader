@@ -1,0 +1,30 @@
+---
+
+# ---------------------------------------------------------------------
+# Path: Default location for the target virtual environment.
+# ---------------------------------------------------------------------
+python_venv_path: "/opt/venv/ansible"
+
+# ---------------------------------------------------------------------
+# Packages: Essential Python libraries for Ansible modules (e.g., Docker SDK).
+# ---------------------------------------------------------------------
+python_runtime_packages:
+  - docker
+  - requests
+  - pyyaml
+  - passlib
+  - kubernetes
+
+
+# ---------------------------------------------------------------------
+# Mirror: Default pip mirror configuration.
+# ---------------------------------------------------------------------
+pip_index_url: "https://pypi.org/simple"
+pip_trusted_host: "pypi.org"
+
+ansible_collections:
+  - community.general
+  - ansible.posix
+  - community.docker
+  - containers.podman
+  - kubernetes.core

@@ -1,0 +1,99 @@
+# =====================================================================
+# roles/native/tasks/python_detector_loader.yml
+#
+# Purpose:
+#   Detection of the Python interpreter path on managed hosts.
+#   Identifies 'python3' or 'python' and sets the 
+#   'ansible_python_interpreter' fact for subsequent tasks.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: python_detector_loader
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: python_detector_loader
+#     vars:
+#       python_required: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Detection: Check for the 'python3' binary in the system path.
+# ---------------------------------------------------------------------
+- name: "Detect python3 {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "/bin/sh -c \"PATH={{ os_paths }} command -v python3 2>/dev/null || true\""
+  register: python3_check
+  changed_when: false
+  failed_when: false
+  become: true
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Detection: Fallback check for the legacy 'python' binary.
+# ---------------------------------------------------------------------
+- name: "Detect python {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "/bin/sh -c \"PATH={{ os_paths }} command -v python 2>/dev/null || true\""
+  register: python_check
+  changed_when: false
+  failed_when: false
+  become: true
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Logic: Normalize the detection results, prioritizing python3.
+# ---------------------------------------------------------------------
+- name: "Normalize python interpreter path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    python_interpreter_detected: "{{ (python3_check.stdout if (python3_check is success and python3_check.stdout | length > 0) else (python_check.stdout if (python_check is success and python_check.stdout | length > 0) else '')) | trim }}"
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configuration: Set the global ansible_python_interpreter fact if 
+# a valid interpreter was found.
+# ---------------------------------------------------------------------
+- name: "Set ansible_python_interpreter fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    ansible_python_interpreter: "{{ python_interpreter_detected | trim }}"
+    ansible_docker_python_interpreter: "{{ python_interpreter_detected | trim }}"
+  when:
+    - python_interpreter_detected is defined
+    - python_interpreter_detected | length > 0
+    - (ansible_python_interpreter is not defined) or 
+      (python_venv_path is not defined) or 
+      (python_venv_path not in ansible_python_interpreter)
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Audit: Log the discovered interpreter path for debugging.
+# ---------------------------------------------------------------------
+- ansible.builtin.debug:
+    msg: |
+      [ PYTHON ]
+      {{
+        "ansible_python_interpreter is " ~ ansible_python_interpreter
+          if ansible_python_interpreter | default('', true) | trim
+          else "No python interpreter found on target host."
+      }}
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+
+
+# ---------------------------------------------------------------------
+# Validation: Fail the play if Python is mandatory but missing.
+# ---------------------------------------------------------------------
+- name: "Fail if python required but missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "No python interpreter found on target host, and python_required=true"
+  when:
+    - python_required | default(false, true) | bool
+    - ansible_python_interpreter is not defined
+      or ansible_python_interpreter | trim | length == 0
+  changed_when: false
+  tags: ["always"]

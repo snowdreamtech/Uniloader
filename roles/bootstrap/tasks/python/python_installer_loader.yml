@@ -1,0 +1,162 @@
+# =====================================================================
+# roles/native/tasks/python_installer_loader.yml
+#
+# Purpose:
+#   Raw bootstrap loader for Python installation.
+#   Uses the 'raw' module to execute shell commands directly on hosts 
+#   where Python is not yet available. Supports a wide range of 
+#   Linux distributions and package managers.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: python_installer_loader
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: python_installer_loader
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Use raw shell script to detect and use the local package 
+# manager to install Python 3 and Pip.
+# ---------------------------------------------------------------------
+- name: "Install Python runtime and pip (raw, no Python required) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.raw: |
+    set -euo pipefail
+
+    echo "[PYTHON_INSTALLER_LOADER] Detecting package manager..."
+
+    # Detect package manager
+    if PATH={{ os_paths }} command -v apk >/dev/null 2>&1; then
+      PM="apk"
+    elif PATH={{ os_paths }} command -v apt-get >/dev/null 2>&1; then
+      PM="apt"
+    elif PATH={{ os_paths }} command -v microdnf >/dev/null 2>&1; then
+      PM="microdnf"
+    elif PATH={{ os_paths }} command -v dnf >/dev/null 2>&1; then
+      PM="dnf"
+    elif PATH={{ os_paths }} command -v yum >/dev/null 2>&1; then
+      PM="yum"
+    elif PATH={{ os_paths }} command -v pacman >/dev/null 2>&1; then
+      PM="pacman"
+    elif PATH={{ os_paths }} command -v zypper >/dev/null 2>&1; then
+      PM="zypper"
+    elif PATH={{ os_paths }} command -v xbps-install >/dev/null 2>&1; then
+      PM="xbps"
+    elif PATH={{ os_paths }} command -v emerge >/dev/null 2>&1; then
+      PM="emerge"
+    elif PATH={{ os_paths }} command -v pkg >/dev/null 2>&1; then
+      PM="freebsd"
+    elif PATH={{ os_paths }} command -v brew >/dev/null 2>&1; then
+      PM="homebrew"
+    elif PATH={{ os_paths }} command -v port >/dev/null 2>&1; then
+      PM="macports"
+    else
+      echo "[PYTHON_INSTALLER_LOADER] ERROR: Unsupported OS (no known package manager found)"
+      exit 1
+    fi
+
+    echo "[PYTHON_INSTALLER_LOADER] Detected package manager: $PM"
+    echo "[PYTHON_INSTALLER_LOADER] Installing Python..."
+
+    case "$PM" in
+      apk)
+        apk update || true
+        apk add --no-cache python3 py3-pip
+        ;;
+
+      apt)
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -y
+        apt-get install -y python3 python3-pip
+
+        # Install Python ecosystem components
+        apt-get install -y python3-venv || true
+        apt-get install -y python3-distutils || true
+        apt-get install -y python3-setuptools || true
+        apt-get install -y python3-wheel || true
+        ;;
+
+      microdnf)
+        microdnf install -y python3 python3-pip || microdnf install -y python3
+        ;;
+
+      dnf)
+        dnf install -y python3 python3-pip \
+          || dnf install -y python3 python3-pip-wheel \
+          || dnf install -y python3 python3-wheel python3-pip
+        ;;
+
+      yum)
+        yum install -y python3 python3-pip \
+          || yum install -y python3 python3-pip-wheel \
+          || yum install -y python3 python3-wheel python3-pip
+        ;;
+
+      pacman)
+        pacman -Sy --noconfirm python python-pip
+        ;;
+
+      zypper)
+        zypper --non-interactive install python3 python3-pip
+        ;;
+
+      xbps)
+        xbps-install -Sy python3 python3-pip
+        ;;
+
+      emerge)
+        emerge -q dev-lang/python dev-python/pip || emerge -q dev-lang/python
+        ;;
+
+      freebsd)
+        pkg install -y python3 py39-pip || pkg install -y python3 py38-pip
+        ;;
+
+      homebrew)
+        brew install python3
+        ;;
+
+      macports)
+        port selfupdate || true
+        port install python311 || port install python310 || port install python3
+        ;;
+    esac
+
+    echo "[PYTHON_INSTALLER_LOADER] Python installation complete"
+    echo "[PYTHON_INSTALLER_LOADER] Validating Python..."
+
+    # Validate python
+    if PATH={{ os_paths }} command -v python3 >/dev/null 2>&1; then
+      PY=python3
+    elif PATH={{ os_paths }} command -v python >/dev/null 2>&1; then
+      PY=python
+    else
+      echo "[PYTHON_INSTALLER_LOADER] ERROR: Python installation failed"
+      exit 1
+    fi
+
+    $PY --version || true
+
+    # Ensure /usr/bin/python exists
+    if [ ! -e /usr/bin/python ]; then
+      echo "[PYTHON_INSTALLER_LOADER] Creating /usr/bin/python symlink"
+      ln -s "$(PATH={{ os_paths }} command -v python3)" /usr/bin/python || true
+    fi
+
+    # Validate pip
+    if ! PATH={{ os_paths }} command -v pip3 >/dev/null 2>&1 && ! PATH={{ os_paths }} command -v pip >/dev/null 2>&1; then
+      echo "[PYTHON_INSTALLER_LOADER] pip not found, attempting fallback installation..."
+      $PY -m ensurepip --default-pip || true
+    fi
+
+    echo "[PYTHON_INSTALLER_LOADER] Python bootstrap completed successfully"
+  become: true
+  changed_when: false
+  args:
+    executable: "/bin/sh"

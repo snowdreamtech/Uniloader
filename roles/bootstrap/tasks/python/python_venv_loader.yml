@@ -1,0 +1,114 @@
+# =====================================================================
+# roles/native/tasks/python_venv_loader.yml
+#
+# Purpose:
+#   Creation and configuration of a Python virtual environment.
+#   Sets up the directory structure, initializes the venv using 
+#   the shell command, and configures the local pip mirror.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: python_venv_loader
+#     vars:
+#       python_venv_path: "/opt/ansible-venv"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: python_venv_loader
+#     vars:
+#       python_venv_path: "/home/deploy/venv"
+#       pip_index_url: "https://pypi.tuna.tsinghua.edu.cn/simple"
+#       pip_trusted_host: "pypi.tuna.tsinghua.edu.cn"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the target virtual environment path is specified.
+# ---------------------------------------------------------------------
+- name: "Ensure python_venv_path is provided {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "python_venv_path must be provided to python_venv_loader. Expected: absolute path (e.g., /opt/venv/ansible), Got: {{ python_venv_path | default('undefined') }}"
+  when:
+    - python_venv_path is not defined
+      or python_venv_path | trim | length == 0
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the venv path is not a system-critical directory.
+# ---------------------------------------------------------------------
+- name: "Ensure python_venv_path is not a system-critical path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "python_venv_path cannot be a system-critical directory. Rejected path: {{ python_venv_path }}. Use a dedicated path like /opt/venv/ansible instead."
+  when:
+    - python_venv_path is defined
+    - python_venv_path | trim in ['/', '/usr', '/etc', '/bin', '/sbin', '/var', '/boot', '/sys', '/proc', '/dev']
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validation: Ensure a working Python interpreter is currently 
+# defined to perform the venv creation.
+# ---------------------------------------------------------------------
+- name: "Ensure ansible_python_interpreter is available {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "ansible_python_interpreter is not defined or empty; python_venv_loader requires a working python interpreter. Current value: {{ ansible_python_interpreter | default('undefined') }}"
+  when:
+    - ansible_python_interpreter is not defined
+      or ansible_python_interpreter | trim | length == 0
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Preparation: Ensure the parent directory for the virtual 
+# environment exists with correct permissions.
+# ---------------------------------------------------------------------
+- name: "Ensure venv parent directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ python_venv_path | dirname }}"
+    state: "directory"
+    mode: "0755"
+  become: true
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# Environment Setup: Create the Python virtual environment.
+# This task is idempotent and only runs if the 'activate' script is missing.
+# ---------------------------------------------------------------------
+- name: "Create python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "{{ ansible_python_interpreter }} -m venv {{ python_venv_path }}"
+  args:
+    creates: "{{ python_venv_path }}/bin/activate"
+  become: true
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# Configuration: Point the global ansible_python_interpreter to the 
+# newly created virtual environment.
+# ---------------------------------------------------------------------
+- name: "Set ansible_python_interpreter to venv python {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    ansible_python_interpreter: "{{ python_venv_path }}/bin/python3"
+    ansible_docker_python_interpreter: "{{ python_venv_path }}/bin/python3"
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configuration: Deploy a local pip.conf to accelerate package 
+# installation via a mirror.
+# ---------------------------------------------------------------------
+- name: "Write pip.conf into venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "{{ python_venv_path }}/pip.conf"
+    content: |
+      [global]
+      index-url = {{ pip_index_url }}
+      trusted-host = {{ pip_trusted_host }}
+    mode: "0644"
+  changed_when: false
+  when:
+    - pip_index_url is defined
+    - pip_trusted_host is defined
+  become: true
