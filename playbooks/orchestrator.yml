@@ -1,14 +1,80 @@
----
+# =====================================================================
 # playbooks/orchestrator.yml
-- name: Execute bootstrap constraints
-  ansible.builtin.import_playbook: bootstrap.yml
+#
+# Purpose:
+#   Orchestrator Playbook.
+#   This playbook detects, resolves, and executes scenarios dynamically.
+#   It initializes the environment by running a 'native' timer loader,
+#   then hands off control to the 'orchestrator' role.
+#
+# Author: Native AI Team
+#
+# Simple Usage:
+#   ansible-playbook playbooks/orchestrator.yml
+#
+# Comprehensive Usage:
+#   ansible-playbook playbooks/orchestrator.yml -e "orchestrator_manual_mode=true"
+# =====================================================================
 
-- name: ULS Core Orchestrator
+- name: "ULS Core Orchestrator"
   hosts: all
-  gather_facts: false
-  tasks:
-    - name: Load Base OS Layer constraints
-      ansible.builtin.import_role:
-        name: base/os_loader
+  gather_facts: false   # Python may not exist yet; bootstrap role will handle discovery
 
-    # Implementation loaders (Container/Native) and App APIs would execute here based on roles.
+  pre_tasks:
+    - ansible.builtin.include_role:
+        name: "native"
+        tasks_from: "timer_loader"
+      vars:
+        timer_action: "start"
+        timer_name: "playbook"
+        module_name: "orchestrator"
+
+    - name: "Initialize user vault"
+      ansible.builtin.include_role:
+        name: "native"
+        tasks_from: "vault_loader"
+
+    # ---------------------------------------------------------------
+    # Skip hosts based on node_tags
+    # ---------------------------------------------------------------
+    - ansible.builtin.meta: end_host
+      when: "'skip_all' in (hostvars[inventory_hostname].node_tags | default([], true))"
+
+    # # ---------------------------------------------------------------
+    # # Auto-generate scenario_map (only if not provided by user)
+    # # ---------------------------------------------------------------
+    # - ansible.builtin.include_role:
+    #     name: "orchestrator"
+    #     tasks_from: "generate_scenario_map"
+    #   when:
+    #     - scenario_map is not defined or (scenario_map | length == 0)
+
+    # # ---------------------------------------------------------------
+    # # Auto-generate scenario_definitions (only if not provided)
+    # # ---------------------------------------------------------------
+    # - ansible.builtin.include_role:
+    #     name: "orchestrator"
+    #     tasks_from: "generate_scenario_definitions"
+    #   when:
+    #     - scenario_definitions is not defined or (scenario_definitions | length == 0)
+
+  roles:
+    - role: "orchestrator"
+
+  post_tasks:
+    # Provide visual confirmation of successful initialization
+    - ansible.builtin.include_role:
+        name: "native"
+        tasks_from: "log_loader"
+      vars:
+        label: "PLAYBOOK"
+        msg: "Initialization completed successfully on {{ inventory_hostname }}"
+
+    # End the execution timer and log total duration
+    - ansible.builtin.include_role:
+        name: "native"
+        tasks_from: "timer_loader"
+      vars:
+        timer_action: "end"
+        timer_name: "playbook"
+        module_name: "orchestrator"
