@@ -3,8 +3,8 @@
 #
 # Purpose:
 #   External Ansible collection dependencies.
-#   Specifies the exact versions of community and vendor collections 
-#   required for the project to ensure consistent execution 
+#   Specifies the exact versions of community and vendor collections
+#   required for the project to ensure consistent execution
 #   environments.
 #
 # Simple Usage:
@@ -16,7 +16,8 @@
 # =====================================================================
 
 collections:
-  - name: community.general
+  - name: "community.general"
+    version: "9.5.0"
 
   # POSIX utilities including SELinux management for RHEL-based systems.
   - name: "ansible.posix"

@@ -18,30 +18,30 @@
 
 # WHY: We need to know if we are on Darwin or Linux to set paths correctly,
 #      but Python (and thus Facts) may not be available yet.
-- name: "Detection: Get POSIX system name (raw)"
+- name: "Detection: Get POSIX system name (raw) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.raw: "uname -s"
   register: raw_os_name_probe
   changed_when: false
   tags: ["always"]
-- name: "Set Internal Context: current_os_name"
+- name: "Set Internal Context: current_os_name {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     current_os_name: "{{ raw_os_name_probe.stdout | trim if raw_os_name_probe.stdout is defined else (ansible_system | default('Linux', true)) }}"
   tags: ["always"]
 
-- name: "Discovery: Dynamically group hosts by OS name"
+- name: "Discovery: Dynamically group hosts by OS name {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.group_by:
     key: "{{ current_os_name | lower }}"
   changed_when: false
   tags: ["always"]
 
-- name: "Discovery: Check for platform-specific group variables"
+- name: "Discovery: Check for platform-specific group variables {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.stat:
     path: "{{ inventory_dir }}/group_vars/{{ current_os_name | lower }}.yml"
   register: _platform_vars_stat
   delegate_to: localhost
   tags: ["always"]
 
-- name: "Discovery: Explicitly load platform-specific group variables"
+- name: "Discovery: Explicitly load platform-specific group variables {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.include_vars:
     file: "{{ inventory_dir }}/group_vars/{{ current_os_name | lower }}.yml"
   when: _platform_vars_stat.stat.exists
@@ -54,13 +54,13 @@
 # WHY: Determine bootstrap flag path for POSIX systems.
 # Unified /opt path strategy (aligns with Docker volumes at /opt/data)
 # macOS/Linux → /opt (FHS standard for optional software)
-- name: "Set bootstrap flag path"
+- name: "Set bootstrap flag path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     bootstrap_flag_path: "/opt/.ansible_bootstrap_done"
   tags: ["always"]
 
 # WHY: Determine Python venv path for POSIX systems.
-- name: "Set python venv path"
+- name: "Set python venv path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     python_venv_path: "/opt/venv/ansible"
   tags: ["always"]
@@ -70,7 +70,7 @@
 # =====================================================================
 
 # WHY: Remove bootstrap flag when force override is requested.
-- name: "Force override: remove bootstrap flag"
+- name: "Force override: remove bootstrap flag {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.file:
     path: "{{ bootstrap_flag_path }}"
     state: absent
@@ -78,7 +78,7 @@
   become: true
 
 # WHY: Remove python venv when force override is requested.
-- name: "Force override: remove python venv"
+- name: "Force override: remove python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.file:
     path: "{{ python_venv_path }}"
     state: absent
@@ -90,7 +90,7 @@
 # =====================================================================
 
 # WHY: Check bootstrap flag existence.
-- name: "Check bootstrap flag"
+- name: "Check bootstrap flag {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.stat:
     path: "{{ bootstrap_flag_path }}"
   register: bootstrap_flag
@@ -98,7 +98,7 @@
   tags: ["always"]
 
 # WHY: Check python venv existence.
-- name: "Check python venv"
+- name: "Check python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.stat:
     path: "{{ python_venv_path }}"
   register: python_venv_flag
@@ -121,7 +121,7 @@
 # =====================================================================
 
 # WHY: Run Python initialization only when bootstrap flag is missing.
-- name: "Run Python bootstrap"
+- name: "Run Python bootstrap {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.include_tasks: "python/main.yml"
   when:
     - bootstrap_flag.stat is defined
@@ -132,7 +132,7 @@
 # =====================================================================
 
 # WHY: Mark bootstrap as completed.
-- name: "Mark bootstrap as done"
+- name: "Mark bootstrap as done {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.file:
     path: "{{ bootstrap_flag_path }}"
     state: touch
@@ -146,7 +146,7 @@
 # =====================================================================
 
 # WHY: Ensure Ansible uses the venv Python for all subsequent tasks.
-- name: "Activate Python venv interpreter"
+- name: "Activate Python venv interpreter {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     ansible_python_interpreter: "{{ python_venv_path }}/bin/python3"
     ansible_docker_python_interpreter: "{{ python_venv_path }}/bin/python3"

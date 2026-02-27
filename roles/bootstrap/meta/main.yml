@@ -28,9 +28,3 @@ galaxy_info:
     - infrastructure
     - system
     - python
-
-# dependencies:
-  # - role: common
-  # - role: python3
-  #   vars:
-  #     python3_package_name: "{{ ansible_facts.os_family == 'Alpine' | ternary('python3', 'python3') }}"
