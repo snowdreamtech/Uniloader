@@ -14,10 +14,15 @@
 #
 # Author: Native AI Team
 #
-# Usage:
+# Simple Usage:
 #   - ansible.builtin.include_role:
-#       name: native
-#       tasks_from: facts_loader
+#       name: "context"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: "context"
+#     vars:
+#       node_tags: ["prod", "web", "docker_host"]
 # =====================================================================
 
 # ---------------------------------------------------------------------
