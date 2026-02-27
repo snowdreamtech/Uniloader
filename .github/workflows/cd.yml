@@ -1,0 +1,63 @@
+name: Ansible Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Enable manual triggering from UI
+
+# Prevent multiple deployments from stomping on each other
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Core Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # Inject our SSH key required to reach our inventory servers
+      - name: Configure SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # Construct our vault password file
+      - name: Setup Ansible Vault Password
+        run: |
+          # Use our standard directory conventions
+          mkdir -p ~/.uniloader
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > ~/.uniloader/.vault_pass
+          chmod 600 ~/.uniloader/.vault_pass
+
+      # Setup identical virtual environment matching local developer
+      - name: Setup Environment via script
+        run: |
+          source ./scripts/setup_venv.sh
+
+      # Run the deployment through our abstraction wrapper for perfect parity
+      - name: Execute Ansible Playbook
+        env:
+          ANSIBLE_FORCE_COLOR: "1"
+          # Required because VMs in GitHub Actions won't have known_hosts populated
+          ANSIBLE_HOST_KEY_CHECKING: "false"
+        run: |
+          source .venv/bin/activate
+          # We execute orchestrator.yml by default
+          bash ./scripts/ansible.sh -p orchestrator
+
+      # Ensure secrets are purged
+      - name: Cleanup Secrets
+        if: always()
+        run: |
+          rm -f ~/.uniloader/.vault_pass
