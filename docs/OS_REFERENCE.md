@@ -73,8 +73,20 @@ This document provides a comprehensive mapping between `ansible_os_family` and `
 | **BSD**                         | `GhostBSD`                            | `pkg`                  | Desktop FreeBSD                       |
 | **BSD**                         | `DragonFly`                           | `pkg`                  | DragonFly BSD                         |
 | **Solaris**                     | `Solaris` / `SunOS`                   | `pkg`                  | Solaris                               |
+| **Solaris**                     | `SmartOS`                             | `pkgin`                | Illumos distribution                  |
+| **Solaris**                     | `OmniOS` / `OpenIndiana`              | `pkg`                  | Illumos distributions                 |
+| **Solaris**                     | `Nexenta`                             | `apt-get`              | Illumos distribution                  |
 | **AIX**                         | `AIX`                                 | `installp` / `rpm`     | IBM AIX                               |
 | **HP-UX**                       | `HPUX`                                | `swinstall`            | HP-UX                                 |
+| **Debian**                      | `Neon` / `KDE neon`                   | `apt`                  | KDE Neon                              |
+| **Debian**                      | `Parrot`                              | `apt`                  | Parrot Security OS                    |
+| **Debian**                      | `Devuan`                              | `apt`                  | Systemd-free Debian                   |
+| **Debian**                      | `Cumulus Linux`                       | `apt`                  | Network Switch OS                     |
+| **RedHat**                      | `CloudLinux`                          | `yum` / `dnf`          | Shared Hosting OS                     |
+| **RedHat**                      | `Scientific` / `SLC`                  | `yum`                  | Scientific Linux                      |
+| **RedHat**                      | `Virtuozzo`                           | `yum`                  | Virtuozzo Linux                       |
+| **RedHat**                      | `XenServer`                           | `yum`                  | Citrix XenServer                      |
+| **RedHat**                      | `Ovs` / `OEL`                         | `yum`                  | Oracle VM Server                      |
 | **Windows**                     | `Windows`                             | `powershell`           | Windows (via WinRM/SSH)               |
 
 ## 2. Release Codename Reference (Major Distros)
