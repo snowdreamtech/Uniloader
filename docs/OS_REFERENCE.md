@@ -162,18 +162,26 @@ It is highly recommended to include system architecture variables when loading s
 
 Ansible is heavily used for network automation. For these platforms, OS identification typically uses `ansible_network_os` instead of `ansible_os_family`.
 
-| Platform / Vendor      | `ansible_network_os`          | Connection Type           | Description                       |
-| :--------------------- | :---------------------------- | :------------------------ | :-------------------------------- |
-| **Cisco IOS / IOS-XE** | `cisco.ios.ios`               | `network_cli`             | Cisco Routers & Switches          |
-| **Cisco NX-OS**        | `cisco.nxos.nxos`             | `network_cli` / `httpapi` | Cisco Nexus Switches              |
-| **Cisco IOS-XR**       | `cisco.iosxr.iosxr`           | `network_cli`             | Cisco Service Provider Routers    |
-| **Juniper**            | `junipernetworks.junos.junos` | `netconf` / `network_cli` | Junos OS (QFX, EX, SRX, MX)       |
-| **Arista**             | `arista.eos.eos`              | `network_cli` / `httpapi` | Arista EOS Switches               |
-| **F5 Networks**        | `f5networks.f5_modules.tmsh`  | `httpapi`                 | F5 BIG-IP Load Balancers          |
-| **Palo Alto**          | `paloaltonetworks.panos`      | `httpapi`                 | PAN-OS Firewalls                  |
-| **Fortinet**           | `fortinet.fortios.fortios`    | `httpapi`                 | FortiOS Firewalls                 |
-| **MikroTik**           | `community.routeros.routeros` | `network_cli`             | MikroTik RouterOS                 |
-| **VyOS**               | `vyos.vyos.vyos`              | `network_cli`             | Open Source Router (Debian based) |
+| Platform / Vendor      | `ansible_network_os`           | Connection Type           | Description                       |
+| :--------------------- | :----------------------------- | :------------------------ | :-------------------------------- |
+| **Cisco IOS / IOS-XE** | `cisco.ios.ios`                | `network_cli`             | Cisco Routers & Switches          |
+| **Cisco NX-OS**        | `cisco.nxos.nxos`              | `network_cli` / `httpapi` | Cisco Nexus Switches              |
+| **Cisco IOS-XR**       | `cisco.iosxr.iosxr`            | `network_cli`             | Cisco Service Provider Routers    |
+| **Juniper**            | `junipernetworks.junos.junos`  | `netconf` / `network_cli` | Junos OS (QFX, EX, SRX, MX)       |
+| **Arista**             | `arista.eos.eos`               | `network_cli` / `httpapi` | Arista EOS Switches               |
+| **F5 Networks**        | `f5networks.f5_modules.tmsh`   | `httpapi`                 | F5 BIG-IP Load Balancers          |
+| **Palo Alto**          | `paloaltonetworks.panos`       | `httpapi`                 | PAN-OS Firewalls                  |
+| **Fortinet**           | `fortinet.fortios.fortios`     | `httpapi`                 | FortiOS Firewalls                 |
+| **MikroTik**           | `community.routeros.routeros`  | `network_cli`             | MikroTik RouterOS                 |
+| **VyOS**               | `vyos.vyos.vyos`               | `network_cli`             | Open Source Router (Debian based) |
+| **Huawei**             | `community.network.ce` / `ne`  | `network_cli`             | Huawei CloudEngine / NetEngine    |
+| **Dell**               | `dellemc.os6` / `os9` / `os10` | `network_cli`             | Dell Networking Switches          |
+| **Aruba**              | `arubanetworks.aruba_os`       | `network_cli`             | ArubaOS                           |
+| **A10 Networks**       | `a10networks.a10_acos`         | `httpapi`                 | A10 ACOS Load Balancers           |
+| **Check Point**        | `check_point.mgmt`             | `httpapi`                 | Check Point Security Gateways     |
+| **Nokia**              | `nokia.srlinux` / `sros`       | `network_cli`             | Nokia SR Linux / SR OS            |
+| **Extreme Networks**   | `community.network.exos`       | `network_cli`             | ExtremeXOS                        |
+| **Cumulus Networks**   | `community.network.cumulus`    | `network_cli`             | Cumulus Linux (by NVIDIA)         |
 
 ## 5. Specialized Infrastructure & Hypervisors
 
