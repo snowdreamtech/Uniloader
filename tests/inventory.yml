@@ -1,0 +1,32 @@
+---
+all:
+  children:
+    docker_nodes:
+      hosts:
+        alpine_node:
+          ansible_host: 127.0.0.1
+          ansible_port: 2222 # Substitute with actual mapped port via Docker if SSH testing
+          ansible_connection: docker
+          ansible_user: root
+          node_tags:
+            - "container"
+            - "test"
+            - "open"
+
+        debian_node:
+          ansible_host: 127.0.0.1
+          ansible_connection: docker
+          ansible_user: root
+          node_tags:
+            - "container"
+            - "test"
+            - "open"
+
+        rhel_node:
+          ansible_host: 127.0.0.1
+          ansible_connection: docker
+          ansible_user: root
+          node_tags:
+            - "container"
+            - "test"
+            - "restricted"

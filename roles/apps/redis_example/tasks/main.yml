@@ -1,0 +1,17 @@
+---
+# roles/apps/redis_example/tasks/main.yml
+- name: Determine Contextual Resource Limits (node_tags environment awareness)
+  ansible.builtin.set_fact:
+    redis_memory_limit: "{{ '256m' if ('dev' in node_tags or 'test' in node_tags) else '4g' }}"
+    redis_persistence_vol: "{{ '/tmp/redis:/data' if ('dev' in node_tags) else '/var/lib/redis:/data' }}"
+
+- name: Delegate Redis deployment to container loader schema
+  ansible.builtin.include_role:
+    name: container/container_loader
+  vars:
+    app_name: "redis_example"
+    app_image: "redis:{{ app_version | default('7.2-alpine') }}"
+    app_ports: "{{ app_ports | default(['6379:6379']) }}"
+    app_volumes:
+      - "{{ redis_persistence_vol }}"
+    # Container boundaries automatically set depending on 'restricted' node_tags upstream.

@@ -1,0 +1,18 @@
+---
+# playbooks/bootstrap.yml
+- name: ULS Framework Bootstrap and Tag Parsing
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Parse node_tags and enforce constraints
+      ansible.builtin.assert:
+        that:
+          - node_tags is defined
+          - node_tags | type_debug == 'list'
+          - "'dev' not in node_tags or 'prod' not in node_tags" # Mutual exclusion rule
+        fail_msg: "Invalid node_tags format or mutually exclusive constraints detected (e.g. dev and prod on same host)."
+        success_msg: "node_tags universally parsed and compliant."
+
+    - name: Dynamically gather unified facts
+      ansible.builtin.import_role:
+        name: base/facts_loader

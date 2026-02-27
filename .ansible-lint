@@ -1,0 +1,24 @@
+---
+# .ansible-lint
+profile: production
+
+warn_list:
+  - experimental
+
+skip_list:
+  - no-handler
+
+rulesdir:
+  - .ansible-lint-rules
+
+enable_list:
+  - fqcn
+  - command-instead-of-shell
+  - no-changed-when
+  - command-instead-of-module
+
+mock_modules:
+  - community.docker.docker_container
+  - containers.podman.podman_container
+
+# Using enable_list is sufficient for default rules.
