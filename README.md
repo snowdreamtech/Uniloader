@@ -55,7 +55,7 @@ ansible-playbook -i inventory/dev.yml playbooks/base/init.yml
 
 # With vault for sensitive data
 ansible-playbook -i inventory/prod.yml playbooks/base/init.yml \
-  -e "@~/.vault.yml" --vault-password-file ~/.vault_pass
+  -e "@~/.uniloader/.vault.yml" --vault-password-file ~/.uniloader/.vault_pass
 ```
 
 ### Deploy an Application

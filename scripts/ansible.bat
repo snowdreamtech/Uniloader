@@ -5,8 +5,8 @@ setlocal EnableDelayedExpansion
 set "INVENTORY=localhost"
 set "PLAYBOOK=orchestrator"
 set "VERBOSITY="
-set "VAULT_VARS=@%USERPROFILE%\.vault.yml"
-set "VAULT_PASS=%USERPROFILE%\.vault_pass"
+set "VAULT_VARS=@%USERPROFILE%\.uniloader\.vault.yml"
+set "VAULT_PASS=%USERPROFILE%\.uniloader\.vault_pass"
 set "EXTRA_ARGS="
 
 :: Parse arguments
@@ -109,8 +109,8 @@ echo Options:
 echo   -i, --inventory ^<name^>    Inventory name (default: localhost -> inventory\localhost.yml)
 echo   -p, --playbook ^<name^>     Playbook name (default: orchestrator -> playbooks\orchestrator.yml)
 echo   -v                        Verbosity level (default: none, supports -v, -vv, -vvv, etc.)
-echo   --vault-vars ^<file^>       Path to vault vars file (default: ~/.vault.yml)
-echo   --vault-pass ^<file^>       Path to vault password file (default: ~/.vault_pass)
+echo   --vault-vars ^<file^>       Path to vault vars file (default: ~/.uniloader/.vault.yml)
+echo   --vault-pass ^<file^>       Path to vault password file (default: ~/.uniloader/.vault_pass)
 echo   -e, --extra-vars ^<vars^>   Additional extra vars
 echo   --home-action ^<action^>    Home role action (encrypt, decrypt, restore). Sets playbook to 'home'.
 echo   --home-files ^<files^>      Comma-separated list of files for home role action.
@@ -173,9 +173,9 @@ if defined HOME_FILES (
     :: Convert comma-separated to JSON list: "file1,file2" -> "file1","file2"
     :: We use substitution to replace commas with quote-comma-quote
     set "FILES=!HOME_FILES:,=","!"
-    
+
     :: Wrap in JSON array syntax
-    :: We must be careful with quotes for cmd. 
+    :: We must be careful with quotes for cmd.
     :: Constructing: -e "{\"home_files\": [\"file1\",\"file2\"]}"
     set "JSON_PAYLOAD={\"home_files\": [\"!FILES!\"]}"
     set "EXTRA_ARGS=!EXTRA_ARGS! -e "!JSON_PAYLOAD!""

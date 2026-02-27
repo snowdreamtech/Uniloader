@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # home.sh
-# 
+#
 # A unified wrapper script for managing GPG-encrypted home secrets using Ansible.
 # Supports: Encrypt, Decrypt, Restore workflows.
 # Compatible with macOS, Linux, and Windows (via WSL/Git Bash).
@@ -22,8 +22,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PLAYBOOK="${PROJECT_ROOT}/playbooks/home.yml"
 DEFAULT_INVENTORY="${PROJECT_ROOT}/inventory"
-VAULT_FILE="${HOME}/.vault.yml"
-VAULT_PASS_FILE="${HOME}/.vault_pass"
+VAULT_FILE="${HOME}/.uniloader/.vault.yml"
+VAULT_PASS_FILE="${HOME}/.uniloader/.vault_pass"
 
 # --- Virtual Environment Auto-Detection ---
 if [ -d "${PROJECT_ROOT}/.venv" ]; then
@@ -95,7 +95,7 @@ ensure_gpg_unlocked() {
 
     # Strategy 2: Interactive Unlock (Local Development)
     log_warn "GPG key is locked. Attempting to unlock via GPG Agent (Interactive)..."
-    
+
     if echo "test" | gpg --clearsign --output /dev/null > /dev/null 2>&1; then
          log_info "GPG key successfully unlocked."
     else

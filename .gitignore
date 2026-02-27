@@ -8,8 +8,7 @@
 .ansible/
 .molecule/
 .tox/
-.vault_pass
-.vault_pass.txt
+.uniloader/
 ansible.log
 ansible-galaxy.log
 
