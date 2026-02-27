@@ -18,7 +18,7 @@
 # ---------------------------------------------------------------------
 # Kubernetes Detection: determine whether kubelet is present.
 # ---------------------------------------------------------------------
-- name: "Detect kubelet binary presence"
+- name: "Detect kubelet binary presence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.command: >
     /bin/sh -c "PATH={{ os_paths }} command -v kubelet 2>/dev/null || true"
   register: detect_kubelet
@@ -27,7 +27,7 @@
   become: "{{ become_enabled }}"
   tags: ["always"]
 
-- name: "Persist Kubernetes node detection state"
+- name: "Persist Kubernetes node detection state {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     detect_k8s_node: "{{ detect_kubelet.rc == 0 }}"
   tags: ["always"]
@@ -35,10 +35,10 @@
 # ---------------------------------------------------------------------
 # Runtime Discovery: detect installed container runtime binaries.
 # ---------------------------------------------------------------------
-- name: "Locate container runtime binaries"
+- name: "Locate container runtime binaries {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.command: >
     /bin/sh -c "PATH={{ os_paths }} command -v {{ runtime_binary }} 2>/dev/null || true"
-  loop: 
+  loop:
     - "docker"
     - "podman"
     - "containerd"
@@ -55,7 +55,7 @@
 # Runtime Selection: choose the first available runtime.
 # If none are installed, return None to trigger fallback logic.
 # ---------------------------------------------------------------------
-- name: "Auto-select available container engine"
+- name: "Auto-select available container engine {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     container_engine_detected: >-
       {{
@@ -83,7 +83,7 @@
 # ---------------------------------------------------------------------
 # Global Fallback: ensure a deterministic default (Docker).
 # ---------------------------------------------------------------------
-- name: "Apply global container engine fallback"
+- name: "Apply global container engine fallback {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     container_engine_detected: "docker"
   when:
@@ -93,7 +93,7 @@
 # ---------------------------------------------------------------------
 # Docker-Specific Analysis: retrieve storage driver information.
 # ---------------------------------------------------------------------
-- name: "Retrieve Docker storage driver"
+- name: "Retrieve Docker storage driver {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.command: "docker info -f '{{ '{{.Driver}}' }}'"
   register: detect_storage
   changed_when: false
@@ -104,7 +104,7 @@
   become: "{{ become_enabled }}"
   tags: ["always"]
 
-- name: "Persist Docker storage driver fact (success)"
+- name: "Persist Docker storage driver fact (success) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     detect_storage_driver: "{{ detect_storage.stdout | trim }}"
   when:
@@ -115,7 +115,7 @@
     - detect_storage.stdout | trim | length > 0
   tags: ["always"]
 
-- name: "Handle Docker storage driver detection failure"
+- name: "Handle Docker storage driver detection failure {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     detect_storage_driver: "unknown"
   when:
@@ -127,7 +127,7 @@
 # ---------------------------------------------------------------------
 # Finalization: export the orchestrator-wide container_engine variable.
 # ---------------------------------------------------------------------
-- name: "Finalize effective container_engine value"
+- name: "Finalize effective container_engine value {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     container_engine: "{{ container_engine_detected }}"
   tags: ["always"]
