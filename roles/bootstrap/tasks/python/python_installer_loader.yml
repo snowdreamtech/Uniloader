@@ -3,8 +3,8 @@
 #
 # Purpose:
 #   Raw bootstrap loader for Python installation.
-#   Uses the 'raw' module to execute shell commands directly on hosts 
-#   where Python is not yet available. Supports a wide range of 
+#   Uses the 'raw' module to execute shell commands directly on hosts
+#   where Python is not yet available. Supports a wide range of
 #   Linux distributions and package managers.
 #
 # Simple Usage:
@@ -22,7 +22,7 @@
 # =====================================================================
 
 # ---------------------------------------------------------------------
-# Execution: Use raw shell script to detect and use the local package 
+# Execution: Use raw shell script to detect and use the local package
 # manager to install Python 3 and Pip.
 # ---------------------------------------------------------------------
 - name: "Install Python runtime and pip (raw, no Python required) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -56,6 +56,24 @@
       PM="homebrew"
     elif PATH={{ os_paths }} command -v port >/dev/null 2>&1; then
       PM="macports"
+    elif PATH={{ os_paths }} command -v urpmi >/dev/null 2>&1; then
+      PM="urpmi"
+    elif PATH={{ os_paths }} command -v swupd >/dev/null 2>&1; then
+      PM="swupd"
+    elif PATH={{ os_paths }} command -v eopkg >/dev/null 2>&1; then
+      PM="eopkg"
+    elif PATH={{ os_paths }} command -v opkg >/dev/null 2>&1; then
+      PM="opkg"
+    elif PATH={{ os_paths }} command -v pkg_add >/dev/null 2>&1; then
+      PM="pkg_add"
+    elif PATH={{ os_paths }} command -v pkgin >/dev/null 2>&1; then
+      PM="pkgin"
+    elif PATH={{ os_paths }} command -v installp >/dev/null 2>&1; then
+      PM="installp"
+    elif PATH={{ os_paths }} command -v swinstall >/dev/null 2>&1; then
+      PM="swinstall"
+    elif PATH={{ os_paths }} command -v nix-env >/dev/null 2>&1; then
+      PM="nix-env"
     else
       echo "[PYTHON_INSTALLER_LOADER] ERROR: Unsupported OS (no known package manager found)"
       exit 1
@@ -125,6 +143,45 @@
       macports)
         port selfupdate || true
         port install python311 || port install python310 || port install python3
+        ;;
+
+      urpmi)
+        urpmi --auto python3 python3-pip
+        ;;
+
+      swupd)
+        swupd bundle-add python3-basic
+        ;;
+
+      eopkg)
+        eopkg install -y python3
+        ;;
+
+      opkg)
+        opkg update
+        opkg install python3 python3-pip
+        ;;
+
+      pkg_add)
+        pkg_add -I python%3
+        ;;
+
+      pkgin)
+        pkgin -y install python311 || pkgin -y install python310 || pkgin -y install python3
+        ;;
+
+      installp)
+        # AIX relies on RPMs from the AIX Toolbox for modern Python
+        rpm -Uvh --replacepkgs python3 python3-pip || echo "[PYTHON_INSTALLER_LOADER] Manual RPM installation required for AIX"
+        ;;
+
+      swinstall)
+        # HP-UX relies on depots, generic fallback warning
+        echo "[PYTHON_INSTALLER_LOADER] swinstall requires pre-downloaded python depots. Ensure python is in PATH."
+        ;;
+
+      nix-env)
+        nix-env -iA nixpkgs.python3 nixpkgs.python3Packages.pip
         ;;
     esac
 
