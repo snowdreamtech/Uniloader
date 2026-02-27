@@ -1278,3 +1278,23 @@ skills/
 
 # Ansible Local Collections and Roles
 .ansible/
+
+# -----------------------------
+# Ansible Runtime & Cache Files
+# -----------------------------
+
+# Fact cache directory (never commit runtime facts)
+facts/
+
+# Ansible local cache
+.ansible/
+
+# Ansible retry files (avoid polluting repo)
+*.retry
+
+# Local inventory cache (if used)
+.inventory
+
+# SSH control path sockets (if accidentally created)
+~/.ansible/cp/
+
