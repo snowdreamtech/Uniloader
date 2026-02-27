@@ -1,0 +1,12 @@
+# =====================================================================
+# inventory/group_vars/all/connection.yml
+#
+# Purpose:
+#   Global connection and identity settings.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Connection & Identity
+# ---------------------------------------------------------------------
+ansible_user_name: "{{ vault_ansible_user_name | default('ansible') }}"
+ansible_user_password: "{{ vault_ansible_user_password | default('ansible') }}"

@@ -1,0 +1,34 @@
+# =====================================================================
+# inventory/prod.yml
+#
+# Purpose:
+#   Production environment inventory definition.
+#   Contains mission-critical infrastructure endpoints and security
+#   parameters (SSH keys, policy overrides).
+#
+# =====================================================================
+
+all:
+  # ---------------------------------------------------------------------
+  # Production Hosts
+  # ---------------------------------------------------------------------
+  hosts:
+    localhost:
+      ansible_host: "127.0.0.1"
+      node_tags:
+        - "host"
+
+  # ---------------------------------------------------------------------
+  # Connection settings for Production environment
+  # ---------------------------------------------------------------------
+  vars:
+    # StrictHostKeyChecking is usually not overwritten in production, as mandatory checking is the default.
+    # However, a Bastion/Jump Host is typically configured instead:
+    # ansible_ssh_common_args: >-
+    #   -o ProxyCommand="ssh -W %h:%p -q bastion_user@bastion.example.com"
+    ansible_user: "ansible"
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=accept-new
+      -o ServerAliveInterval=60
+      -o ServerAliveCountMax=10
+    ansible_ssh_private_key_file: "~/.ssh/id_ed25519"

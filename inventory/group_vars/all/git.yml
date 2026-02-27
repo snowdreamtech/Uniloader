@@ -1,0 +1,15 @@
+# =====================================================================
+# inventory/group_vars/all/git.yml
+#
+# Purpose:
+#   Global development tooling and Git configuration.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Development Tooling: Git Configuration
+# ---------------------------------------------------------------------
+git_user_name: "{{ vault_git_user_name | default('user') }}"
+git_user_email: "{{ vault_git_user_email | default('user@example.com') }}"
+git_editor: "{{ vault_git_editor | default('vim') }}"
+git_signing_key: "{{ vault_git_signing_key | default('') }}"
+git_signing: "{{ vault_git_signing | default(false) }}"

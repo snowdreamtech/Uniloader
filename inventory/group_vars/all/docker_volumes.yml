@@ -1,0 +1,105 @@
+---
+# =====================================================================
+# inventory/group_vars/all/docker_volumes.yml
+#
+# Purpose:
+#   Cross-platform Docker volume configuration
+#   Defines unified volume paths that work across Linux, macOS, Windows
+#
+# Directory Ownership:
+#   Defaults to root:root for production security
+#   Override in host_vars or group_vars if needed
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Directory Ownership (Optional - Override as needed)
+# ---------------------------------------------------------------------
+# Default owner and group: Automatically selected based on OS
+#   Linux/macOS:
+#     - owner: root
+#     - group: root (Linux) / wheel (macOS)
+#   Windows:
+#     - owner: Administrator
+#     - group: Administrators
+
+# Auto-select default owner based on OS family
+docker_volume_default_owner: >-
+  {%- if os_family == 'windows' -%}
+    Administrator
+  {%- else -%}
+    root
+  {%- endif -%}
+
+# Auto-select default group based on OS family
+docker_volume_default_group: >-
+  {%- if os_family == 'darwin' -%}
+    wheel
+  {%- elif os_family == 'windows' -%}
+    Administrators
+  {%- else -%}
+    root
+  {%- endif -%}
+
+# container_app_volume_owner: "{{ docker_volume_default_owner }}"  # Override if needed
+# container_app_volume_group: "{{ docker_volume_default_group }}"  # Override if needed
+# 
+# Development environment example:
+# container_app_volume_owner: "{{ ansible_user_name }}"
+# container_app_volume_group: "staff"  # macOS
+# container_app_volume_group: "{{ ansible_user_name }}"  # Linux
+
+
+
+# ---------------------------------------------------------------------
+# Strategy 1: Named Volumes (Recommended)
+# Let Docker manage the storage location automatically
+# ---------------------------------------------------------------------
+docker_named_volumes:
+  mongodb_data: "mongodb_data"
+  mongodb_config: "mongodb_config"
+  redis_data: "redis_data"
+  postgres_data: "postgres_data"
+
+# ---------------------------------------------------------------------
+# Strategy 2: Bind Mounts with Cross-Platform Paths
+# Only use when you need specific host paths
+# ---------------------------------------------------------------------
+
+# Base directory for all Docker data
+# Platform-specific paths following Filesystem Hierarchy Standard (FHS):
+#   - Unix-like (Linux/macOS): /opt/data/containers/volumes (FHS standard for optional software)
+#   - Windows: C:/data/containers/volumes (Windows standard)
+docker_data_base_dir: >-
+  {%- if os_family == 'windows' -%}
+    C:/data/containers/volumes
+  {%- else -%}
+    /opt/data/containers/volumes
+  {%- endif -%}
+
+# Application-specific volume paths
+docker_volume_paths:
+  mongodb: "{{ docker_data_base_dir }}/mongodb"
+  redis: "{{ docker_data_base_dir }}/redis"
+  postgres: "{{ docker_data_base_dir }}/postgres"
+  mysql: "{{ docker_data_base_dir }}/mysql"
+  nginx: "{{ docker_data_base_dir }}/nginx"
+
+# ---------------------------------------------------------------------
+# Helper: Format volume mount strings
+# Usage: {{ docker_volume_paths.mongodb }}:/data/db
+# ---------------------------------------------------------------------
+
+# Example configurations for different apps:
+# 
+# MongoDB with named volume:
+#   app_volumes:
+#     - "{{ docker_named_volumes.mongodb_data }}:/data/db"
+#
+# MongoDB with bind mount:
+#   app_volumes:
+#     - "{{ docker_volume_paths.mongodb }}:/data/db"
+#
+# Mixed approach:
+#   app_volumes:
+#     - "{{ docker_named_volumes.mongodb_data }}:/data/db"      # Named volume for data
+#     - "{{ docker_volume_paths.mongodb }}/config:/etc/mongo"   # Bind mount for config
