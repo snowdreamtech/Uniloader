@@ -3,7 +3,7 @@
 #
 # Purpose:
 #   Installation of Python runtime packages into a virtual environment.
-#   Upgrades core pip utilities and installs additional packages 
+#   Upgrades core pip utilities and installs additional packages
 #   requested via variables.
 #
 # Simple Usage:
@@ -21,8 +21,8 @@
 # =====================================================================
 
 # ---------------------------------------------------------------------
-# Validation: Ensure the current Python interpreter is a virtual 
-# environment (venv). This loader is NOT intended for system-wide 
+# Validation: Ensure the current Python interpreter is a virtual
+# environment (venv). This loader is NOT intended for system-wide
 # pip installations.
 # ---------------------------------------------------------------------
 - name: "Ensure ansible_python_interpreter points to venv python {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -68,15 +68,3 @@
     - python_runtime_packages | length > 0
   become: true
   changed_when: false
-
-# ---------------------------------------------------------------------
-# Audit: Log successful runtime initialization.
-# ---------------------------------------------------------------------
-- ansible.builtin.debug:
-    msg: |
-      [ PYTHON_RUNTIME ]
-      Python runtime installation completed in venv: {{ ansible_python_interpreter }}
-  delegate_to: localhost
-  vars:
-    ansible_python_interpreter: "{{ ansible_playbook_python }}"
-  tags: ["always"]

@@ -3,7 +3,7 @@
 #
 # Purpose:
 #   Detection of the Python interpreter path on managed hosts.
-#   Identifies 'python3' or 'python' and sets the 
+#   Identifies 'python3' or 'python' and sets the
 #   'ansible_python_interpreter' fact for subsequent tasks.
 #
 # Simple Usage:
@@ -24,7 +24,7 @@
 # Detection: Check for the 'python3' binary in the system path.
 # ---------------------------------------------------------------------
 - name: "Detect python3 {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.shell: "/bin/sh -c \"PATH={{ os_paths }} command -v python3 2>/dev/null || true\""
+  ansible.builtin.shell: '/bin/sh -c "PATH={{ os_paths }} command -v python3 2>/dev/null || true"'
   register: python3_check
   changed_when: false
   failed_when: false
@@ -35,7 +35,7 @@
 # Detection: Fallback check for the legacy 'python' binary.
 # ---------------------------------------------------------------------
 - name: "Detect python {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.shell: "/bin/sh -c \"PATH={{ os_paths }} command -v python 2>/dev/null || true\""
+  ansible.builtin.shell: '/bin/sh -c "PATH={{ os_paths }} command -v python 2>/dev/null || true"'
   register: python_check
   changed_when: false
   failed_when: false
@@ -52,7 +52,7 @@
   tags: ["always"]
 
 # ---------------------------------------------------------------------
-# Configuration: Set the global ansible_python_interpreter fact if 
+# Configuration: Set the global ansible_python_interpreter fact if
 # a valid interpreter was found.
 # ---------------------------------------------------------------------
 - name: "Set ansible_python_interpreter fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -62,28 +62,11 @@
   when:
     - python_interpreter_detected is defined
     - python_interpreter_detected | length > 0
-    - (ansible_python_interpreter is not defined) or 
-      (python_venv_path is not defined) or 
+    - (ansible_python_interpreter is not defined) or
+      (python_venv_path is not defined) or
       (python_venv_path not in ansible_python_interpreter)
   changed_when: false
   tags: ["always"]
-
-# ---------------------------------------------------------------------
-# Audit: Log the discovered interpreter path for debugging.
-# ---------------------------------------------------------------------
-- ansible.builtin.debug:
-    msg: |
-      [ PYTHON ]
-      {{
-        "ansible_python_interpreter is " ~ ansible_python_interpreter
-          if ansible_python_interpreter | default('', true) | trim
-          else "No python interpreter found on target host."
-      }}
-  delegate_to: localhost
-  vars:
-    ansible_python_interpreter: "{{ ansible_playbook_python }}"
-  tags: ["always"]
-
 
 # ---------------------------------------------------------------------
 # Validation: Fail the play if Python is mandatory but missing.

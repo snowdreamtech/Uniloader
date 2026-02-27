@@ -2,8 +2,8 @@
 # roles/native/tasks/requirements_loader.yml
 #
 # Purpose:
-#   Automatic generation of the 'requirements.yml' file for Ansible 
-#   collections. Centralizes the collection list for consistency 
+#   Automatic generation of the 'requirements.yml' file for Ansible
+#   collections. Centralizes the collection list for consistency
 #   across environments.
 #
 # Simple Usage:
@@ -25,7 +25,7 @@
 # =====================================================================
 
 # ---------------------------------------------------------------------
-# Validation: Ensure mandatory variables for venv path and collection 
+# Validation: Ensure mandatory variables for venv path and collection
 # lists are provided.
 # ---------------------------------------------------------------------
 - name: "Ensure python_venv_path is provided {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -79,15 +79,3 @@
         - name: "{{ item }}"
       {% endfor %}
   become: true
-
-# ---------------------------------------------------------------------
-# Audit: Log the successful generation of the requirements file.
-# ---------------------------------------------------------------------
-- ansible.builtin.debug:
-    msg: |
-      [ REQUIREMENTS ]
-      requirements.yml generated at {{ requirements_path }}
-  delegate_to: localhost
-  vars:
-    ansible_python_interpreter: "{{ ansible_playbook_python }}"
-  tags: ["always"]
