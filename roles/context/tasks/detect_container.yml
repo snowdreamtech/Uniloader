@@ -1,0 +1,133 @@
+---
+# =====================================================================
+# roles/context/tasks/detect_container.yml
+#
+# Purpose:
+#   Multivariate container environment discovery engine.
+#   Identifies the active or preferred container runtime (Docker,
+#   Podman, Containerd) and detects Kubernetes node presence.
+#
+# Notes:
+#   - All comments are English-only per engineering standards.
+#   - Detection logic guarantees a defined fallback even when no
+#     container runtime is installed.
+#   - Designed for orchestrator-wide consumption.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Kubernetes Detection: determine whether kubelet is present.
+# ---------------------------------------------------------------------
+- name: "Detect kubelet binary presence"
+  ansible.builtin.command: >
+    /bin/sh -c "PATH={{ os_paths }} command -v kubelet 2>/dev/null || true"
+  register: detect_kubelet
+  changed_when: false
+  failed_when: false
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "Persist Kubernetes node detection state"
+  ansible.builtin.set_fact:
+    detect_k8s_node: "{{ detect_kubelet.rc == 0 }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Runtime Discovery: detect installed container runtime binaries.
+# ---------------------------------------------------------------------
+- name: "Locate container runtime binaries"
+  ansible.builtin.command: >
+    /bin/sh -c "PATH={{ os_paths }} command -v {{ runtime_binary }} 2>/dev/null || true"
+  loop: 
+    - "docker"
+    - "podman"
+    - "containerd"
+  register: detect_runtimes
+  changed_when: false
+  failed_when: false
+  loop_control:
+    loop_var: runtime_binary
+    label: "{{ runtime_binary }}"
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Runtime Selection: choose the first available runtime.
+# If none are installed, return None to trigger fallback logic.
+# ---------------------------------------------------------------------
+- name: "Auto-select available container engine"
+  ansible.builtin.set_fact:
+    container_engine_detected: >-
+      {{
+        'docker'
+          if (detect_runtimes.results
+              | selectattr('runtime_binary', 'equalto', 'docker')
+              | map(attribute='rc') | first | default(1, true) == 0)
+        else
+        'podman'
+          if (detect_runtimes.results
+              | selectattr('runtime_binary', 'equalto', 'podman')
+              | map(attribute='rc') | first | default(1, true) == 0)
+        else
+        'containerd'
+          if (detect_runtimes.results
+              | selectattr('runtime_binary', 'equalto', 'containerd')
+              | map(attribute='rc') | first | default(1, true) == 0)
+        else
+        None
+      }}
+  when:
+    - container_engine is not defined
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Global Fallback: ensure a deterministic default (Docker).
+# ---------------------------------------------------------------------
+- name: "Apply global container engine fallback"
+  ansible.builtin.set_fact:
+    container_engine_detected: "docker"
+  when:
+    - container_engine_detected in [None, '', false]
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Docker-Specific Analysis: retrieve storage driver information.
+# ---------------------------------------------------------------------
+- name: "Retrieve Docker storage driver"
+  ansible.builtin.command: "docker info -f '{{ '{{.Driver}}' }}'"
+  register: detect_storage
+  changed_when: false
+  failed_when: false
+  when:
+    - container_engine_detected == 'docker'
+    - not ansible_check_mode
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "Persist Docker storage driver fact (success)"
+  ansible.builtin.set_fact:
+    detect_storage_driver: "{{ detect_storage.stdout | trim }}"
+  when:
+    - container_engine_detected == 'docker'
+    - detect_storage is defined
+    - detect_storage is succeeded
+    - detect_storage.stdout is defined
+    - detect_storage.stdout | trim | length > 0
+  tags: ["always"]
+
+- name: "Handle Docker storage driver detection failure"
+  ansible.builtin.set_fact:
+    detect_storage_driver: "unknown"
+  when:
+    - container_engine_detected == 'docker'
+    - detect_storage is defined
+    - (detect_storage is failed or detect_storage.rc != 0 or detect_storage.stdout | default('') | trim | length == 0)
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Finalization: export the orchestrator-wide container_engine variable.
+# ---------------------------------------------------------------------
+- name: "Finalize effective container_engine value"
+  ansible.builtin.set_fact:
+    container_engine: "{{ container_engine_detected }}"
+  tags: ["always"]
