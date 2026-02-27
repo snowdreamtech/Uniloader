@@ -6,6 +6,8 @@ PLAYBOOK="orchestrator"
 VERBOSITY=""
 VAULT_VARS="@$HOME/.uniloader/.vault.yml"
 VAULT_PASS="$HOME/.uniloader/.vault_pass"
+USER_PROVIDED_VAULT_VARS="false"
+USER_PROVIDED_VAULT_PASS="false"
 
 # Function to show usage
 usage() {
@@ -44,10 +46,12 @@ while [ $# -gt 0 ]; do
             ;;
         --vault-vars)
             VAULT_VARS="$2"
+            USER_PROVIDED_VAULT_VARS="true"
             shift 2
             ;;
         --vault-pass)
             VAULT_PASS="$2"
+            USER_PROVIDED_VAULT_PASS="true"
             shift 2
             ;;
         -e|--extra-vars)
@@ -142,9 +146,30 @@ if [ -n "$HOME_FILES_RAW" ]; then
     EXTRA_ARGS="$EXTRA_ARGS -e '{\"home_files\": [\"$FORMATTED_FILES\"]}'"
 fi
 
+# Process Vault arguments conditionally
+VAULT_ARGS=""
+
+if [ "$USER_PROVIDED_VAULT_VARS" = "true" ]; then
+    VAULT_ARGS="-e \"$VAULT_VARS\""
+else
+    # Strip the '@' prefix if present to check file existence
+    VARS_FILE="${VAULT_VARS#@}"
+    if [ -f "$VARS_FILE" ]; then
+        VAULT_ARGS="-e \"$VAULT_VARS\""
+    fi
+fi
+
+if [ "$USER_PROVIDED_VAULT_PASS" = "true" ]; then
+    VAULT_ARGS="$VAULT_ARGS --vault-password-file \"$VAULT_PASS\""
+else
+    if [ -f "$VAULT_PASS" ]; then
+        VAULT_ARGS="$VAULT_ARGS --vault-password-file \"$VAULT_PASS\""
+    fi
+fi
+
 # Execute ansible-playbook with all arguments
 # Using eval to properly handle quoted arguments in EXTRA_ARGS
-echo "Running: ansible-playbook -i \"$INVENTORY_PATH\" \"$PLAYBOOK_PATH\" $VERBOSITY -e \"$VAULT_VARS\" --vault-password-file \"$VAULT_PASS\" $EXTRA_ARGS"
+echo "Running: ansible-playbook -i \"$INVENTORY_PATH\" \"$PLAYBOOK_PATH\" $VERBOSITY $VAULT_ARGS $EXTRA_ARGS"
 echo "----------------------------------------------------------------"
 
-eval ansible-playbook -i \""$INVENTORY_PATH"\" \""$PLAYBOOK_PATH"\" "$VERBOSITY" -e \""$VAULT_VARS"\" --vault-password-file \""$VAULT_PASS"\" "$EXTRA_ARGS"
+eval ansible-playbook -i \""$INVENTORY_PATH"\" \""$PLAYBOOK_PATH"\" "$VERBOSITY" $VAULT_ARGS "$EXTRA_ARGS"
