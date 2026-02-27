@@ -94,13 +94,13 @@
 # Docker-Specific Analysis: retrieve storage driver information.
 # ---------------------------------------------------------------------
 - name: "Retrieve Docker storage driver {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.command: "docker info -f '{{ '{{.Driver}}' }}'"
+  ansible.builtin.shell: 'set -euo pipefail; PATH="{{ os_paths }}:$PATH" docker info -f ''{{ ''{{.Driver}}'' }}'''
   register: detect_storage
   changed_when: false
   failed_when: false
   when:
     - container_engine_detected == 'docker'
-    - not ansible_check_mode
+    - not ansible_check_mode | default(false, true) | bool
   become: "{{ become_enabled }}"
   tags: ["always"]
 

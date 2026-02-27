@@ -82,7 +82,7 @@
   ansible.builtin.set_fact:
     is_managed_node: true
   when:
-    - not (is_control_node | default(false, true))
+    - not (is_control_node | default(false, true) | bool)
   tags: ["always"]
 
 # ---------------------------------------------------------------------
