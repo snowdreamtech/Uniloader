@@ -1275,3 +1275,6 @@ FodyWeavers.xsd
 skills/
 .agents/skills/
 .agent/skills/
+
+# Ansible Local Collections and Roles
+.ansible/
