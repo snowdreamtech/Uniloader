@@ -1,0 +1,65 @@
+# =====================================================================
+# roles/common/bootstrap/tasks/python/python_control_node.yml
+#
+# Purpose:
+#   Detection, installation, and environment setup for the Ansible 
+#   Control Node. Ensures that a virtual environment is created 
+#   and all required project dependencies are installed.
+#
+# Simple Usage:
+#   - include_tasks: "python_control_node.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "python_control_node.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Full Provisioning: Detection, installation, and setup of Python environment.
+# Only executed when bootstrap flag or venv is missing.
+# ---------------------------------------------------------------------
+- when: >
+    (bootstrap_flag.stat is not defined or not bootstrap_flag.stat.exists) or
+    (python_venv_flag.stat is not defined or not python_venv_flag.stat.exists)
+  block:
+    # 1. First pass: try to detect existing Python without failing.
+    - include_tasks: "python_detector_loader.yml"
+      vars:
+        python_required: false
+       
+    # 2. If no interpreter was found, trigger the specialized installer loader.
+    - include_tasks: "python_installer_loader.yml"
+      when:
+        - (ansible_python_interpreter is not defined) or 
+          (ansible_python_interpreter | trim | length == 0)
+
+    # 3. Second pass: re-run detection and enforce that Python MUST be present.
+    - include_tasks: "python_detector_loader.yml"
+      vars:
+        python_required: true
+
+    # 4. Virtual Environment: Create the dedicated venv for Ansible execution.
+    - include_tasks: "python_venv_loader.yml"
+        
+    # 5. Runtime: Install essential Python packages into the venv.
+    - include_tasks: "python_runtime_loader.yml"
+
+    # 6. Ansible: Install or upgrade the Ansible core and related collections.
+    - include_tasks: "ansible_runtime_loader.yml"
+
+    # 7. Dependencies: Install project-specific requirements.
+    - include_tasks: "requirements_loader.yml"
+
+# ---------------------------------------------------------------------
+# Direct Activation: Ensure the Ansible interpreter always points 
+# to the virtual environment, regardless of whether it was just 
+# installed or already existed.
+# ---------------------------------------------------------------------
+- name: "Activate Python venv (Set interpreter) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    ansible_python_interpreter: "{{ python_venv_path }}/bin/python3"
+    ansible_docker_python_interpreter: "{{ python_venv_path }}/bin/python3"
+  changed_when: false
+  tags: ["always"]

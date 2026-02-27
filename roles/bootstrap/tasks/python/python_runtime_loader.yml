@@ -1,0 +1,82 @@
+# =====================================================================
+# roles/native/tasks/python_runtime_loader.yml
+#
+# Purpose:
+#   Installation of Python runtime packages into a virtual environment.
+#   Upgrades core pip utilities and installs additional packages 
+#   requested via variables.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: python_runtime_loader
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: python_runtime_loader
+#     vars:
+#       python_runtime_packages: ["requests", "pyyaml"]
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the current Python interpreter is a virtual 
+# environment (venv). This loader is NOT intended for system-wide 
+# pip installations.
+# ---------------------------------------------------------------------
+- name: "Ensure ansible_python_interpreter points to venv python {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "ansible_python_interpreter must point to the project venv python before running python_runtime_loader. Expected venv path: {{ python_venv_path | default('undefined') }}, Current interpreter: {{ ansible_python_interpreter | default('undefined') }}"
+  when:
+    - python_venv_path is not defined
+      or ansible_python_interpreter is not defined
+      or python_venv_path not in ansible_python_interpreter
+      or ansible_python_interpreter == "auto"
+      or ansible_python_interpreter == "auto_silent"
+      or ansible_python_interpreter == "/usr/bin/python3"
+      or ansible_python_interpreter == "/usr/bin/python"
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Maintenance: Upgrade the pip package manager to the latest version.
+# ---------------------------------------------------------------------
+- name: "Upgrade pip in venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install --upgrade pip"
+  become: true
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# Maintenance: Upgrade essential build tools (wheel, setuptools).
+# ---------------------------------------------------------------------
+- name: "Install wheel and setuptools {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install --upgrade wheel setuptools"
+  become: true
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# Installation: Deploy specific Python packages into the environment.
+# ---------------------------------------------------------------------
+- name: "Install additional pip packages {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install {{ python_package }}"
+  loop: "{{ python_runtime_packages }}"
+  loop_control:
+    loop_var: python_package
+  when:
+    - python_runtime_packages is defined
+    - python_runtime_packages | length > 0
+  become: true
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# Audit: Log successful runtime initialization.
+# ---------------------------------------------------------------------
+- ansible.builtin.debug:
+    msg: |
+      [ PYTHON_RUNTIME ]
+      Python runtime installation completed in venv: {{ ansible_python_interpreter }}
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
