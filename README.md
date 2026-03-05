@@ -421,8 +421,8 @@ This automatically handles:
 When creating new loaders, use these as templates:
 
 - **Container orchestration**: [roles/container/tasks/docker_compose_loader.yml](roles/container/tasks/docker_compose_loader.yml)
-- **Package management**: [roles/native/tasks/package_loader.yml](roles/native/tasks/package_loader.yml)
-- **Service control**: [roles/native/tasks/service_loader.yml](roles/native/tasks/service_loader.yml)
+- **Package management**: [roles/native/tasks/package_loader/main.yml](roles/native/tasks/package_loader/main.yml)
+- **Service control**: [roles/native/tasks/service_loader/main.yml](roles/native/tasks/service_loader/main.yml)
 - **File operations**: [roles/native/tasks/file_loader.yml](roles/native/tasks/file_loader.yml)
 
 ---
@@ -433,7 +433,7 @@ When creating new loaders, use these as templates:
 
 ### For Human Developers
 
-1. Read [STANDARDS.md](STANDARDS.md) and [STANDARDS_zh-CN.md](STANDARDS_zh-CN.md)
+1. Read [ansible.md](.agent/rules/ansible.md) and [ansible-local.md](.agent/rules/ansible-local.md)
 2. Ensure all new loaders have Simple + Comprehensive usage examples
 
 ### Code Review Checklist
@@ -451,7 +451,7 @@ When creating new loaders, use these as templates:
 
 ## Additional Resources
 
-- **Standards**: [STANDARDS.md](STANDARDS.md) | [STANDARDS_zh-CN.md](STANDARDS_zh-CN.md)
+- **Standards**: [.agent/rules/ansible.md](.agent/rules/ansible.md) | [.agent/rules/ansible-local.md](.agent/rules/ansible-local.md)
 - **Examples**: [roles/](roles/) - Every loader is self-documenting
 
 ---
