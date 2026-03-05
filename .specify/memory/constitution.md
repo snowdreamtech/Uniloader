@@ -1,50 +1,53 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+- Version change: 0.0.0 → 1.0.0
+- Modified principles:
+  - [PRINCIPLE_1_NAME] → I. Modular Four-Layer Architecture
+  - [PRINCIPLE_2_NAME] → II. Unified Cross-Platform Deployment
+  - [PRINCIPLE_3_NAME] → III. Absolute Idempotence
+  - [PRINCIPLE_4_NAME] → IV. 100% FQCN Compliance
+  - [PRINCIPLE_5_NAME] → V. Environment-Aware Dynamic Behavior
+- Added sections: Architecture Constraints (Section 2), Development & Testing Workflow (Section 3)
+- Templates requiring updates:
+  - ✅ .specify/templates/plan-template.md (Updated Constitution Check section)
+  - ✅ .specify/templates/tasks-template.md (Added idempotency block in tasks)
+- Follow-up TODOs: None
+-->
+
+# Unified Loader System (ULS) Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Modular Four-Layer Architecture
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+The system MUST strictly adhere to the four-layer design: Base layer (`facts_loader`/`os_loader`) for OS detection and permission abstraction, Implementation layer (`container`/`native` roles) encapsulating runtimes, Application API layer (`app` roles) providing unified deployment interfaces masking underlying differences, and Orchestration layer (`playbooks`) combining scenarios like bootstrap, foundation, and orchestrator.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Unified Cross-Platform Deployment
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+The codebase MUST remain a single source of truth compatible across Alpine, Debian, and RHEL. Container runtime support (`container_loader`) MUST uniformly cover Docker, Podman, Containerd, and CRI-O without platform-specific fragmentation in the App API layer.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Absolute Idempotence
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+All tasks, especially `ansible.builtin.shell` and `ansible.builtin.command`, MUST explicitly define `changed_when` (and optionally `failed_when`) conditions. The system MUST safely run multiple times without unintended side effects or redundant operations.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. 100% FQCN Compliance
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Complete Fully Qualified Collection Name (FQCN) compliance is mandatory. All modules, roles, and plugins MUST use their full namespace (e.g., `ansible.builtin.shell` instead of `shell`) to ensure deterministic behavior, avoid collection path conflicts, and maintain strict standardization.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Environment-Aware Dynamic Behavior
+
+Deployments MUST leverage the `node_tags` mechanism (including tags like `host`, `container`, `dev`, `prod`, `open`, `restricted`) to dynamically adapt configurations, package loading behaviors (via `package_loader`), and runtime states without hardcoding environment-specific logic.
+
+## Architecture Constraints
+
+The project relies on a highly capable internal routing system. The `package_loader` MUST maintain and route between 38+ installation methods, including mainstream OS package managers (apk/apt/dnf), language/ecosystem managers (pip/npm/cargo/go/gem), and platform-specific formats (mas:/winget:/choco:). Roles MUST be structurally organized into the explicit 14 categories (such as `base`, `bootstrap`, `container`, `native`, `apps`, `scenarios`, `init`, `security`).
+
+## Development & Testing Workflow
+
+All code changes MUST successfully pass the local Docker Compose testing environment before submission. Development should accommodate the extensive catalog of ~81 mainstream software applications supported in the `apps` category, ensuring seamless deployment pathways (bootstrap, deploy, develop, server, desktop).
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This Constitution supersedes all other feature documentation. Amendments to these principles require explicit documentation, approval updates, and an impact verification on the four-layer architecture. All pull requests, code reviews, and generation pipelines MUST verify compliance with absolute idempotence (`changed_when`) and full FQCN standardization.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-02-26 | **Last Amended**: 2026-02-26
