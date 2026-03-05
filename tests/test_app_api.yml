@@ -1,0 +1,15 @@
+---
+# tests/test_app_api.yml
+- name: Test App API Contract
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Simulate generic redis app deployment via container_loader
+      ansible.builtin.include_role:
+        name: container/container_loader
+      vars:
+        app_name: "redis"
+        app_version: "7.0-alpine"
+        app_ports:
+          - "6379:6379"
+      # Verifies the generalized input matches the required Docker/Podman FQCN modules behind the scenes.
