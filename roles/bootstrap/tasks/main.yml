@@ -13,14 +13,14 @@
 # WHY: On bare-metal or freshly provisioned hosts, gather_facts is usually
 #      false. We must detect OS type using raw commands to route correctly.
 # ---------------------------------------------------------------------
-- name: "Discovery: Detect OS type (raw probe)"
+- name: "Discovery: Detect OS type (raw probe) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.raw: "uname"
   register: raw_uname_probe
   ignore_errors: true
   changed_when: false
   tags: ["always"]
 
-- name: "Set discovery facts: is_posix_system"
+- name: "Set discovery facts: is_posix_system {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     is_posix_system: "{{ (raw_uname_probe.rc | default(0)) == 0 }}"
     is_windows_system: "{{ (raw_uname_probe.rc | default(0)) != 0 }}"
@@ -31,7 +31,7 @@
 # =====================================================================
 
 # WHY: Windows uses PowerShell modules via WinRM and does not require Python.
-- name: "Skip bootstrap on Windows (no Python required)"
+- name: "Skip bootstrap on Windows (no Python required) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.debug:
     msg: "Windows host detected — bootstrap role skipped."
   when: is_windows_system | bool
@@ -42,6 +42,6 @@
 # =====================================================================
 
 # WHY: Run bootstrap logic for Linux/macOS.
-- name: "Run POSIX bootstrap"
+- name: "Run POSIX bootstrap {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.include_tasks: "bootstrap_posix.yml"
   when: is_posix_system | bool
