@@ -42,6 +42,7 @@ skip_list:
   - name[template]
   - fqcn-builtins # Fully Qualified Collection Names are auto-fixed via AST tools
   - yaml # Prevent ansible-lint from altering established YAML formatting conventions
+  - yaml[line-length] # 80-char limit is unreasonable for Ansible tasks with URLs, long shell commands, or Jinja2 syntax
   - no-changed-when # The loader framework is declarative and does not require explicit changed_when evaluations
   - risky-file-permissions
   - command-instead-of-shell

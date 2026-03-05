@@ -40,15 +40,13 @@ docker_volume_default_group: >-
     root
   {%- endif -%}
 
-# container_app_volume_owner: "{{ docker_volume_default_owner }}"  # Override if needed
-# container_app_volume_group: "{{ docker_volume_default_group }}"  # Override if needed
-# 
+# container_app_volume_owner: "{{ docker_volume_default_owner }}"
+# container_app_volume_group: "{{ docker_volume_default_group }}"
+#
 # Development environment example:
 # container_app_volume_owner: "{{ ansible_user_name }}"
 # container_app_volume_group: "staff"  # macOS
 # container_app_volume_group: "{{ ansible_user_name }}"  # Linux
-
-
 
 # ---------------------------------------------------------------------
 # Strategy 1: Named Volumes (Recommended)
@@ -90,7 +88,7 @@ docker_volume_paths:
 # ---------------------------------------------------------------------
 
 # Example configurations for different apps:
-# 
+#
 # MongoDB with named volume:
 #   app_volumes:
 #     - "{{ docker_named_volumes.mongodb_data }}:/data/db"
