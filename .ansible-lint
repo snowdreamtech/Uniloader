@@ -20,6 +20,8 @@ exclude_paths:
   - .nuxt/
   - .output/
   - dist/
+
+  # Go & PHP
   - vendor/
   - out/
   - target/
