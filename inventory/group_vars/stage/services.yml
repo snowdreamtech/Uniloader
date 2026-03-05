@@ -1,0 +1,14 @@
+# =====================================================================
+# inventory/group_vars/stage/services.yml
+#
+# Purpose:
+#   Variables specific to the staging environment.
+#   Pre-production environment settings, mirroring production
+#   constraints without full hardening protocols.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Service Settings:
+# ---------------------------------------------------------------------
+enable_debug: false
+install_dev_tools: false

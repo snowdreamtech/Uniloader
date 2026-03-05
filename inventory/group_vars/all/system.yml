@@ -1,0 +1,29 @@
+# =====================================================================
+# inventory/group_vars/all/system.yml
+#
+# Purpose:
+#   Global system localization, environment markers, and base paths.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# System Localization & Environment
+# ---------------------------------------------------------------------
+# timezone: "Asia/Shanghai"
+timezone: "UTC"
+env: "default" # Execution environment (default/dev/prod)
+
+# =====================================================================
+# Canonical System PATH (Base)
+# WHY:
+#   Provides a stable baseline PATH for initial bootstrap and discovery.
+#   Only contains universal paths. Platform-specific roots are
+#   managed via group_vars or dynamic discovery.
+# =====================================================================
+os_paths: >-
+  {%- if ansible_os_family == 'Darwin' -%}
+    /opt/homebrew/bin:/opt/homebrew/sbin:/opt/local/bin:/opt/local/sbin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/bin:/sbin
+  {%- elif ansible_os_family == 'Windows' -%}
+    C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\ProgramData\scoop\shims;C:\Program Files\Go\bin
+  {%- else -%}
+    /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/bin:/sbin
+  {%- endif -%}

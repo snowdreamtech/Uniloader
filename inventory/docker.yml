@@ -1,0 +1,36 @@
+# =====================================================================
+# inventory/dev.yml
+#
+# Purpose:
+#   Development environment inventory configuration.
+#   Defines container-based development hosts using the Docker 
+#   connection plugin for local prototyping and CI/CD validation.
+#
+# Simple Usage:
+#   ansible-playbook -i inventory/dev.yml site.yml
+#
+# Comprehensive Usage:
+#   ansible-playbook -i inventory/dev.yml site.yml --limit alpine
+#
+# =====================================================================
+
+all:
+  hosts:
+    alpine:
+      ansible_connection: "docker"
+      node_tags:
+        - "open"
+        - "container"
+        - "docker_container"
+    debian:
+      ansible_connection: "docker"
+      node_tags:
+        - "open"
+        - "container"
+        - "docker_container"
+    redhat:
+      ansible_connection: "docker"
+      node_tags:
+        - "open"
+        - "container"
+        - "docker_container"

@@ -1,0 +1,14 @@
+# =====================================================================
+# inventory/group_vars/dev/services.yml
+#
+# Purpose:
+#   Variables specific to the development environment.
+#   Enables debug mode and development utilities for all hosts
+#   assigned to the 'dev' group.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Tooling & Debugging:
+# ---------------------------------------------------------------------
+enable_debug: true
+install_dev_tools: true

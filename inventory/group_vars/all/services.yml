@@ -1,0 +1,20 @@
+# =====================================================================
+# inventory/group_vars/all/services.yml
+#
+# Purpose:
+#   Global service, package management, and basic toggles.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Global Service & Package Toggles
+# ---------------------------------------------------------------------
+enable_monitoring: true
+enable_logging: true
+
+# ---------------------------------------------------------------------
+# Default State Management
+# ---------------------------------------------------------------------
+package_state: "present"
+service_state: "started"
+service_enabled: true
+service_daemon_reload: false

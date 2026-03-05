@@ -1,0 +1,50 @@
+# =====================================================================
+# inventory/staging.yml
+#
+# Purpose:
+#   Staging environment inventory definition.
+#   Maps hostnames to groups and defines environment-level connection
+#   parameters (Docker transport for local testing/simulation).
+#
+# =====================================================================
+
+all:
+  # ---------------------------------------------------------------------
+  # Global Connection settings for Staging
+  # ---------------------------------------------------------------------
+  vars:
+    ansible_user: "ansible"
+
+  children:
+    # ---------------------------------------------------------------------
+    # Alpine-based host group
+    # ---------------------------------------------------------------------
+    alpine_group:
+      hosts:
+        alpine:
+          ansible_connection: "docker"
+          node_tags:
+            - "container"
+            - "docker_container"
+
+    # ---------------------------------------------------------------------
+    # Debian-based host group
+    # ---------------------------------------------------------------------
+    debian_group:
+      hosts:
+        debian:
+          ansible_connection: "docker"
+          node_tags:
+            - "container"
+            - "docker_container"
+
+    # ---------------------------------------------------------------------
+    # RedHat-based (Rocky) host group
+    # ---------------------------------------------------------------------
+    rhel_group:
+      hosts:
+        rocky:
+          ansible_connection: "docker"
+          node_tags:
+            - "container"
+            - "docker_container"
