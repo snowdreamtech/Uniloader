@@ -48,7 +48,7 @@
   ansible.builtin.set_fact:
     detect_cgroup_version: >-
       {{ 'none' if (os_family == 'darwin') else
-         ('v2' if (detect_cgroup.stdout | default('', true) == '/') else 'v1') }}
+      ('v2' if (detect_cgroup.stdout | default('', true) == '/') else 'v1') }}
   tags: ["always"]
 
 # ---------------------------------------------------------------------

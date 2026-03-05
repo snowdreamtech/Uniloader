@@ -11,9 +11,9 @@ set -e
 # Prevent sourcing (POSIX-compatible check)
 if [ -n "$BASH_VERSION" ]; then
     if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
-        echo "Error: This script is meant to be executed, not sourced."
-        echo "Run it as: $0 <args>"
-        return 1
+       echo "Error: This script is meant to be executed, not sourced."
+       echo "Run it as: $0 <args>"
+       return 1
     fi
 fi
 
@@ -30,7 +30,7 @@ if [ -d "${PROJECT_ROOT}/.venv" ]; then
     export PATH="${PROJECT_ROOT}/.venv/bin:$PATH"
 fi
 if [ -d "${PROJECT_ROOT}/venv" ]; then
-     export PATH="${PROJECT_ROOT}/venv/bin:$PATH"
+    export PATH="${PROJECT_ROOT}/venv/bin:$PATH"
 fi
 
 # --- Colors ---
@@ -70,7 +70,7 @@ ensure_gpg_unlocked() {
 
     # Encryption usually only needs the public key, so we can skip unlocking for 'encrypt'
     if [ "$action" = "encrypt" ]; then
-        return 0
+       return 0
     fi
 
     log_info "Checking GPG key status for action '${action}'..."
@@ -78,30 +78,30 @@ ensure_gpg_unlocked() {
     # Recipient checking omitted for brevity, focusing on unlocking.
     # Check if already unlocked
     if echo "test" | gpg --batch --no-tty --clearsign --output /dev/null 2>/dev/null; then
-        log_info "GPG key is already unlocked."
-        return 0
+       log_info "GPG key is already unlocked."
+       return 0
     fi
 
     # Strategy 1: Unlock using Environment Variable (CI/CD / Vault injected)
     if [ -n "$GPG_PASSPHRASE" ]; then
-        log_info "GPG_PASSPHRASE detected. Attempting non-interactive unlock..."
-        if echo "test" | gpg --batch --no-tty --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --clearsign --output /dev/null 2>/dev/null; then
-             log_info "GPG key successfully unlocked via environment variable."
-             return 0
-        else
-             log_warn "Failed to unlock using GPG_PASSPHRASE. Falling back to interactive mode..."
-        fi
+       log_info "GPG_PASSPHRASE detected. Attempting non-interactive unlock..."
+       if echo "test" | gpg --batch --no-tty --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --clearsign --output /dev/null 2>/dev/null; then
+            log_info "GPG key successfully unlocked via environment variable."
+            return 0
+       else
+            log_warn "Failed to unlock using GPG_PASSPHRASE. Falling back to interactive mode..."
+       fi
     fi
 
     # Strategy 2: Interactive Unlock (Local Development)
     log_warn "GPG key is locked. Attempting to unlock via GPG Agent (Interactive)..."
 
     if echo "test" | gpg --clearsign --output /dev/null > /dev/null 2>&1; then
-         log_info "GPG key successfully unlocked."
+        log_info "GPG key successfully unlocked."
     else
-         log_error "Failed to unlock GPG key. Cannot proceed with '${action}'."
-         log_error "Hint: To run non-interactively, set the 'GPG_PASSPHRASE' environment variable."
-         exit 1
+        log_error "Failed to unlock GPG key. Cannot proceed with '${action}'."
+        log_error "Hint: To run non-interactively, set the 'GPG_PASSPHRASE' environment variable."
+        exit 1
     fi
 }
 
@@ -122,20 +122,20 @@ VERBOSE=""
 # First argument detection
 if [ $# -gt 0 ]; then
     case "$1" in
-        restore|decrypt|encrypt)
-            ACTION="$1"
-            shift
-            ;;
-        -h|--help)
-            usage
-            ;;
-        -*)
-            # Valid options, imply default 'restore'
-            ;;
-        *)
-            log_error "Unknown action: $1"
-            usage
-            ;;
+       restore|decrypt|encrypt)
+           ACTION="$1"
+           shift
+           ;;
+       -h|--help)
+           usage
+           ;;
+       -*)
+           # Valid options, imply default 'restore'
+           ;;
+       *)
+           log_error "Unknown action: $1"
+           usage
+           ;;
     esac
 fi
 
@@ -143,25 +143,25 @@ fi
 while [ $# -gt 0 ]; do
     key="$1"
     case $key in
-        -i|--inventory)
-            INVENTORY="$2"
-            shift 2
-            ;;
-        -l|--limit)
-            LIMIT="$2"
-            shift 2
-            ;;
-        -v|--verbose)
-            VERBOSE="-v"
-            shift
-            ;;
-        -h|--help)
-            usage
-            ;;
-        *)
-            log_error "Unknown argument: $1"
-            usage
-            ;;
+       -i|--inventory)
+           INVENTORY="$2"
+           shift 2
+           ;;
+       -l|--limit)
+           LIMIT="$2"
+           shift 2
+           ;;
+       -v|--verbose)
+           VERBOSE="-v"
+           shift
+           ;;
+       -h|--help)
+           usage
+           ;;
+       *)
+           log_error "Unknown argument: $1"
+           usage
+           ;;
     esac
 done
 
@@ -175,17 +175,17 @@ fi
 # Detect Inventory
 if [ -z "$INVENTORY" ]; then
     if [ -f "${DEFAULT_INVENTORY}/hosts" ]; then
-        INVENTORY="${DEFAULT_INVENTORY}/hosts"
+       INVENTORY="${DEFAULT_INVENTORY}/hosts"
     elif [ -d "${DEFAULT_INVENTORY}" ]; then
-        COUNT=$(find "${DEFAULT_INVENTORY}" -maxdepth 1 -name "*.yml" -o -name "*.yaml" | wc -l)
-        if [ "$COUNT" -eq 1 ]; then
-             INVENTORY=$(find "${DEFAULT_INVENTORY}" -maxdepth 1 -name "*.yml" -o -name "*.yaml" | head -n 1)
-        elif [ "$COUNT" -gt 1 ]; then
-             log_error "Multiple inventory files found in ${DEFAULT_INVENTORY}. Please specify one with -i."
-             exit 1
-        else
-             log_warn "No inventory file specified and none found. Ansible might fail."
-        fi
+       COUNT=$(find "${DEFAULT_INVENTORY}" -maxdepth 1 -name "*.yml" -o -name "*.yaml" | wc -l)
+       if [ "$COUNT" -eq 1 ]; then
+            INVENTORY=$(find "${DEFAULT_INVENTORY}" -maxdepth 1 -name "*.yml" -o -name "*.yaml" | head -n 1)
+       elif [ "$COUNT" -gt 1 ]; then
+            log_error "Multiple inventory files found in ${DEFAULT_INVENTORY}. Please specify one with -i."
+            exit 1
+       else
+            log_warn "No inventory file specified and none found. Ansible might fail."
+       fi
     fi
 fi
 

@@ -4,7 +4,7 @@
 #
 # Purpose:
 #   POSIX-compatible Python virtual environment (venv) manager.
-#   Provides functions to activate, deactivate, recreate, and inspect 
+#   Provides functions to activate, deactivate, recreate, and inspect
 #   the local venv.
 #
 # Simple Usage:
@@ -81,7 +81,7 @@ venv_path() {
 }
 
 # ---------------------------------------------------------------------
-# Dispatch: Process the command-line argument to trigger the 
+# Dispatch: Process the command-line argument to trigger the
 # corresponding function.
 # ---------------------------------------------------------------------
 case "$1" in

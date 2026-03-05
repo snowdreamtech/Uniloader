@@ -4,7 +4,7 @@
 #
 # Purpose:
 #   Utility to install Python packages and synchronize requirements.txt.
-#   Ensures that newly installed dependencies are captured for 
+#   Ensures that newly installed dependencies are captured for
 #   project reproducibility.
 #
 # Simple Usage:
@@ -59,7 +59,7 @@ if [ $# -eq 0 ]; then
 fi
 
 # ---------------------------------------------------------------------
-# Execution: Install the requested packages and freeze the result to 
+# Execution: Install the requested packages and freeze the result to
 # requirements.txt.
 # ---------------------------------------------------------------------
 echo "Installing dependencies: $@"

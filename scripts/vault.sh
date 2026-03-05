@@ -14,9 +14,9 @@ set -e
 # Prevent sourcing (POSIX-compatible check)
 if [ -n "$BASH_VERSION" ]; then
     if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
-        echo "Error: This script is meant to be executed, not sourced."
-        echo "Run it as: $0 <args>"
-        return 1
+       echo "Error: This script is meant to be executed, not sourced."
+       echo "Run it as: $0 <args>"
+       return 1
     fi
 fi
 
@@ -31,7 +31,7 @@ if [ -d "${PROJECT_ROOT}/.venv" ]; then
     export PATH="${PROJECT_ROOT}/.venv/bin:$PATH"
 fi
 if [ -d "${PROJECT_ROOT}/venv" ]; then
-     export PATH="${PROJECT_ROOT}/venv/bin:$PATH"
+    export PATH="${PROJECT_ROOT}/venv/bin:$PATH"
 fi
 
 # --- Colors ---
@@ -90,38 +90,38 @@ set -- "$COMMAND"
 
 # 1. Auto-inject Password File
 if [ -f "$VAULT_PASS_FILE" ]; then
-     set -- "$@" "--vault-password-file" "${VAULT_PASS_FILE}"
+    set -- "$@" "--vault-password-file" "${VAULT_PASS_FILE}"
 fi
 
 # 2. Smart Default File Handling
 # Commands that typically target an existing single file
 case "$COMMAND" in
     edit|view|rekey|decrypt|encrypt)
-        # Check if user provided a filename argument
-        # We iterate remaining args to see if there is any non-option argument
-        HAS_FILE_ARG=false
-        for arg in "$@"; do
-            case "$arg" in
-                -*) ;;  # Option, skip
-                *) HAS_FILE_ARG=true; break ;;
-            esac
-        done
+       # Check if user provided a filename argument
+       # We iterate remaining args to see if there is any non-option argument
+       HAS_FILE_ARG=false
+       for arg in "$@"; do
+           case "$arg" in
+               -*) ;;  # Option, skip
+               *) HAS_FILE_ARG=true; break ;;
+           esac
+       done
 
-        if [ "$HAS_FILE_ARG" = "false" ]; then
-            # Special case: 'encrypt' usually implies we want to encrypt a NEW plain file
-            if [ "$COMMAND" != "encrypt" ]; then
-                if [ ! -f "$VAULT_FILE" ]; then
-                     log_warn "Default target file ${VAULT_FILE} does not exist."
-                else
-                     log_info "Targeting default file: ${VAULT_FILE}"
-                     set -- "$@" "${VAULT_FILE}"
-                fi
-            fi
-        fi
-        ;;
+       if [ "$HAS_FILE_ARG" = "false" ]; then
+           # Special case: 'encrypt' usually implies we want to encrypt a NEW plain file
+           if [ "$COMMAND" != "encrypt" ]; then
+               if [ ! -f "$VAULT_FILE" ]; then
+                    log_warn "Default target file ${VAULT_FILE} does not exist."
+               else
+                    log_info "Targeting default file: ${VAULT_FILE}"
+                    set -- "$@" "${VAULT_FILE}"
+               fi
+           fi
+       fi
+       ;;
     create)
-        # Must provide filename
-        ;;
+       # Must provide filename
+       ;;
 esac
 
 # 3. Append remaining user arguments
