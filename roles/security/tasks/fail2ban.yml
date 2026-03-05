@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/security/tasks/fail2ban.yml
+#
+# Purpose:
+#   Installation and configuration of Fail2ban for intrusion prevention.
+#
+# =====================================================================
+
+- name: "Install Fail2ban {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "fail2ban"
+    state: "present"
+
+- name: "Configure Fail2ban (jail.local) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "jail.local.j2"
+    dest: "/etc/fail2ban/jail.local"
+    mode: "0644"
+  notify: "Restart Fail2ban"
+
+- name: "Ensure Fail2ban service is running {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.service:
+    name: "fail2ban"
+    state: "started"
+    enabled: true

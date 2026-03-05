@@ -1,0 +1,34 @@
+---
+# =====================================================================
+# roles/security/meta/main.yml
+#
+# Purpose:
+#   Metadata and dependency configuration for the security role.
+#   Defines role properties for Ansible Galaxy.
+#
+# =====================================================================
+
+galaxy_info:
+  author: "snowdreamtech"
+  description: "Cross-platform active security defense role."
+  license: "MIT"
+  min_ansible_version: "2.14"
+  platforms:
+    - name: "EL"
+      versions: ["8", "9"]
+    - name: "Debian"
+      versions: ["11", "12"]
+    - name: "Ubuntu"
+      versions: ["20.04", "22.04"]
+    - name: "Alpine"
+      versions: ["3.18", "3.19"]
+    - name: "MacOSX"
+      versions: ["13", "14", "15"]
+  galaxy_tags:
+    - "security"
+    - "firewall"
+    - "fail2ban"
+    - "auditd"
+    - "hardening"
+
+dependencies: []

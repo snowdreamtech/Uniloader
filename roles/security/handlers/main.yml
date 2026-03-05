@@ -1,0 +1,20 @@
+---
+# =====================================================================
+# roles/security/handlers/main.yml
+#
+# Purpose:
+#   Global notification handlers for core security services.
+#
+# =====================================================================
+
+- name: "Restart Fail2ban"
+  ansible.builtin.service:
+    name: "fail2ban"
+    state: "restarted"
+
+- name: "Restart Auditd"
+  ansible.builtin.service:
+    name: "auditd"
+    state: "restarted"
+    # auditd sometimes requires unique reload commands, but service restart is standard
+    use: "service"

@@ -1,0 +1,25 @@
+---
+# =====================================================================
+# roles/security/defaults/main.yml
+#
+# Purpose:
+#   Default variable definitions for the security role.
+#
+# =====================================================================
+
+# Feature Toggles
+security_firewall_enabled: true
+security_fail2ban_enabled: true
+security_auditd_enabled: true
+
+# Firewall Settings
+# Default allowed ports (SSH is usually essential)
+security_firewall_allowed_ports:
+  - "22"
+  # - "80"
+  # - "443"
+
+# Fail2ban Settings
+security_fail2ban_bantime: "1h"
+security_fail2ban_findtime: "10m"
+security_fail2ban_maxretry: 5

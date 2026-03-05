@@ -1,0 +1,22 @@
+---
+# =====================================================================
+# roles/security/tasks/auditd.yml
+#
+# Purpose:
+#   Deployment of system auditing framework (auditd).
+#
+# =====================================================================
+
+- name: "Install Auditd {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "auditd"
+    state: "present"
+
+- name: "Ensure Auditd service is running {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.service:
+    name: "auditd"
+    state: "started"
+    enabled: true
+# ---------------------------------------------------------------------
+# Note: Add specific audit rules in templates/audit.rules.j2 if needed
+# ---------------------------------------------------------------------

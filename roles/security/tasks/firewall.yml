@@ -1,0 +1,60 @@
+---
+# =====================================================================
+# roles/security/tasks/firewall.yml
+#
+# Purpose:
+#   Cross-platform firewall management (UFW for Debian, Firewalld for RedHat).
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Debian / Ubuntu (UFW)
+# ---------------------------------------------------------------------
+- name: "Install UFW (Debian/Ubuntu) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "ufw"
+    state: "present"
+  when: "ansible_os_family == 'Debian'"
+
+- name: "Configure UFW Allowed Ports {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.ufw:
+    rule: "allow"
+    port: "{{ item }}"
+    proto: "tcp"
+  loop: "{{ security_firewall_allowed_ports }}"
+  when:
+    - "ansible_os_family == 'Debian'"
+    - "security_firewall_allowed_ports is defined"
+
+- name: "Enable UFW with default deny policy {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.ufw:
+    state: "enabled"
+    policy: "deny"
+  when: "ansible_os_family == 'Debian'"
+
+# ---------------------------------------------------------------------
+# RedHat / CentOS / Fedora (Firewalld)
+# ---------------------------------------------------------------------
+- name: "Install Firewalld (RedHat family) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "firewalld"
+    state: "present"
+  when: "ansible_os_family == 'RedHat'"
+
+- name: "Ensure Firewalld is running {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.service:
+    name: "firewalld"
+    state: "started"
+    enabled: true
+  when: "ansible_os_family == 'RedHat'"
+
+- name: "Configure Firewalld Allowed Ports {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.posix.firewalld:
+    port: "{{ item }}/tcp"
+    permanent: true
+    state: "enabled"
+    immediate: true
+  loop: "{{ security_firewall_allowed_ports }}"
+  when:
+    - "ansible_os_family == 'RedHat'"
+    - "security_firewall_allowed_ports is defined"
