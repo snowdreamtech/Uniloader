@@ -12,7 +12,7 @@
 # ---------------------------------------------------------------------
 # Collection: Refresh system facts
 # ---------------------------------------------------------------------
-- name: "Refresh system facts"
+- name: "Refresh system facts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.setup:
   become: false
   register: facts_result
@@ -24,7 +24,7 @@
 # ---------------------------------------------------------------------
 # OS Information: Extract and normalize into snake_case
 # ---------------------------------------------------------------------
-- name: "Build OS fact variables"
+- name: "Build OS fact variables {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     # Basic classification
     os_family: "{{ ansible_facts.os_family | lower }}"
@@ -66,27 +66,27 @@
 # ---------------------------------------------------------------------
 # Package Manager Refinement (Darwin)
 # ---------------------------------------------------------------------
-- name: "Refine os_pkg_mgr for macOS (Priority: Homebrew > MacPorts > Default)"
+- name: "Refine os_pkg_mgr for macOS (Priority: Homebrew > MacPorts > Default) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   when: os_family == 'darwin'
   block:
-    - name: "Check for Homebrew"
+    - name: "Check for Homebrew {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
       ansible.builtin.shell: "PATH={{ os_paths }} command -v brew"
       register: _check_brew
       failed_when: false
       changed_when: false
 
-    - name: "Check for MacPorts"
+    - name: "Check for MacPorts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
       ansible.builtin.shell: "PATH={{ os_paths }} command -v port"
       register: _check_port
       failed_when: false
       changed_when: false
 
-    - name: "Override os_pkg_mgr to homebrew (User Preference 1)"
+    - name: "Override os_pkg_mgr to homebrew (User Preference 1) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
       ansible.builtin.set_fact:
         os_pkg_mgr: "homebrew"
       when: _check_brew.rc == 0
 
-    - name: "Override os_pkg_mgr to macports (User Preference 2)"
+    - name: "Override os_pkg_mgr to macports (User Preference 2) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
       ansible.builtin.set_fact:
         os_pkg_mgr: "macports"
       when:
@@ -97,7 +97,7 @@
 # ---------------------------------------------------------------------
 # Architecture Normalization
 # ---------------------------------------------------------------------
-- name: "Normalize architecture map"
+- name: "Normalize architecture map {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     architecture_map: >-
       {{
@@ -118,7 +118,7 @@
       }}
   tags: ["always"]
 
-- name: "Set normalized architecture (OCI/Docker/Go style)"
+- name: "Set normalized architecture (OCI/Docker/Go style) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     os_architecture_oci: >-
       {{
@@ -130,7 +130,7 @@
 # ---------------------------------------------------------------------
 # Global Fingerprint
 # ---------------------------------------------------------------------
-- name: "Build os_fingerprint"
+- name: "Build os_fingerprint {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     os_fingerprint: >-
       {{ ansible_facts.distribution }} {{ ansible_facts.distribution_version }}
