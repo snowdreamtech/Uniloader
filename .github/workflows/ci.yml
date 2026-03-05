@@ -35,7 +35,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: "pip" # caching pip dependencies
 
       # Re-use our own virtual environment script to ensure environments strictly match.
