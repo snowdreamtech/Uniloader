@@ -1,0 +1,23 @@
+---
+# =====================================================================
+# roles/bootstrap/defaults/main.yml
+#
+# Purpose:
+#   Default configuration for the bootstrap role.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Default privilege escalation setting.
+# ---------------------------------------------------------------------
+become_enabled: true
+
+# ---------------------------------------------------------------------
+# Path: OS-specific search paths.
+# WHY: On fresh systems, PATH might be extremely limited.
+# ---------------------------------------------------------------------
+os_paths: >-
+  {%- if (current_os_name | default('Linux')) == 'Darwin' -%}
+    /opt/homebrew/bin:/opt/homebrew/sbin:/opt/local/bin:/opt/local/sbin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/bin:/sbin
+  {%- else -%}
+    /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/bin:/sbin
+  {%- endif -%}

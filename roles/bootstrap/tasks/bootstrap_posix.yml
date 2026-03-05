@@ -26,7 +26,7 @@
   tags: ["always"]
 - name: "Set Internal Context: current_os_name {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
-    current_os_name: "{{ raw_os_name_probe.stdout | trim if raw_os_name_probe.stdout is defined else (ansible_system | default('Linux', true)) }}"
+    current_os_name: "{{ raw_os_name_probe.stdout | trim if (raw_os_name_probe.rc | default(1) == 0) else (ansible_system | default('Linux', true)) }}"
   tags: ["always"]
 
 - name: "Discovery: Dynamically group hosts by OS name {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"

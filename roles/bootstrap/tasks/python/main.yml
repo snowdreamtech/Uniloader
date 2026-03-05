@@ -16,6 +16,14 @@
 #       node_tags: ["control"]
 #
 # =====================================================================
+#
+# ---------------------------------------------------------------------
+# Variables: Load default Python and Ansible runtime configuration.
+# ---------------------------------------------------------------------
+- name: "Load python default variables"
+  ansible.builtin.include_vars:
+    file: "python/default.yml"
+
 # ---------------------------------------------------------------------
 # Controller: Execute specialized venv and runtime setup for the
 # Ansible Control Node.
