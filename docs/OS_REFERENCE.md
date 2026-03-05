@@ -63,6 +63,8 @@ This document provides a comprehensive mapping between `ansible_os_family` and `
 | **NixOS**                       | `NixOS`                               | `nix`                  | Functional, declarative Linux         |
 | **Void**                        | `Void`                                | `xbps`                 | Void Linux (runit-based)              |
 | **ClearLinux**                  | `Clear`                               | `swupd`                | Intel performance-oriented OS         |
+| **ClearLinux**                  | `Clear Linux OS`                      | `swupd`                | Intel Clear Linux                     |
+| **ClearLinux**                  | `Clear Linux Mix`                     | `swupd`                | Clear Linux Custom Mix                |
 | **Solus**                       | `Solus`                               | `eopkg`                | Independent desktop distro            |
 | **OpenWrt**                     | `OpenWrt`                             | `opkg`                 | Embedded/Network Devices              |
 | **Linux**                       | `Talos`                               | `talosctl`             | API-driven Kubernetes OS              |
@@ -71,7 +73,8 @@ This document provides a comprehensive mapping between `ansible_os_family` and `
 | **OpenBSD**                     | `OpenBSD`                             | `pkg_add`              | OpenBSD                               |
 | **NetBSD**                      | `NetBSD`                              | `pkgin`                | NetBSD                                |
 | **BSD**                         | `GhostBSD`                            | `pkg`                  | Desktop FreeBSD                       |
-| **BSD**                         | `DragonFly`                           | `pkg`                  | DragonFly BSD                         |
+| **DragonFly**                   | `DragonFlyBSD` / `DragonflyBSD`       | `pkg`                  | DragonFly BSD                         |
+| **DragonFly**                   | `Gentoo/DragonFlyBSD`                 | `emerge`               | DragonFly BSD (Gentoo Prefix)         |
 | **Solaris**                     | `Solaris` / `SunOS`                   | `pkg`                  | Solaris                               |
 | **Solaris**                     | `SmartOS`                             | `pkgin`                | Illumos distribution                  |
 | **Solaris**                     | `OmniOS` / `OpenIndiana`              | `pkg`                  | Illumos distributions                 |
