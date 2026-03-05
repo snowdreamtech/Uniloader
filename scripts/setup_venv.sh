@@ -81,8 +81,7 @@ EOF
 pip install -r "$PROJECT_ROOT/requirements.txt"
 
 # ---------------------------------------------------------------------
-# Cleanup & Feedback: Clear screen and provide confirmation.
+# Cleanup & Feedback: provide confirmation.
 # ---------------------------------------------------------------------
-clear
 echo "Virtual environment setup completed."
 echo "Venv is located at: $VENV_DIR"
