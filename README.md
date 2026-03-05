@@ -4,7 +4,13 @@
 
 # Unified Loader System - Enterprise Ansible Framework
 
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![GitHub Actions Lint](https://github.com/snowdreamtech/Uniloader/actions/workflows/lint.yml/badge.svg)](https://github.com/snowdreamtech/Uniloader/actions/workflows/lint.yml)
+[![GitHub Actions CI](https://github.com/snowdreamtech/Uniloader/actions/workflows/ci.yml/badge.svg)](https://github.com/snowdreamtech/Uniloader/actions/workflows/ci.yml)
+[![GitHub Actions CD](https://github.com/snowdreamtech/Uniloader/actions/workflows/cd.yml/badge.svg)](https://github.com/snowdreamtech/Uniloader/actions/workflows/cd.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/snowdreamtech/Uniloader?include_prereleases&sort=semver)](https://github.com/snowdreamtech/Uniloader/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![CodeSize](https://img.shields.io/github/languages/code-size/snowdreamtech/Uniloader)](https://github.com/snowdreamtech/Uniloader)
+[![Dependabot Enabled](https://img.shields.io/badge/Dependabot-Enabled-brightgreen?logo=dependabot)](https://github.com/snowdreamtech/Uniloader/blob/main/.github/dependabot.yml)
 
 A production-grade, cross-distribution Ansible framework implementing the **Unified Loader System** architecture. Supports Alpine, Debian/Ubuntu, and RHEL/CentOS with consistent APIs across native packages and container runtimes.
 
