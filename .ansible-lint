@@ -9,7 +9,6 @@ warn_list:
 
 # Paths to exclude from linting
 exclude_paths:
-  # Python
   - .venv/
   - venv/
   - env/
@@ -20,8 +19,6 @@ exclude_paths:
   - .nuxt/
   - .output/
   - dist/
-
-  # Go & PHP
   - vendor/
   - out/
   - target/
@@ -40,26 +37,21 @@ skip_list:
   - no-handler
   - name[missing]
   - name[template]
-  - fqcn-builtins # Fully Qualified Collection Names are auto-fixed via AST tools
-  - yaml # Prevent ansible-lint from altering established YAML formatting conventions
-  - yaml[line-length] # 80-char limit is unreasonable for Ansible tasks with URLs, long shell commands, or Jinja2 syntax
-  - no-changed-when # The loader framework is declarative and does not require explicit changed_when evaluations
+  - fqcn-builtins
+  - yaml[line-length]
+  - no-changed-when
   - risky-file-permissions
   - command-instead-of-shell
-  - var-naming # The project maintains its own custom variable naming conventions outside the lint scope
-  - meta-no-info # Role metadata (meta/main.yml) is not necessary for the current architectural pattern
+  - var-naming
+  - meta-no-info
 
-# Custom rule directories to load
 rulesdir:
   - .ansible-lint-rules
 
-# Specific rules to force-enable (those that are otherwise not in the base profile)
 enable_list:
   - fqcn
   - command-instead-of-module
 
-# Mock modules that are external or unavailable during the static analysis phase
 mock_modules:
   - community.docker.docker_container
   - containers.podman.podman_container
-# Using enable_list is sufficient for default rules.
