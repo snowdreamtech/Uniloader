@@ -1,4 +1,4 @@
-name: Ansible CD
+name: Uniloader CD
 
 on:
   push:
