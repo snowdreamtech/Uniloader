@@ -1,3 +1,4 @@
+---
 # =====================================================================
 # roles/bootstrap/tasks/python/main.yml
 #
@@ -15,7 +16,6 @@
 #       node_tags: ["control"]
 #
 # =====================================================================
----
 # ---------------------------------------------------------------------
 # Controller: Execute specialized venv and runtime setup for the
 # Ansible Control Node.
