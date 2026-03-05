@@ -23,3 +23,10 @@ Continue, Junie, etc.). This file is a redirect entry point —
 the actual rules live in `.agent/rules/` as the Single Source of Truth.
 
 > **Failure to follow the rules inside `.agent/rules/` is completely unacceptable.**
+
+## Active Technologies
+- Ansible 2.14+ (Python 3.9+) + `ansible-core`, Docker (for testing) (001-uls-framework)
+- N/A (Stateless automation) (001-uls-framework)
+
+## Recent Changes
+- 001-uls-framework: Added Ansible 2.14+ (Python 3.9+) + `ansible-core`, Docker (for testing)
