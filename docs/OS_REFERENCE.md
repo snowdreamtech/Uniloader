@@ -158,7 +158,35 @@ It is highly recommended to include system architecture variables when loading s
 # Result: Debian-aarch64.yml or RedHat-x86_64.yml
 ```
 
-## 4. Debug Command
+## 4. Network Operating Systems (NOS)
+
+Ansible is heavily used for network automation. For these platforms, OS identification typically uses `ansible_network_os` instead of `ansible_os_family`.
+
+| Platform / Vendor      | `ansible_network_os`          | Connection Type           | Description                       |
+| :--------------------- | :---------------------------- | :------------------------ | :-------------------------------- |
+| **Cisco IOS / IOS-XE** | `cisco.ios.ios`               | `network_cli`             | Cisco Routers & Switches          |
+| **Cisco NX-OS**        | `cisco.nxos.nxos`             | `network_cli` / `httpapi` | Cisco Nexus Switches              |
+| **Cisco IOS-XR**       | `cisco.iosxr.iosxr`           | `network_cli`             | Cisco Service Provider Routers    |
+| **Juniper**            | `junipernetworks.junos.junos` | `netconf` / `network_cli` | Junos OS (QFX, EX, SRX, MX)       |
+| **Arista**             | `arista.eos.eos`              | `network_cli` / `httpapi` | Arista EOS Switches               |
+| **F5 Networks**        | `f5networks.f5_modules.tmsh`  | `httpapi`                 | F5 BIG-IP Load Balancers          |
+| **Palo Alto**          | `paloaltonetworks.panos`      | `httpapi`                 | PAN-OS Firewalls                  |
+| **Fortinet**           | `fortinet.fortios.fortios`    | `httpapi`                 | FortiOS Firewalls                 |
+| **MikroTik**           | `community.routeros.routeros` | `network_cli`             | MikroTik RouterOS                 |
+| **VyOS**               | `vyos.vyos.vyos`              | `network_cli`             | Open Source Router (Debian based) |
+
+## 5. Specialized Infrastructure & Hypervisors
+
+Some highly specialized enterprise environments rely on custom connection plugins or represent unique target OS architectures:
+
+| Environment          | Supported Via                    | Notes                                                  |
+| :------------------- | :------------------------------- | :----------------------------------------------------- |
+| **VMware ESXi**      | `vmware_guest` / `esxi_hostname` | Managed via vCenter/ESXi APIs, not standard SSH.       |
+| **IBM i (AS/400)**   | `ibm.power_ibmi` collection      | Managed via SSH but uses PASE environment.             |
+| **OpenVMS**          | `community.general`              | Very legacy/niche, requires specific python SSH setup. |
+| **z/OS (Mainframe)** | `ibm.ibm_zos_core`               | IBM Z mainframes.                                      |
+
+## 6. Debug Command
 
 Run this to see exactly how Ansible identifies your current host:
 
