@@ -44,7 +44,7 @@
 # Maintenance: Upgrade the pip package manager to the latest version.
 # ---------------------------------------------------------------------
 - name: "Upgrade pip in venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install --upgrade pip"
+  ansible.builtin.command: '"{{ ansible_python_interpreter }}" -m pip install --upgrade pip'
   become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
@@ -52,7 +52,7 @@
 # Maintenance: Upgrade essential build tools (wheel, setuptools).
 # ---------------------------------------------------------------------
 - name: "Install wheel and setuptools {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install --upgrade wheel setuptools"
+  ansible.builtin.command: '"{{ ansible_python_interpreter }}" -m pip install --upgrade wheel setuptools'
   become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
@@ -60,7 +60,7 @@
 # Installation: Deploy specific Python packages into the environment.
 # ---------------------------------------------------------------------
 - name: "Install additional pip packages {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install {{ python_package }}"
+  ansible.builtin.command: '"{{ ansible_python_interpreter }}" -m pip install {{ python_package }}'
   loop: "{{ python_runtime_packages }}"
   loop_control:
     loop_var: python_package

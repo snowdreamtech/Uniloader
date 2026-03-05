@@ -42,7 +42,7 @@
 # Installation: Deploy the specified or latest version of ansible-core.
 # ---------------------------------------------------------------------
 - name: "Install ansible-core (latest) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install ansible-core"
+  ansible.builtin.command: '"{{ ansible_python_interpreter }}" -m pip install ansible-core'
   when:
     - ansible_core_version is not defined
       or ansible_core_version | trim | length == 0
@@ -50,7 +50,7 @@
   changed_when: false
 
 - name: "Install ansible-core (specific version) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install ansible-core=={{ ansible_core_version }}"
+  ansible.builtin.command: '"{{ ansible_python_interpreter }}" -m pip install ansible-core=={{ ansible_core_version }}'
   when:
     - ansible_core_version is defined
       and ansible_core_version | trim | length > 0
