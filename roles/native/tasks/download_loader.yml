@@ -1,0 +1,48 @@
+---
+# =====================================================================
+# roles/native/tasks/download_loader.yml
+#
+# Purpose:
+#   Unified file acquisition engine.
+#   Efficiently downloads files via HTTP/HTTPS with integrated
+#   checksum validation and retry logic.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: download_loader
+#     vars:
+#       url: "https://example.com/binary"
+#       dest: "/usr/local/bin/binary"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: download_loader
+#     vars:
+#       url: "https://github.com/fastfetch-cli/fastfetch/releases/download/2.34.1/fastfetch-linux-amd64.tar.gz"
+#       dest: "/tmp/fastfetch.tar.gz"
+#       file_desc: "Fastfetch release archive"
+#       mode: "0644"
+#       checksum: "sha256:887895e6f6631ad18cf145d29094762c9540a027387cc2fa9352601ba4726d9d"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Invoke the 'get_url' module to retrieve the specified
+# resource. Includes automatic retries to handle transient network issues.
+# ---------------------------------------------------------------------
+- name: "Download {{ file_desc | default(dest, true) }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ url }}"
+    dest: "{{ dest }}"
+    mode: "{{ mode | default('0644', true) }}"
+    checksum: "{{ checksum | default(omit) }}"
+  register: download_result
+  retries: 3
+  delay: 2
+  until: download_result is succeeded
+  become: "{{ become_enabled }}"
+  when:
+    - url is defined
+    - dest is defined

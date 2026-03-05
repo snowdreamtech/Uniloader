@@ -1,0 +1,126 @@
+---
+# =====================================================================
+# roles/native/tasks/command_loader/execute.yml
+#
+# Purpose:
+#   Core execution logic for shell and direct command modes.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Debugging: If dry-run mode is enabled, print all resolved variables
+# without executing any commands on the target.
+# ---------------------------------------------------------------------
+- name: "Audit: CMD_DRYRUN {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      [DRY RUN] command_loader
+      selected_command: {{ selected_command }}
+      candidates:
+      {{ command_candidates | to_nice_yaml | indent(6) }}
+      args: {{ command_args | default({}, true) }}
+      shell: {{ command_shell | default(false, true) }}
+      become: "{{ command_become | default(false, true) }}"
+      timeout: {{ command_timeout | default('ansible_default', true) }}
+      retries: {{ command_retries | default(1, true) }}
+      retry_delay: {{ command_retry_delay | default(1, true) }}
+
+# ---------------------------------------------------------------------
+# Execution (Shell Mode): Run commands through the platform shell
+# (e.g., /bin/bash). Used for commands with pipes or redirects.
+# ---------------------------------------------------------------------
+- name: "Execute candidate command (shell mode) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  vars:
+    _become: "{{ command_become | default(false, true) }}"
+    _timeout: "{{ command_timeout | default(omit) }}"
+    _retries: "{{ (command_retries | default(1, true)) | int }}"
+    _retry_delay: "{{ (command_retry_delay | default(1, true)) | int }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} {{ item }}"
+  args: "{{ command_args if command_args is defined else omit }}"
+  register: shell_results
+  changed_when: "{{ command_changed_when | default(true, true) }}"
+  failed_when: false
+  become: "{{ _become }}"
+  timeout: "{{ _timeout }}"
+  retries: "{{ _retries }}"
+  delay: "{{ _retry_delay }}"
+  until: shell_results.rc == 0
+  when:
+    - not (command_dry_run | default(false, true))
+    - command_shell | default(false, true)
+  loop: "{{ command_candidates }}"
+  loop_control:
+    loop_var: "item"
+
+- name: "Record failed shell candidates {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    command_failures: >-
+      {{
+        command_failures
+        + [
+            {
+              'candidate': item_result.item,
+              'rc': item_result.rc,
+              'stdout': item_result.stdout,
+              'stderr': item_result.stderr
+            }
+          ]
+      }}
+  loop: "{{ shell_results.results | selectattr('rc', 'ne', 0) | list }}"
+  loop_control:
+    loop_var: "item_result"
+  when:
+    - command_shell | default(false, true)
+    - not (command_dry_run | default(false, true))
+    - shell_results.results is defined
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Execution (Command Mode): Run commands directly as executables.
+# Preferred for security and performance if shell features aren't needed.
+# ---------------------------------------------------------------------
+- name: "Execute candidate command (command mode) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  vars:
+    _become: "{{ command_become | default(false, true) }}"
+    _timeout: "{{ command_timeout | default(omit) }}"
+    _retries: "{{ (command_retries | default(1, true)) | int }}"
+    _retry_delay: "{{ (command_retry_delay | default(1, true)) | int }}"
+  ansible.builtin.command: "{{ item }}"
+  args: "{{ command_args if command_args is defined else omit }}"
+  register: command_results
+  changed_when: "{{ command_changed_when | default(true, true) }}"
+  failed_when: false
+  become: "{{ _become }}"
+  timeout: "{{ _timeout }}"
+  retries: "{{ _retries }}"
+  delay: "{{ _retry_delay }}"
+  until: command_results.rc == 0
+  when:
+    - not (command_dry_run | default(false, true))
+    - not (command_shell | default(false, true))
+  loop: "{{ command_candidates }}"
+  loop_control:
+    loop_var: "item"
+
+- name: "Record failed command candidates {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    command_failures: >-
+      {{
+        command_failures
+        + [
+            {
+              'candidate': item_result.item,
+              'rc': item_result.rc,
+              'stdout': item_result.stdout,
+              'stderr': item_result.stderr
+            }
+          ]
+      }}
+  loop: "{{ command_results.results | selectattr('rc', 'ne', 0) | list }}"
+  loop_control:
+    loop_var: "item_result"
+  when:
+    - not (command_shell | default(false, true))
+    - not (command_dry_run | default(false, true))
+    - command_results.results is defined
+  tags: ["always"]

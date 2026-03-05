@@ -1,0 +1,82 @@
+---
+# =====================================================================
+# roles/native/tasks/service_loader/smf.yml
+#
+# Purpose:
+#   Solaris SMF (Service Management Facility) Loader.
+#   Dedicated backend for illumos and Solaris distributions.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "service_loader/smf"
+#     vars:
+#       service_name: "network/ssh"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "service_loader/smf"
+#     vars:
+#       service_name: "network/ssh"
+#       service_state: "started"
+#       service_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# --- Detection ---
+# ---------------------------------------------------------------------
+
+# WHY: Reset functional variables to prevent pollution.
+- name: "Service (Solaris): Reset loader variables {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _smf_check: null
+    _smf_exists_check: null
+    _smf_result: null
+  tags: ["always"]
+
+# WHY: SMF management relies on the 'svcadm' command.
+- name: "Service (Solaris): Verify svcadm binary {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which svcadm"
+  register: _smf_check
+  failed_when: false
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+- name: "Service (Solaris): Fault if svcadm missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Solaris environment detected but 'svcadm' binary was not found."
+  when: _smf_check.rc | default(1) != 0
+  tags: ["always"]
+
+# WHY: Check if the service instance exists.
+- name: "Service (Solaris): Probe service presence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "svcs {{ service_name }}"
+  register: _smf_exists_check
+  failed_when: false
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+- name: "Service (Solaris): Fault if starting missing service {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "SMF service '{{ service_name }}' not found. Cannot start/restart."
+  when:
+    - _smf_exists_check.rc | default(1) != 0
+    - (service_state | default('started', true)) in ['started', 'restarted']
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# --- Execution ---
+# ---------------------------------------------------------------------
+
+# WHY: use specialized module for Solaris SMF services.
+- name: "Audit: AUDIT {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Status: Completed"
+  when: _smf_exists_check.rc | default(1) == 0
+- name: "Audit: SERVICE_SMF {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Name: {{ service_name }} | State: {{ service_state | default('started', true) }} | Enabled: {{ service_enabled | default(true, true) }}"

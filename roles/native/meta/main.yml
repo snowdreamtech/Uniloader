@@ -1,0 +1,27 @@
+---
+# =====================================================================
+# roles/native/meta/main.yml
+#
+# Purpose:
+#   Metadata for the native infrastructure layer.
+#
+# =====================================================================
+
+galaxy_info:
+  author: "snowdreamtech"
+  description: "Unified cross-distribution native application loader."
+  license: "MIT"
+  min_ansible_version: "2.14"
+  platforms:
+    - name: "EL"
+      versions: ["8", "9"]
+    - name: "Debian"
+      versions: ["bookworm", "bullseye"]
+    - name: "Ubuntu"
+      versions: ["focal", "jammy", "noble"]
+    - name: "Alpine"
+      versions: ["all"]
+    - name: "MacOSX"
+      versions: ["all"]
+
+dependencies: []

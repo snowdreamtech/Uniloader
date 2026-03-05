@@ -1,0 +1,122 @@
+---
+# =====================================================================
+# roles/native/tasks/group_loader/darwin.yml
+#
+# Purpose:
+#   macOS specific group management implementation.
+#   Uses 'group' module and dscl/dseditgroup for advanced operations.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pre-checks: Environment Integrity
+# ---------------------------------------------------------------------
+
+# WHY: macOS requires 'dscl' and 'dseditgroup' for reliable group management.
+- name: "Group (macOS): Verify dscl existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which dscl"
+  register: _dscl_check
+  failed_when: false
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+- name: "Group (macOS): Verify dseditgroup existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which dseditgroup"
+  register: _dseditgroup_check
+  failed_when: false
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+- name: "Group (macOS): Fail if essential binaries missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "macOS environment detected but 'dscl' or 'dseditgroup' binary was not found."
+  when: _dscl_check.rc != 0 or _dseditgroup_check.rc != 0
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Detection: Check if the specified group already exists using dscl.
+# ---------------------------------------------------------------------
+- name: "Check if group exists (macos) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dscl . -read /Groups/{{ group_name }}"
+  register: group_exists_check_macos
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "Mark group as existing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    group_already_exists: true
+  when: group_exists_check_macos.rc | default(1) == 0
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validation: Check for GID availability using dscl.
+# ---------------------------------------------------------------------
+- name: "Check if GID {{ group_gid | default(omit) }} already exists (macos) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dscl . -search /Groups PrimaryGroupID {{ group_gid }}"
+  register: gid_conflict_check_macos
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: group_gid is defined
+  tags: ["always"]
+
+- name: "Mark GID conflict {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    group_gid_conflict: true
+  when:
+    - group_gid is defined
+    - gid_conflict_check_macos.stdout | default('') != ""
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Safety Logic
+# ---------------------------------------------------------------------
+- name: "Skip group creation due to GID conflict {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    group_skip: true
+  when: group_gid_conflict | default(false, true)
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Execution: Create or manage group
+# ---------------------------------------------------------------------
+- name: "Ensure group {{ group_name }} exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.group:
+    name: "{{ group_name }}"
+    gid: "{{ group_gid | default(omit) }}"
+    state: "present"
+  register: group_result
+  retries: 3
+  delay: 2
+  until: group_result is succeeded
+  become: "{{ become_enabled }}"
+  when: group_skip is not defined
+
+# ---------------------------------------------------------------------
+# Lifecycle: Manage Membership
+# ---------------------------------------------------------------------
+- name: "Add members to group {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.user:
+    name: "{{ item }}"
+    groups: "{{ group_name }}"
+    append: true
+  loop: "{{ group_members | default([], true) }}"
+  become: "{{ become_enabled }}"
+  when:
+    - group_members is defined
+    - group_skip is not defined
+  changed_when: false
+
+- name: "Remove members from group (macos) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dseditgroup -o edit -d {{ item }} -t user {{ group_name }}"
+  register: remove_member_result_macos
+  failed_when: false
+  loop: "{{ group_remove_members | default([], true) }}"
+  become: "{{ become_enabled }}"
+  when:
+    - group_remove_members is defined
+    - group_skip is not defined
+  changed_when: false

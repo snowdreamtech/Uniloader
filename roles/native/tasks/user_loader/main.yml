@@ -1,0 +1,40 @@
+---
+# =====================================================================
+# roles/native/tasks/user_loader/main.yml
+#
+# Purpose:
+#   Entry point for user management tasks.
+#   Delegates execution to the OS-specific loader.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_loader/main"
+#     vars:
+#       user_name: "deploy"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_loader/main"
+#     vars:
+#       user_name: "deploy"
+#       user_uid: 1500
+#       user_gid: 1500
+#       user_shell: "/bin/bash"
+#       user_groups: ["docker", "www-data"]
+#       user_authorized_keys:
+#         - "ssh-ed25519 AAAAC3... deploy@host"
+#       user_sudo: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to select the appropriate user configuration
+# tasks (default/darwin/alpine/etc) based on the target OS.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "user_loader"

@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/native/tasks/package_clean/default.yml
+#
+# Purpose:
+#   Generic package maintenance fallback.
+# =====================================================================
+
+- name: "Package Clean (Generic): Maintenance report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "System maintenance (Clean/Autoremove) not explicitly implemented for {{ os_family }}. Skipping."
+  when: package_clean_cache | bool or package_autoremove | bool

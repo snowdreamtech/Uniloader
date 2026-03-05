@@ -1,0 +1,56 @@
+---
+# =====================================================================
+# roles/native/tasks/user_loader/common_sudo.yml
+#
+# Purpose:
+#   Common Sudoers.d privilege management.
+#   Shared across Linux and macOS.
+# =====================================================================
+
+# WHY: Group ownership of sudoers files varies (root on Linux, wheel on macOS).
+- name: "User (Common): Resolve sudo group {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _user_sudo_group: "{{ 'wheel' if os_family == 'darwin' else 'root' }}"
+  tags: ["always"]
+
+# WHY: Ensure the directory for drop-in sudoers configurations exists.
+- name: "User (Common): Ensure sudoers.d directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/etc/sudoers.d"
+    state: directory
+    owner: "root"
+    group: "{{ _user_sudo_group }}"
+    mode: "0750"
+  when:
+    - sudo_available | default(false, true)
+    - user_sudo | default(false, true)
+    - user_skip is not defined
+  become: "{{ become_enabled }}"
+
+# WHY: On macOS, we might need to explicitly include the sudoers.d directory.
+- name: "User (Common): Ensure sudoers.d is included in sudoers {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.lineinfile:
+    path: "/etc/sudoers"
+    line: "#includedir /etc/sudoers.d"
+    validate: "/usr/sbin/visudo -cf %s"
+  when:
+    - os_family == 'darwin'
+    - sudo_available | default(false, true)
+    - user_sudo | default(false, true)
+    - user_skip is not defined
+  become: "{{ become_enabled }}"
+
+# WHY: Grant nopasswd sudo binary access to the specialized user.
+- name: "User (Common): Grant sudo privileges {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/{{ user_name }}"
+    content: "{{ user_name }} ALL=(ALL) NOPASSWD:ALL"
+    owner: "root"
+    group: "{{ _user_sudo_group }}"
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
+  when:
+    - sudo_available | default(false, true)
+    - user_sudo | default(false, true)
+    - user_skip is not defined
+  become: "{{ become_enabled }}"

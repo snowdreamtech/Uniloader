@@ -1,0 +1,54 @@
+---
+# =====================================================================
+# roles/native/tasks/file_loader.yml
+#
+# Purpose:
+#   Unified template deployment engine.
+#   Renders and deploys a Jinja2 template to the target destination
+#   with integrated validation and backup support.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: file_loader
+#     vars:
+#       src: "config.conf.j2"
+#       dest: "/etc/config.conf"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: file_loader
+#     vars:
+#       src: "myapp.conf.j2"
+#       dest: "/etc/myapp/myapp.conf"
+#       template_desc: "MyApp production configuration"
+#       owner: "myapp"
+#       group: "myapp"
+#       mode: "0640"
+#       validate_command: "myapp --check-config %s"
+#       backup: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Render the Jinja2 template and deploy it to the host.
+# Supports owner/group/mode assignment and optional config validation.
+# ---------------------------------------------------------------------
+- name: "Deploy template {{ template_desc | default(dest, true) }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "{{ src }}"
+    dest: "{{ dest }}"
+    owner: "{{ owner | default('root', true) }}"
+    group: "{{ group | default('root', true) }}"
+    mode: "{{ mode | default('0644', true) }}"
+    validate: "{{ validate_command | default(omit) }}"
+    backup: "{{ backup | default(false, true) }}"
+  register: template_result
+  retries: 3
+  delay: 2
+  until: template_result is succeeded
+  become: "{{ become_enabled }}"
+  when:
+    - src is defined
+    - dest is defined

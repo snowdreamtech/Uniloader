@@ -1,0 +1,102 @@
+---
+# =====================================================================
+# roles/native/tasks/user_loader/darwin.yml
+#
+# Purpose:
+#   macOS specific user/group management implementation.
+#   Uses standard 'user' and 'group' modules which abstract dscl.
+#   Includes special handling for home directories and groups.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_loader/main"
+#     vars:
+#       user_name: "deploy"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_loader/main"
+#     vars:
+#       user_name: "deploy"
+#       user_uid: 501
+#       user_shell: "/bin/zsh"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Normalization: Resolve the user's home directory path for macOS.
+# ---------------------------------------------------------------------
+- name: "Resolve user home directory path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    ansible_user_home: "{{ user_home | default('/Users/' ~ user_name) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Detection: Check if the user already exists on the system.
+# ---------------------------------------------------------------------
+- name: "Check if user exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "id {{ user_name }}"
+  register: user_exists_check
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "Mark user as existing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    user_already_exists: true
+  when: user_exists_check.rc == 0
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validation: Conflict checks (uid/gid) are skipped on macOS for simplicity
+# or require complex dscl queries which 'user' module handles gracefully.
+# ---------------------------------------------------------------------
+
+# ---------------------------------------------------------------------
+# Group Management
+# ---------------------------------------------------------------------
+- name: "Ensure primary group exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.group:
+    name: "{{ user_name }}"
+    gid: "{{ user_gid | default(omit) }}"
+    state: "present"
+  when:
+    - user_already_exists is not defined
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# User Management
+# ---------------------------------------------------------------------
+- name: "Ensure user {{ user_name }} exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.user:
+    name: "{{ user_name }}"
+    shell: "{{ user_shell | default('/bin/zsh') }}"
+    groups: "{{ user_groups | default([]) }}"
+    uid: "{{ user_uid | default(omit) }}"
+    group: "{{ user_name }}"
+    home: "{{ ansible_user_home }}"
+    comment: "{{ user_comment | default(omit) }}"
+    password: "{{ (user_password | default('') | length > 0) | ternary(user_password | password_hash('sha512'), omit) }}"
+    state: "present"
+    create_home: "{{ user_create_home | default(true) }}"
+    update_password: on_create
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Configuration: SSH & Sudo (Shared Logic)
+# ---------------------------------------------------------------------
+
+# WHY: Reusing common logic for security and identity configuration.
+- name: "User (macOS): Include SSH configuration"
+  ansible.builtin.include_tasks: "common_ssh.yml"
+  vars:
+    # On macOS, primary user group is typically 'staff' for non-root users.
+    user_primary_group: "staff"
+  when: user_skip is not defined
+
+- name: "User (macOS): Include Sudo configuration"
+  ansible.builtin.include_tasks: "common_sudo.yml"
+  when: user_skip is not defined

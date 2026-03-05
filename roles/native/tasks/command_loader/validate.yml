@@ -1,0 +1,74 @@
+---
+# =====================================================================
+# roles/native/tasks/command_loader/validate.yml
+#
+# Purpose:
+#   Input validation and state initialization for the command loader.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure either a direct command string or a command
+# mapping is provided to the loader.
+# ---------------------------------------------------------------------
+- ansible.builtin.assert:
+    that:
+      - command is defined or command_map is defined
+    fail_msg: "Either 'command' or 'command_map' must be provided."
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validation: If using map mode, ensure the specific command name is
+# defined to look up the actual executable.
+# ---------------------------------------------------------------------
+- ansible.builtin.assert:
+    that:
+      - command_name is defined
+      - (command_name | string | length) > 0
+    fail_msg: "command_name is required when using command_map."
+  when:
+    - command is not defined
+  tags: ["always"]
+
+- ansible.builtin.assert:
+    that:
+      - command_map[command_name] is defined
+    fail_msg: "command_map does not contain key '{{ command_name }}'."
+  when:
+    - command is not defined
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Processing: Resolve the primary command string and build the list of
+# candidate commands (including fallbacks).
+# ---------------------------------------------------------------------
+- name: "Select primary command {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    selected_command: >-
+      {{
+        command
+          | default(command_map[command_name], true)
+          | trim
+      }}
+  tags: ["always"]
+
+- name: "Build command candidate list {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    command_candidates: >-
+      {{
+        [selected_command]
+        + (command_fallback | default([], true))
+      }}
+  tags: ["always"]
+
+- name: "Fail when no commands are available {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "No commands available to execute."
+  when:
+    - command_candidates | length == 0
+  tags: ["always"]
+
+- name: "Initialize fallback failure log {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    command_failures: []
+  tags: ["always"]

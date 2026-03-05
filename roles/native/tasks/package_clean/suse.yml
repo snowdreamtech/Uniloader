@@ -1,0 +1,38 @@
+---
+# =====================================================================
+# roles/native/tasks/package_clean/suse.yml
+#
+# Purpose:
+#   SUSE-specific package maintenance.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pre-checks: Environment Integrity
+# ---------------------------------------------------------------------
+
+# WHY: We verify 'zypper' is available before attempting maintenance.
+- name: "Package Clean (SUSE): Verify zypper existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which zypper"
+  register: _zypper_check
+  failed_when: false
+  changed_when: false
+  become: false
+
+- name: "Package Clean (SUSE): Fail if zypper missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "SUSE Linux detected but 'zypper' binary was not found."
+  when: _zypper_check.rc != 0
+
+# ---------------------------------------------------------------------
+# Execution
+# ---------------------------------------------------------------------
+
+- name: "Package Clean (SUSE): Clean cache (command) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "zypper clean --all"
+  when:
+    - package_clean_cache | bool
+    - _zypper_check.rc == 0
+  become: "{{ become_enabled }}"
+  changed_when: false
+  vars:
+    fingerprint: "package_clean_suse_cache_{{ package_name | default('unknown', true) }}"

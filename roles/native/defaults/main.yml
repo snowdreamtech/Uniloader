@@ -1,0 +1,13 @@
+---
+# =====================================================================
+# roles/native/defaults/main.yml
+#
+# Purpose:
+#   Primary default variables for the native infrastructure layer.
+#   Note: Historical repository and tag mapping variables have been
+#   relocated to 'init' and 'context' roles respectively for
+#   centralized architectural management.
+#
+# =====================================================================
+
+# =====================================================================

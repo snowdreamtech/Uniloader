@@ -1,0 +1,73 @@
+---
+# =====================================================================
+# roles/native/tasks/account_loader/main.yml
+#
+# Purpose:
+#   Simplified entrypoint for unified system account orchestration.
+#   Abstracts the sequential creation of groups and users, ensuring
+#   that primary groups exist before users are created.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "account_loader/main"
+#     vars:
+#       account_user_name: "deploy"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "account_loader/main"
+#     vars:
+#       account_user_name: "app_user"
+#       account_user_uid: 1005
+#       account_group_name: "app_group"
+#       account_group_gid: 1005
+#       account_user_sudo: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure that at least one identity (user or group) is specified.
+# ---------------------------------------------------------------------
+- name: "Validate account loader input {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Mandatory input 'account_user_name' or 'account_group_name' is missing."
+  when:
+    - account_user_name is not defined
+    - account_group_name is not defined
+
+# ---------------------------------------------------------------------
+# Group Orchestration: Creation of the primary or secondary group
+# using the specialized group_loader.
+# ---------------------------------------------------------------------
+- name: "Orchestrate group creation {{ account_group_name | default('', true) }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "group_loader/main"
+  vars:
+    group_name: "{{ account_group_name }}"
+    group_gid: "{{ account_group_gid | default(omit) }}"
+    group_members: "{{ [account_user_name] if account_user_name is defined else [] }}"
+  when:
+    - account_group_name is defined
+
+# ---------------------------------------------------------------------
+# User Orchestration: Provisioning of the user account and associated
+# permissions (SSH/Sudo) via the specialized user_loader.
+# ---------------------------------------------------------------------
+- name: "Orchestrate user creation {{ account_user_name | default('', true) }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "user_loader/main"
+  vars:
+    user_name: "{{ account_user_name }}"
+    user_uid: "{{ account_user_uid | default(omit) }}"
+    user_gid: "{{ account_group_gid | default(omit) }}"
+    user_shell: "{{ account_user_shell | default('/bin/bash', true) }}"
+    user_groups: "{{ account_user_groups | default([], true) }}"
+    user_authorized_keys: "{{ account_user_authorized_keys | default(omit) }}"
+    user_ssh_config: "{{ account_user_ssh_config | default(omit) }}"
+    user_sudo: "{{ account_user_sudo | default(false, true) }}"
+  when:
+    - account_user_name is defined

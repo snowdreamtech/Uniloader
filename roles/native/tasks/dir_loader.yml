@@ -1,0 +1,47 @@
+---
+# =====================================================================
+# roles/native/tasks/dir_loader.yml
+#
+# Purpose:
+#   Standardized directory management engine.
+#   Ensures that target directories are created with consistent
+#   ownership, permissions, and auditing.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: dir_loader
+#     vars:
+#       dir_path: "/var/lib/myapp"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: dir_loader
+#     vars:
+#       dir_path: "/opt/myapp/data"
+#       dir_desc: "Main application data storage"
+#       dir_mode: "0750"
+#       dir_owner: "myapp"
+#       dir_group: "myapp"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Create the directory if it does not exist, or synchronize
+# its attributes (owner, group, mode) if it does.
+# ---------------------------------------------------------------------
+- name: "Ensure directory {{ dir_desc | default(dir_path, true) }} exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ dir_path }}"
+    state: "directory"
+    mode: "{{ dir_mode | default('0755', true) }}"
+    owner: "{{ dir_owner | default('root', true) }}"
+    group: "{{ dir_group | default('root', true) }}"
+  register: dir_result
+  retries: 3
+  delay: 2
+  until: dir_result is succeeded
+  become: "{{ become_enabled }}"
+  when:
+    - dir_path is defined

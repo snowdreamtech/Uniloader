@@ -1,0 +1,304 @@
+---
+# =====================================================================
+# roles/native/tasks/user_rename_loader/default.yml
+#
+# Purpose:
+#   Standard Linux user renaming implemented.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_rename_loader/main"
+#     vars:
+#       old_user: "ubuntu"
+#       new_user: "deployer"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_rename_loader/main"
+#     vars:
+#       old_user: "ubuntu"
+#       new_user: "deployer"
+#       become_enabled: true
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pre-checks: Environment Integrity
+# ---------------------------------------------------------------------
+
+# WHY: User renaming requires specific binaries to be present on the host.
+- name: "User Rename (Default): Verify management binaries existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "which usermod && which groupmod && which pkill"
+  register: _rename_bin_check
+  failed_when: false
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+- name: "User Rename (Default): Fail if critical binaries missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Critical renaming binaries (usermod, groupmod, pkill) are missing. Rename aborted."
+  when: _rename_bin_check.rc != 0
+  tags: ["always"]
+
+- name: "User Rename (Default): Check loginctl existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which loginctl"
+  register: _loginctl_check
+  failed_when: false
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Protection: Safety Guards
+# ---------------------------------------------------------------------
+- name: "User Rename (Default): Get current username"
+  ansible.builtin.command: "whoami"
+  register: _rename_current_user
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+- name: "User Rename (Default): Prevent self-rename"
+  ansible.builtin.fail:
+    msg: "Cannot rename the current user '{{ old_user }}' while it is in use by this session."
+  when: old_user == _rename_current_user.stdout
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Detection: Status exploration
+# ---------------------------------------------------------------------
+- name: "User Rename (Default): Check if old_user exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "id {{ old_user }}"
+  register: _old_user_check
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "User Rename (Default): Check if new_user exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "id {{ new_user }}"
+  register: _new_user_check
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Normalization: Resolve existing state
+# ---------------------------------------------------------------------
+- name: "User Rename (Default): Set state facts"
+  ansible.builtin.set_fact:
+    old_user_exists: "{{ _old_user_check.rc == 0 }}"
+    new_user_exists: "{{ _new_user_check.rc == 0 }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Extraction: Getting metadata for the old user
+# ---------------------------------------------------------------------
+
+# WHY: We check for getent presence to choose the best extraction method.
+- name: "User Rename (Default): Check getent existence"
+  ansible.builtin.command: "which getent"
+  register: _getent_bin_check
+  failed_when: false
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+- name: "User Rename (Default): Get old_user info via getent {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.getent:
+    database: "passwd"
+    key: "{{ old_user }}"
+  register: _old_user_info_getent
+  failed_when: false
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - _getent_bin_check.rc == 0
+  tags: ["always"]
+
+- name: "User Rename (Default): Get old_user info via id/grep (fallback) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: |
+    UID_VAL=$(id -u {{ old_user }})
+    HOME_VAL=$(grep "^{{ old_user }}:" /etc/passwd | cut -d: -f6)
+    echo "uid=$UID_VAL"
+    echo "home=$HOME_VAL"
+  register: _old_user_info_fallback
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - _getent_bin_check.rc != 0 or (_old_user_info_getent.found is defined and not _old_user_info_getent.found)
+  tags: ["always"]
+
+- name: "User Rename (Default): Map metadata facts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    old_user_uid: "{{ _old_user_info_getent.passwd[old_user].1 if (_old_user_info_getent.found | default(false)) else (_old_user_info_fallback.stdout_lines | select('match', '^uid=') | first | split('=') | last) }}"
+    old_user_home: "{{ _old_user_info_getent.passwd[old_user].4 if (_old_user_info_getent.found | default(false)) else (_old_user_info_fallback.stdout_lines | select('match', '^home=') | first | split('=') | last) }}"
+  when: old_user_exists
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Security Warning: UID 1000 is often the primary user
+# ---------------------------------------------------------------------
+- name: "Audit: USER_RENAME {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      WARNING: User {{ old_user }} has UID=1000 (primary user).
+      Renaming this account may impact active SSH sessions and systemd user services.
+  when:
+    - old_user_exists
+    - old_user_uid | default(0, true) | int == 1000
+
+# ---------------------------------------------------------------------
+# Guard Clause: Prevent accidental overwriting
+# ---------------------------------------------------------------------
+- name: "User Rename (Default): Abort if new_user already exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "User {{ new_user }} already exists. Rename aborted for safety."
+  when:
+    - new_user_exists
+    - old_user_exists
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Guard Clause: Old user gone
+# ---------------------------------------------------------------------
+- name: "Audit: USER_RENAME {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "User {{ old_user }} does not exist. No rename required."
+  when:
+    - not old_user_exists
+
+# ---------------------------------------------------------------------
+# Preparation: Terminating sessions
+# ---------------------------------------------------------------------
+- name: "User Rename (Default): Terminate user session via loginctl {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "loginctl terminate-user {{ old_user }}"
+  register: _loginctl_result
+  failed_when: false
+  changed_when: "_loginctl_result.rc == 0"
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - _loginctl_check.rc == 0
+
+- name: "User Rename (Default): Force kill remaining processes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pkill -u {{ old_user }}"
+  register: _pkill_result
+  failed_when: false
+  changed_when: "_pkill_result.rc == 0"
+  become: "{{ become_enabled }}"
+  when: old_user_exists
+
+- name: "User Rename (Default): Wait for processes to exit"
+  ansible.builtin.pause:
+    seconds: 2
+  when: old_user_exists
+
+- name: "User Rename (Default): Force kill remaining processes (SIGKILL) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pkill -9 -u {{ old_user }}"
+  register: _pkill_9_result
+  failed_when: false
+  changed_when: "_pkill_9_result.rc == 0"
+  become: "{{ become_enabled }}"
+  when: old_user_exists
+
+- name: "User Rename (Default): Final check for user processes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pgrep -u {{ old_user }}"
+  register: _user_process_check
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: old_user_exists
+
+- name: "User Rename (Default): Abort if processes still running {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: |
+      User {{ old_user }} still has active processes ({{ _user_process_check.stdout }}).
+      Rename aborted.
+  when:
+    - old_user_exists
+    - _user_process_check is defined and _user_process_check.rc == 0
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Inspection: Filesystem check
+# ---------------------------------------------------------------------
+- name: "User Rename (Default): Check if home directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "{{ old_user_home }}"
+  register: _home_stat
+  when: old_user_exists
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Execution: Atomic rename
+# ---------------------------------------------------------------------
+- name: "User Rename (Default): Perform user rename (usermod) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "usermod -l {{ new_user }} {{ old_user }}"
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+
+- name: "User Rename (Default): Perform group rename (groupmod) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "groupmod -n {{ new_user }} {{ old_user }}"
+  failed_when: false
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+
+# ---------------------------------------------------------------------
+# Lifecycle: Home directory relocation
+# ---------------------------------------------------------------------
+
+# WHY: Some versions of usermod are picky about home directory moves if
+# processes were just killed. We try usermod first, and mv as fallback.
+- name: "User Rename (Default): Relocate home directory (primary) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "usermod -d /home/{{ new_user }} -m {{ new_user }}"
+  register: _usermod_move_result
+  failed_when: false
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+    - _home_stat.stat.exists | default(false, true)
+    - old_user_home != "/home/" ~ new_user
+
+- name: "User Rename (Default): Relocate home directory (manual fallback) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "mv {{ old_user_home }} /home/{{ new_user }}"
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+    - _home_stat.stat.exists | default(false, true)
+    - old_user_home != "/home/" ~ new_user
+    - _usermod_move_result.rc | default(0) != 0
+
+- name: "User Rename (Default): Ensure home directory path is updated in passwd {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "usermod -d /home/{{ new_user }} {{ new_user }}"
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+    - _usermod_move_result.rc | default(0) != 0
+
+# ---------------------------------------------------------------------
+# Cleanup: Permissions fix
+# ---------------------------------------------------------------------
+- name: "User Rename (Default): Fix new home directory ownership {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/home/{{ new_user }}"
+    owner: "{{ new_user }}"
+    group: "{{ new_user }}"
+    recurse: true
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+    - _home_stat.stat.exists | default(false, true)

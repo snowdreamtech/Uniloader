@@ -1,0 +1,35 @@
+---
+# =====================================================================
+# roles/native/tasks/cond_loader.yml
+#
+# Purpose:
+#   Simplified conditional execution wrapper.
+#   Allows for dynamic task inclusion based on complex boolean
+#   evaluations, providing a clean interface for logic branches.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: cond_loader
+#     vars:
+#       cond_block: "tasks/custom_setup.yml"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: cond_loader
+#     vars:
+#       cond_block: "tasks/debian_specific.yml"
+#       cond_when: "os_family == 'debian' and os_version_major | int >= 11"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Include the specified task file only if the condition
+# evaluates to true.
+# ---------------------------------------------------------------------
+- name: "Conditional include check: {{ cond_block }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "{{ cond_block }}"
+  when:
+    - cond_block is defined
+    - cond_when | default(true, true) | bool

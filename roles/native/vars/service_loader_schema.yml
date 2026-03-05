@@ -1,0 +1,18 @@
+---
+# =====================================================================
+# roles/native/vars/service_loader_schema.yml
+#
+# Purpose:
+#   Definition of the Service Loader variable schema.
+# =====================================================================
+
+service_loader_api_vars:
+  - service_name
+  - service_state
+  - service_enabled
+  - service_shell
+  - service_restart_policy
+
+# Internal state variables that should be reset between calls
+# service_name is an input parameter and should NOT be reset
+service_loader_internal_vars: []

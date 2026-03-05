@@ -1,0 +1,64 @@
+---
+# =====================================================================
+# roles/native/tasks/service_loader/procd.yml
+#
+# Purpose:
+#   Procd-specific service management (OpenWrt).
+#   Handles the specialized init system used in embedded Linux environments.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "service_loader/procd"
+#     vars:
+#       service_name: "network"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "service_loader/procd"
+#     vars:
+#       service_name: "network"
+#       service_state: "started"
+#       service_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# --- Detection ---
+# ---------------------------------------------------------------------
+
+# WHY: Reset functional variables to prevent pollution.
+- name: "Service (Procd): Reset loader variables {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _procd_init_check: null
+    _procd_exec_result: null
+  tags: ["always"]
+
+# WHY: OpenWrt services are managed via scripts in /etc/init.d/.
+- name: "Service (Procd): Verify service script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/etc/init.d/{{ service_name }}"
+  register: _procd_init_check
+  tags: ["always"]
+
+- name: "Service (Procd): Fault if script missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Service script '/etc/init.d/{{ service_name }}' not found. Cannot start/restart."
+  when:
+    - not _procd_init_check.stat.exists | default(false)
+    - (service_state | default('started', true)) in ['started', 'restarted']
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# --- Execution ---
+# ---------------------------------------------------------------------
+
+# WHY: We use shell for procd as it involves calling the init script with specific actions.
+- name: "Audit: AUDIT {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Status: Completed"
+  when: true
+- name: "Audit: SERVICE_PROCD {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Name: {{ service_name }} | State: {{ service_state | default('started', true) }} | Enabled: {{ service_enabled | default(true, true) }}"

@@ -1,0 +1,138 @@
+---
+# =====================================================================
+# roles/native/tasks/user_rename_loader/alpine.yml
+#
+# Purpose:
+#   Infrastructure logic managed by snowdreamtech.
+#
+# =====================================================================
+# ---------------------------------------------------------------------
+# Mode: Alpine Official Recommended Way (Manual Database Update)
+# ---------------------------------------------------------------------
+
+# WHY: Pure file editing is the standard way on Alpine (BusyBox).
+# We use the exact regex patterns and sequence provided by the user.
+- name: "User Rename (Alpine): Official manual implementation"
+  block:
+    # 1. Protection: Self-Rename Guard
+    - name: "User Rename (Alpine): Get current username"
+      ansible.builtin.command: "whoami"
+      register: _alpine_current_user
+      changed_when: false
+      become: false
+
+    - name: "User Rename (Alpine): Prevent self-rename"
+      ansible.builtin.fail:
+        msg: "Cannot rename the current user '{{ old_user }}' while it is in use by this session."
+      when: old_user == _alpine_current_user.stdout
+
+    # 2. Detection: Status exploration
+    - name: "User Rename (Alpine): Verify old user exists"
+      ansible.builtin.command: "id {{ old_user }}"
+      register: _alpine_old_check
+      failed_when: false
+      changed_when: false
+
+    - name: "User Rename (Alpine): Verify new user uniqueness"
+      ansible.builtin.command: "id {{ new_user }}"
+      register: _alpine_new_check
+      failed_when: false
+      changed_when: false
+
+    - name: "User Rename (Alpine): Abort if state is invalid"
+      ansible.builtin.fail:
+        msg: "Target user '{{ old_user }}' missing or '{{ new_user }}' already exists."
+      when: _alpine_old_check.rc != 0 or _alpine_new_check.rc == 0
+
+    # 3. Security: Handle Process Deadlocks
+    - name: "User Rename (Alpine): Terminate user processes (SIGTERM)"
+      ansible.builtin.command: "pkill -u {{ old_user }}"
+      failed_when: false
+      changed_when: false
+
+    - name: "User Rename (Alpine): Wait for processes to exit"
+      ansible.builtin.pause:
+        seconds: 2
+      when: _alpine_old_check.rc == 0
+
+    - name: "User Rename (Alpine): Force kill remaining processes (SIGKILL)"
+      ansible.builtin.command: "pkill -9 -u {{ old_user }}"
+      failed_when: false
+      changed_when: false
+
+    - name: "User Rename (Alpine): Verify no processes remains"
+      ansible.builtin.command: "pgrep -u {{ old_user }}"
+      register: _alpine_deadlock_check
+      failed_when: false
+      changed_when: false
+
+    - name: "User Rename (Alpine): Abort on process deadlock"
+      ansible.builtin.fail:
+        msg: "User '{{ old_user }}' still has active processes after SIGKILL. Rename aborted for safety."
+      when: _alpine_deadlock_check.rc == 0
+
+    # 4. Metadata: Extract old home path
+    - name: "User Rename (Alpine): Extract old home"
+      ansible.builtin.shell: "grep '^{{ old_user }}:' /etc/passwd | cut -d: -f6"
+      register: _alpine_old_home
+      changed_when: false
+
+    # 5. Execution: Atomic Database Transformation (User identity)
+    # NOTE: We use exact regex as requested (e.g. /^old:/ -> ansible: )
+    - name: "User Rename (Alpine): Update /etc/passwd (Username)"
+      ansible.builtin.replace:
+        path: "/etc/passwd"
+        regexp: "^{{ old_user }}:"
+        replace: "{{ new_user }}:"
+
+    - name: "User Rename (Alpine): Update /etc/shadow (Username)"
+      ansible.builtin.replace:
+        path: "/etc/shadow"
+        regexp: "^{{ old_user }}:"
+        replace: "{{ new_user }}:"
+
+    - name: "User Rename (Alpine): Update /etc/group (Primary Group)"
+      ansible.builtin.replace:
+        path: "/etc/group"
+        regexp: "^{{ old_user }}:"
+        replace: "{{ new_user }}:"
+
+    - name: "User Rename (Alpine): Update /etc/gshadow (Primary Group)"
+      ansible.builtin.replace:
+        path: "/etc/gshadow"
+        regexp: "^{{ old_user }}:"
+        replace: "{{ new_user }}:"
+      failed_when: false # gshadow is optional
+
+    - name: "User Rename (Alpine): Update Group Memberships (Auxiliary Groups)"
+      ansible.builtin.replace:
+        path: "/etc/group"
+        regexp: "(^|:|,){{ old_user }}(,|$)"
+        replace: "\\1{{ new_user }}\\2"
+
+    # 6. Lifecycle: Home Directory transformation
+    - name: "User Rename (Alpine): Move home folder (mv /home/old /home/new)"
+      ansible.builtin.command: "mv {{ _alpine_old_home.stdout }} /home/{{ new_user }}"
+      when:
+        - _alpine_old_home.stdout != ""
+        - _alpine_old_home.stdout != "/home/" ~ new_user
+      failed_when: false
+
+    - name: "User Rename (Alpine): Update home path in /etc/passwd"
+      ansible.builtin.replace:
+        path: "/etc/passwd"
+        regexp: "{{ _alpine_old_home.stdout }}"
+        replace: "/home/{{ new_user }}"
+      when:
+        - _alpine_old_home.stdout != ""
+        - _alpine_old_home.stdout.startswith('/')
+
+    - name: "User Rename (Alpine): Fix directory ownership"
+      ansible.builtin.file:
+        path: "/home/{{ new_user }}"
+        owner: "{{ new_user }}"
+        group: "{{ new_user }}"
+        recurse: true
+      when: _alpine_old_home.stdout != ""
+
+  become: "{{ become_enabled }}"

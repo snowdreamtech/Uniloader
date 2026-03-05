@@ -1,0 +1,57 @@
+---
+# =====================================================================
+# roles/native/tasks/package_clean/darwin.yml
+#
+# Purpose:
+#   macOS-specific package maintenance (Homebrew/MacPorts).
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pre-checks: Environment Integrity
+# ---------------------------------------------------------------------
+- name: "Package Clean (Darwin): Verify brew existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which brew"
+  register: _brew_check
+  failed_when: false
+  changed_when: false
+  become: false
+
+- name: "Package Clean (Darwin): Verify port existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which port"
+  register: _port_check
+  failed_when: false
+  changed_when: false
+  become: false
+
+# ---------------------------------------------------------------------
+# Homebrew Branch
+# ---------------------------------------------------------------------
+
+# WHY: Homebrew cleanup removes stale lock files and outdated
+# downloads for all formulae and casks.
+- name: "Package Clean (Darwin): Homebrew cleanup {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "brew cleanup"
+  when:
+    - package_clean_cache | bool
+    - os_pkg_mgr == 'homebrew'
+    - _brew_check.rc == 0
+  become: false
+  changed_when: false
+  vars:
+    fingerprint: "package_clean_brew_exec_{{ package_name | default('unknown', true) }}"
+
+# ---------------------------------------------------------------------
+# MacPorts Branch
+# ---------------------------------------------------------------------
+
+# WHY: MacPorts clean removes files created during the build process.
+- name: "Package Clean (Darwin): MacPorts clean {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "port clean --all all"
+  when:
+    - package_clean_cache | bool
+    - os_pkg_mgr == 'macports'
+    - _port_check.rc == 0
+  become: "{{ become_enabled }}"
+  changed_when: false
+  vars:
+    fingerprint: "package_clean_port_exec_{{ package_name | default('unknown', true) }}"

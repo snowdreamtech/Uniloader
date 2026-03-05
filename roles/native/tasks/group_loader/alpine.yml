@@ -1,0 +1,93 @@
+---
+# =====================================================================
+# roles/native/tasks/group_loader/alpine.yml
+#
+# Purpose:
+#   Alpine Linux (BusyBox) specific group management.
+#   Uses BusyBox 'addgroup' and 'delgroup'.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Detection: Check if the specified group already exists.
+# ---------------------------------------------------------------------
+
+# WHY: BusyBox doesn't have 'getent'. We check /etc/group directly.
+- name: "Group (Alpine): Check if group exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "grep -q '^{{ group_name }}:' /etc/group"
+  register: _group_exists_check_alpine
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "Group (Alpine): Mark group as existing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    group_already_exists: true
+  when: _group_exists_check_alpine.rc == 0
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validation: Check for GID availability.
+# ---------------------------------------------------------------------
+- name: "Group (Alpine): Check if GID {{ group_gid | default(omit) }} already exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "grep -q ':x:{{ group_gid }}:' /etc/group"
+  register: _gid_conflict_check_alpine
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: group_gid is defined
+  tags: ["always"]
+
+- name: "Group (Alpine): Mark GID conflict {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    group_gid_conflict: true
+  when:
+    - group_gid is defined
+    - _gid_conflict_check_alpine.rc | default(1) == 0
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Safety Logic
+# ---------------------------------------------------------------------
+- name: "Group (Alpine): Skip group creation due to conflict {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    group_skip: true
+  when: group_gid_conflict | default(false, true)
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Execution: Create or manage group
+# ---------------------------------------------------------------------
+- name: "Group (Alpine): Ensure group {{ group_name }} exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.group:
+    name: "{{ group_name }}"
+    gid: "{{ group_gid | default(omit) }}"
+    state: "present"
+  register: group_result
+  become: "{{ become_enabled }}"
+  when: group_skip is not defined
+
+# ---------------------------------------------------------------------
+# Lifecycle: Manage Membership (BusyBox Style)
+# ---------------------------------------------------------------------
+
+# WHY: BusyBox doesn't have 'gpasswd'. We use 'addgroup <user> <group>'.
+- name: "Group (Alpine): Add members to group {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "addgroup {{ item }} {{ group_name }}"
+  loop: "{{ group_members | default([], true) }}"
+  become: "{{ become_enabled }}"
+  when:
+    - group_members is defined
+    - group_skip is not defined
+  changed_when: false
+  failed_when: false # In case user is already in group
+
+- name: "Group (Alpine): Remove members from group {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "delgroup {{ item }} {{ group_name }}"
+  loop: "{{ group_remove_members | default([], true) }}"
+  become: "{{ become_enabled }}"
+  when:
+    - group_remove_members is defined
+    - group_skip is not defined
+  changed_when: false
+  failed_when: false # In case user is not in group

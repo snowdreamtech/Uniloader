@@ -1,0 +1,54 @@
+---
+# =====================================================================
+# roles/native/tasks/copy_loader.yml
+#
+# Purpose:
+#   Unified file and directory distribution engine.
+#   Wraps the 'ansible.builtin.copy' module with standardized
+#   logging, retries, and permission handling.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: copy_loader
+#     vars:
+#       src: "/tmp/config.conf"
+#       dest: "/etc/app/config.conf"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: copy_loader
+#     vars:
+#       src: "/opt/source_dir/"
+#       dest: "/opt/target_dir"
+#       copy_desc: "Application static assets"
+#       owner: "www-data"
+#       group: "www-data"
+#       mode: "0644"
+#       directory_mode: "0755"
+#       remote_src: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Perform the copy operation. Handles both local-to-remote
+# and remote-to-remote (if remote_src is true) transfers.
+# ---------------------------------------------------------------------
+- name: "Copy {{ copy_desc | default(dest, true) }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    src: "{{ src }}"
+    dest: "{{ dest }}"
+    owner: "{{ owner | default(omit) }}"
+    group: "{{ group | default(omit) }}"
+    mode: "{{ mode | default(omit) }}"
+    directory_mode: "{{ directory_mode | default('0755', true) }}"
+    remote_src: "{{ remote_src | default(false, true) }}"
+  register: copy_result
+  retries: 3
+  delay: 2
+  until: copy_result is succeeded
+  become: "{{ become_enabled }}"
+  when:
+    - src is defined
+    - dest is defined

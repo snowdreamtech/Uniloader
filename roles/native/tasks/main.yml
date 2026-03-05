@@ -1,0 +1,40 @@
+---
+# =====================================================================
+# roles/native/tasks/main.yml
+#
+# Purpose:
+#   Entry point for the native deployment layer.
+#   Routes the execution to the native_loader and performs final
+#   logging for audits.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#     vars:
+#       native_app_name: "curl"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#     vars:
+#       native_app_name: "nginx"
+#       native_app_state: "started"
+#       native_app_packages: ["nginx-full", "nginx-common"]
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Route: Dispatch to the specialized native_loader.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "native_loader.yml"
+
+# ---------------------------------------------------------------------
+# Audit: Log the completion of the native main routing.
+# ---------------------------------------------------------------------
+- name: "Audit: NATIVE_MAIN {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: >-
+      name={{ native_app_name | default('unknown', true) }}
+      state={{ native_app_state | default('present', true) }}
+      packages={{ native_app_packages | default(native_app_name, true) }}
+      homepage={{ native_app_homepage | default('', true) }}

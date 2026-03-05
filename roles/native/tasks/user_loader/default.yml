@@ -1,0 +1,124 @@
+---
+# =====================================================================
+# roles/native/tasks/user_loader/default.yml
+#
+# Purpose:
+#   Generic Linux user/group management implementation.
+#   Uses standard 'user' and 'group' modules.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_loader/main"
+#     vars:
+#       user_name: "deploy"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_loader/main"
+#     vars:
+#       user_name: "deploy"
+#       user_uid: 1500
+#       user_gid: 1500
+#       user_shell: "/bin/bash"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Normalization: Resolve the user's home directory path.
+# ---------------------------------------------------------------------
+- name: "Resolve user home directory path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    ansible_user_home: "{{ user_home | default('/home/' ~ user_name) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Detection: Check if the user already exists on the system.
+# ---------------------------------------------------------------------
+- name: "Check if user exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "id {{ user_name }}"
+  register: user_exists_check
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "Mark user as existing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    user_already_exists: true
+  when: user_exists_check.rc == 0
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validation: Check for UID/GID conflicts using getent.
+# ---------------------------------------------------------------------
+- name: "Check if UID {{ user_uid | default(omit) }} already exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "getent passwd {{ user_uid }}"
+  register: uid_conflict_check
+  failed_when: false
+  changed_when: false
+  when: user_uid is defined
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "Check if GID {{ user_gid | default(omit) }} already exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "getent group {{ user_gid }}"
+  register: gid_conflict_check
+  failed_when: false
+  changed_when: false
+  when: user_gid is defined
+  become: "{{ become_enabled }}"
+  tags: ["always"]
+
+- name: "Skip user creation due to conflicts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    user_skip: true
+  when: >
+    (user_uid is defined and uid_conflict_check.stdout | default('') != "") or
+    (user_gid is defined and gid_conflict_check.stdout | default('') != "")
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Group Management
+# ---------------------------------------------------------------------
+- name: "Ensure primary group exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.group:
+    name: "{{ user_name }}"
+    gid: "{{ user_gid | default(omit) }}"
+    state: "present"
+  when:
+    - user_already_exists is not defined
+    - user_skip is not defined
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# User Management
+# ---------------------------------------------------------------------
+- name: "Ensure user {{ user_name }} exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.user:
+    name: "{{ user_name }}"
+    shell: "{{ user_shell | default('/bin/bash') }}"
+    groups: "{{ user_groups | default([]) }}"
+    uid: "{{ user_uid | default(omit) }}"
+    group: "{{ user_name }}"
+    home: "{{ ansible_user_home }}"
+    comment: "{{ user_comment | default(omit) }}"
+    password: "{{ (user_password | default('') | length > 0) | ternary(user_password | password_hash('sha512'), omit) }}"
+    state: "present"
+    create_home: "{{ user_create_home | default(true) }}"
+  when: user_skip is not defined
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Configuration: SSH & Sudo (Shared Logic)
+# ---------------------------------------------------------------------
+
+# WHY: Reusing common logic for security and identity configuration.
+- name: "User (Default): Include SSH configuration"
+  ansible.builtin.include_tasks: "common_ssh.yml"
+  when: user_skip is not defined
+
+- name: "User (Default): Include Sudo configuration"
+  ansible.builtin.include_tasks: "common_sudo.yml"
+  when: user_skip is not defined

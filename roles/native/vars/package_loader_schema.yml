@@ -1,0 +1,54 @@
+---
+# =====================================================================
+# roles/native/vars/package_loader_schema.yml
+#
+# Purpose:
+#   Definition of the Package Loader variable schema.
+# =====================================================================
+
+package_loader_api_vars:
+  # Temporary Classification Lists
+  - pkg_file_list
+  - pkg_url_list
+  - pkg_src_list
+  - pkg_dmg_list
+  - pkg_pkg_list
+  - pkg_mpkg_list
+  - pkg_app_list
+  - pkg_zip_list
+  - pkg_framework_list
+  - pkg_dylib_list
+  - pkg_kext_list
+  - pkg_mas_list
+  - pkg_winget_list
+  - pkg_choco_list
+  - pkg_scoop_list
+  - pkg_msstore_list
+  - pkg_snap_list
+  - pkg_flatpak_list
+  - pkg_nix_list
+  - pkg_guix_list
+  - pkg_aur_list
+  - pkg_pip_list
+  - pkg_go_list
+  - pkg_npm_list
+  - pkg_yarn_list
+  - pkg_pnpm_list
+  - pkg_cargo_list
+  - pkg_deno_list
+  - pkg_composer_list
+  - pkg_dart_list
+  - pkg_nim_list
+  - pkg_pipx_list
+  - pkg_dotnet_list
+  - pkg_bun_list
+  - pkg_cs_list
+  - pkg_sdk_list
+  - pkg_conda_list
+  - pkg_gem_list
+  - pkg_repo_list
+
+  # Execution Context
+  - _pkg_input_list
+  - package_cache_updated
+  - package_result

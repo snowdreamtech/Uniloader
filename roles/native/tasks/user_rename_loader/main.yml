@@ -1,0 +1,58 @@
+---
+# =====================================================================
+# roles/native/tasks/user_rename_loader/main.yml
+#
+# Purpose:
+#   Unified user renaming engine.
+#   Ensures old users are safely migrated to new identities.
+#
+# Parameters:
+#   - old_user: The current username to be renamed (Mandatory).
+#   - new_user: The new username to be applied (Mandatory).
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_rename_loader/main"
+#     vars:
+#       old_user: "ubuntu"
+#       new_user: "deployer"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "user_rename_loader/main"
+#     vars:
+#       old_user: "pi"
+#       new_user: "admin"
+#       become_enabled: true
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Normalization: Internal parameter cleaning
+# ---------------------------------------------------------------------
+- name: "User Rename: Normalization {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    old_user: "{{ old_user | default('', true) | trim }}"
+    new_user: "{{ new_user | default('', true) | trim }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validation: Ensure mandatory inputs are present
+# ---------------------------------------------------------------------
+- name: "User Rename: Validation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - (old_user | length) > 0
+      - (new_user | length) > 0
+    fail_msg: "Both 'old_user' and 'new_user' are required for renaming."
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Dispatch: Invoke the OS Loader
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "user_rename_loader"

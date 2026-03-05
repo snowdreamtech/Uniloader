@@ -1,0 +1,37 @@
+---
+# =====================================================================
+# roles/native/tasks/package_facts.yml
+#
+# Purpose:
+#   System-wide software inventory discovery.
+#   Retrieves a comprehensive list of all installed packages on the
+#   target host, enabling downstream tasks to make conditional
+#   decisions based on software availability.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: package_facts
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: package_facts
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Invoke the 'package_facts' module to populate
+# 'ansible_facts.packages'. Uses automatic manager detection.
+# ---------------------------------------------------------------------
+- name: "Gather package facts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package_facts:
+    manager: "auto"
+  register: package_facts_result
+  retries: 3
+  delay: 2
+  until: package_facts_result is succeeded
+  become: "{{ become_enabled }}"
+  tags: ["always"]

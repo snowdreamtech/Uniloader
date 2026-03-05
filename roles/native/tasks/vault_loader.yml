@@ -1,0 +1,90 @@
+---
+# =====================================================================
+# roles/native/tasks/vault_loader.yml
+#
+# Purpose:
+#   Automatically discover, decrypt, and load user-specific Ansible Vault files.
+#   This allows sensitive configurations to be securely injected into the
+#   runtime environment without hardcoding secrets in the codebase.
+#
+# Author: Native AI Team
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: "native"
+#       tasks_from: "vault_loader"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: "native"
+#       tasks_from: "vault_loader"
+#     vars:
+#       # No specific variables required; searches standard locations.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# --- Preparation ---
+# ---------------------------------------------------------------------
+
+- name: "Define user vault candidates {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  # Identifying potential locations for vault files and their corresponding password files
+  # across common user configuration directories.
+  ansible.builtin.set_fact:
+    user_vault_candidates:
+      - vault_file: "{{ inventory_dir }}/group_vars/all/.vault.yml"
+        pass_file: "{{ inventory_dir }}/group_vars/all/.vault_pass"
+      - vault_file: "{{ ansible_user_home | default(lookup('env', 'HOME'), true) }}/.vault.yml"
+        pass_file: "{{ ansible_user_home | default(lookup('env', 'HOME'), true) }}/.vault_pass"
+      - vault_file: "{{ ansible_user_home | default(lookup('env', 'HOME'), true) }}/.ansible/vault.yml"
+        pass_file: "{{ ansible_user_home | default(lookup('env', 'HOME'), true) }}/.ansible/vault_pass"
+      - vault_file: "{{ ansible_user_home | default(lookup('env', 'HOME'), true) }}/.private/vault.yml"
+        pass_file: "{{ ansible_user_home | default(lookup('env', 'HOME'), true) }}/.private/vault_pass"
+      - vault_file: "{{ ansible_user_home | default(lookup('env', 'HOME'), true) }}/.secrets/vault.yml"
+        pass_file: "{{ ansible_user_home | default(lookup('env', 'HOME'), true) }}/.secrets/vault_pass"
+
+# ---------------------------------------------------------------------
+# --- Configuration ---
+# ---------------------------------------------------------------------
+
+- name: "Decrypt user vault files {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  # Using the ansible-vault command to read the content of potential vault files.
+  # We use changed_when: false to maintain idempotency since it's a read operation.
+  ansible.builtin.command: >
+    ansible-vault view "{{ item.vault_file }}"
+    --vault-password-file "{{ item.pass_file }}"
+  register: vault_output
+  loop: "{{ user_vault_candidates }}"
+  loop_control:
+    loop_var: "item"
+  changed_when: false
+  failed_when: false
+  when:
+    - item.vault_file is file
+    - item.pass_file is file
+
+- name: "Accumulate decrypted variables into memory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  # Merge each found vault's content into a unified dictionary for easier processing.
+  ansible.builtin.set_fact:
+    user_vault_vars: "{{ user_vault_vars | default({}, true) | combine(item.stdout | from_yaml) }}"
+  loop: "{{ vault_output.results | default([], true) }}"
+  loop_control:
+    loop_var: "item"
+  when:
+    - item.stdout is defined
+    - item.stdout | trim != ""
+  changed_when: false
+
+- name: "Promote user_vault_vars to top-level variables {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  # Convert dictionary keys into top-level Ansible facts so they can be accessed directly.
+  ansible.builtin.set_fact:
+    "{{ item.key }}": "{{ item.value }}"
+  loop: "{{ user_vault_vars | default({}, true) | dict2items }}"
+  loop_control:
+    loop_var: "item"
+  changed_when: false
+- name: "Audit: VAULT {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Successfully loaded user secrets from discovered vault files"
+  when:
+    - user_vault_vars is defined
+    - user_vault_vars | length > 0

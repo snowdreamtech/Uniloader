@@ -1,0 +1,43 @@
+---
+# =====================================================================
+# roles/native/tasks/package_clean/main.yml
+#
+# Purpose:
+#   Unified package manager maintenance engine.
+#   Handles both cache cleaning and removal of unused dependencies.
+#
+# Parameters:
+#   - package_clean_cache: Whether to clean the package manager cache (default: true).
+#   - package_autoremove: Whether to remove unused dependencies (default: true).
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "package_clean/main"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "package_clean/main"
+#     vars:
+#       package_clean_cache: true
+#       package_autoremove: false
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Normalization: Set defaults for maintenance flags
+# ---------------------------------------------------------------------
+- name: "Package Clean: Normalization {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    package_clean_cache: "{{ package_clean_cache | default(true, true) }}"
+    package_autoremove: "{{ package_autoremove | default(true, true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Dispatch: Invoke the OS Loader
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "package_clean"

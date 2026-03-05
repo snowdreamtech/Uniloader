@@ -1,0 +1,45 @@
+---
+# =====================================================================
+# roles/native/tasks/package_loader/alpine.yml
+#
+# Purpose:
+#   Alpine-specific package maintenance.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pre-checks: Environment Integrity
+# ---------------------------------------------------------------------
+
+# WHY: We verify 'apk' is available before attempting maintenance.
+- name: "Package Clean (Alpine): Verify apk existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which apk"
+  register: _apk_check
+  failed_when: false
+  changed_when: false
+  become: false
+
+- name: "Package Clean (Alpine): Fail if apk missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Alpine Linux detected but 'apk' binary was not found."
+  when: _apk_check.rc != 0
+
+# ---------------------------------------------------------------------
+# Execution: Clean cache
+# ---------------------------------------------------------------------
+
+# WHY: Alpine keeps a local cache of apk files if configured.
+- name: "Package Clean (Alpine): Clean cache {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "apk cache clean"
+  when:
+    - package_clean_cache | bool
+    - _apk_check.rc == 0
+  vars:
+    fingerprint: "package_clean_apk_cache_{{ package_name | default('unknown', true) }}"
+
+# WHY: Alpine doesn't have a direct 'autoremove' but 'apk fix' or
+# manual removal of orphans is used. For simplicity, we skip or
+# use a debug message.
+- name: "Package Clean (Alpine): Autoremove info {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Alpine does not support a direct autoremove command. Skipping."
+  when: package_autoremove | bool

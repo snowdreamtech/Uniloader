@@ -1,0 +1,151 @@
+---
+# =====================================================================
+# roles/native/tasks/user_rename_loader/darwin.yml
+#
+# Purpose:
+#   Infrastructure logic managed by snowdreamtech.
+#
+# =====================================================================
+# ---------------------------------------------------------------------
+# Pre-checks: Environment Integrity
+# ---------------------------------------------------------------------
+
+# WHY: We ensure 'dscl' is available, which is mandatory for user management on macOS.
+- name: "User Rename (macOS): Verify dscl existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which dscl"
+  register: _dscl_check
+  failed_when: false
+  changed_when: false
+  become: false
+
+- name: "User Rename (macOS): Fail if dscl missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "macOS environment detected but 'dscl' binary was not found."
+  when: _dscl_check.rc != 0
+
+# ---------------------------------------------------------------------
+# Protection: Safety Guards
+# ---------------------------------------------------------------------
+- name: "User Rename (macOS): Get current username"
+  ansible.builtin.command: "whoami"
+  register: _darwin_current_user
+  changed_when: false
+  become: false
+
+- name: "User Rename (macOS): Prevent self-rename"
+  ansible.builtin.fail:
+    msg: "Cannot rename the current user '{{ old_user }}' while it is in use by this session."
+  when: old_user == _darwin_current_user.stdout
+
+# ---------------------------------------------------------------------
+# Detection: Status exploration
+# ---------------------------------------------------------------------
+- name: "User Rename (macOS): Check if old_user exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "id {{ old_user }}"
+  register: _old_user_check
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+
+- name: "User Rename (macOS): Check if new_user exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "id {{ new_user }}"
+  register: _new_user_check
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+
+- name: "User Rename (macOS): Set state facts"
+  ansible.builtin.set_fact:
+    old_user_exists: "{{ _old_user_check.rc == 0 }}"
+    new_user_exists: "{{ _new_user_check.rc == 0 }}"
+
+# ---------------------------------------------------------------------
+# Extraction: Resolve home directory
+# ---------------------------------------------------------------------
+- name: "User Rename (macOS): Get old_user home directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dscl . -read /Users/{{ old_user }} NFSHomeDirectory"
+  register: _old_home_check
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: old_user_exists
+
+- name: "User Rename (macOS): Map home fact"
+  ansible.builtin.set_fact:
+    old_user_home: "{{ _old_home_check.stdout | split(': ') | last | trim }}"
+  when:
+    - old_user_exists
+    - _old_home_check.rc == 0
+
+# ---------------------------------------------------------------------
+# Guard Clause: Prevent accidental overwriting
+# ---------------------------------------------------------------------
+- name: "User Rename (macOS): Abort if new_user already exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "User {{ new_user }} already exists. Rename aborted for safety."
+  when:
+    - new_user_exists
+    - old_user_exists
+
+# ---------------------------------------------------------------------
+# Preparation: Terminating sessions
+# ---------------------------------------------------------------------
+# NOTE: Active GUI sessions are hard to kill safely on macOS. We assume CLI sessions.
+- name: "User Rename (macOS): Force kill remaining processes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pkill -u {{ old_user }}"
+  register: _pkill_result
+  failed_when: false
+  changed_when: "_pkill_result.rc == 0"
+  become: "{{ become_enabled }}"
+  when: old_user_exists
+
+- name: "User Rename (macOS): Wait for processes to exit"
+  ansible.builtin.pause:
+    seconds: 2
+  when: old_user_exists
+
+- name: "User Rename (macOS): Force kill remaining processes (SIGKILL) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pkill -9 -u {{ old_user }}"
+  failed_when: false
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: old_user_exists
+
+# ---------------------------------------------------------------------
+# Execution: dscl transformation
+# ---------------------------------------------------------------------
+
+# WHY: macOS user rename is a multi-step RecordName change in OpenDirectory.
+- name: "User Rename (macOS): Rename RecordName {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dscl . -change /Users/{{ old_user }} RecordName {{ old_user }} {{ new_user }}"
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+
+- name: "User Rename (macOS): Rename primary group RecordName {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dscl . -change /Groups/{{ old_user }} RecordName {{ old_user }} {{ new_user }}"
+  failed_when: false
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+
+# ---------------------------------------------------------------------
+# Lifecycle: Home directory relocation
+# ---------------------------------------------------------------------
+- name: "User Rename (macOS): Relocate home directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "mv {{ old_user_home }} /Users/{{ new_user }}"
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists
+    - old_user_home is defined
+    - old_user_home.startswith('/Users/')
+
+- name: "User Rename (macOS): Update home directory path in OpenDirectory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dscl . -create /Users/{{ new_user }} NFSHomeDirectory /Users/{{ new_user }}"
+  become: "{{ become_enabled }}"
+  when:
+    - old_user_exists
+    - not new_user_exists

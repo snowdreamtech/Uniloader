@@ -1,0 +1,80 @@
+---
+# =====================================================================
+# roles/native/tasks/command_loader/report.yml
+#
+# Purpose:
+#   Format execution results and handle terminal failures.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Output: Consolidate execution results into a structured format for
+# consumption by other playbooks or loaders.
+# ---------------------------------------------------------------------
+- name: "Set structured command_loader_result {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    command_loader_result:
+      name: "{{ command_name | default('direct_command', true) }}"
+      last_command: >-
+        {{
+          (shell_results.results | last).cmd
+            if (command_shell | default(false, true))
+            else (command_results.results | last).cmd
+        }}
+      rc: >-
+        {{
+          (shell_results.results | last).rc
+            if (command_shell | default(false, true))
+            else (command_results.results | last).rc
+        }}
+      stdout: >-
+        {{
+          (shell_results.results | last).stdout
+            if (command_shell | default(false, true))
+            else (command_results.results | last).stdout
+        }}
+      stderr: >-
+        {{
+          (shell_results.results | last).stderr
+            if (command_shell | default(false, true))
+            else (command_results.results | last).stderr
+        }}
+      failures: "{{ command_failures }}"
+  when:
+    - not (command_dry_run | default(false, true))
+    - (shell_results.results is defined and shell_results.results | length > 0)
+      or (command_results.results is defined and command_results.results | length > 0)
+  tags: ["always"]
+
+- name: "Audit: CMD_RESULT {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      [COMMAND LOADER RESULT]
+      name: "{{ command_loader_result.name }}"
+      last_command: {{ command_loader_result.last_command | default('N/A', true) }}
+      rc: {{ command_loader_result.rc | default('N/A', true) }}
+      stdout: {{ command_loader_result.stdout | default('', true) }}
+      stderr: {{ command_loader_result.stderr | default('', true) }}
+      failures:
+      {{ command_loader_result.failures | to_nice_yaml | indent(6) }}
+  when:
+    - not (command_dry_run | default(false, true))
+    - command_loader_result is defined
+
+# ---------------------------------------------------------------------
+# Teardown: If all attempts (primary and fallbacks) failed, trigger
+# a final failure to stop playbook execution.
+# ---------------------------------------------------------------------
+- name: "Fail if all command candidates failed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: |
+      All command candidates failed.
+      last_command: {{ command_loader_result.last_command | default('N/A', true) }}
+      rc: {{ command_loader_result.rc | default('N/A', true) }}
+      stderr: {{ command_loader_result.stderr | default('N/A', true) }}
+      failures:
+      {{ command_loader_result.failures | to_nice_yaml }}
+  when:
+    - not (command_dry_run | default(false, true))
+    - command_loader_result is defined and command_loader_result.rc != 0
+  tags: ["always"]

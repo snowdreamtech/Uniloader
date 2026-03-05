@@ -1,0 +1,43 @@
+---
+# =====================================================================
+# roles/native/tasks/package_clean/debian.yml
+#
+# Purpose:
+#   Debian/Ubuntu-specific package maintenance.
+# =====================================================================
+
+# WHY: Verify environment integrity for Debian/Ubuntu maintenance.
+- name: "Package Clean (Debian): Verify apt-get existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which apt-get"
+  register: _apt_check
+  failed_when: false
+  changed_when: false
+  become: false
+  tags: ["always"]
+
+- name: "Package Clean (Debian): Fail if binary missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Debian environment detected but 'apt-get' binary was not found."
+  when: _apt_check.rc != 0
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Maintenance Execution
+# ---------------------------------------------------------------------
+- name: "Package Clean (Debian): Clean cache {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apt:
+    clean: true
+  when: package_clean_cache | bool
+  become: "{{ become_enabled }}"
+  vars:
+    fingerprint: "package_clean_deb_cache_{{ package_name | default('unknown', true) }}"
+
+# WHY: Removing packages that were automatically installed for
+# dependencies but are no longer needed.
+- name: "Package Clean (Debian): Autoremove {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apt:
+    autoremove: true
+  when: package_autoremove | bool
+  become: "{{ become_enabled }}"
+  vars:
+    fingerprint: "package_clean_deb_auto_{{ package_name | default('unknown', true) }}"

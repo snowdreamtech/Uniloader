@@ -1,0 +1,317 @@
+---
+# =====================================================================
+# roles/native/tasks/os_loader.yml
+#
+# Purpose:
+#   Universal OS-specific loader supporting both module-mode and
+#   root-mode directory structures. This loader handles the logic of
+#   finding and loading the correct YAML files based on the target's
+#   operating system (distribution, family, or default).
+#
+# Parameters:
+#   - module_name: The name of the module or sub-component to load.
+#   - module_var_prefix: Optional prefix for automatic variable merging.
+#   - module_var_prefixes: Optional list of prefixes for variable merging.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: os_loader
+#     vars:
+#       module_name: "openssh"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: os_loader
+#     vars:
+#       module_name: "openssh"
+#       module_var_prefix: "sshd"
+#       module_var_prefixes: ["sshd", "ssh"]
+#       module_role_path: "/path/to/custom/role"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure that a module_name is provided by the caller.
+# Without a module_name, we cannot resolve the paths to vars/tasks.
+# ---------------------------------------------------------------------
+- ansible.builtin.assert:
+    that:
+      - module_name is defined
+      - module_name is string
+      - (module_name | length) > 0
+    fail_msg: |
+      os_loader parameter validation failed:
+
+      Required parameter 'module_name' must be a non-empty string.
+
+      Received:
+        - Type: {{ module_name | default('UNDEFINED') | type_debug }}
+        - Value: {{ module_name | default('UNDEFINED') }}
+
+      Example usage:
+        - ansible.builtin.include_role:
+            name: "native"
+            tasks_from: "os_loader"
+          vars:
+            module_name: "openssh"
+            module_var_prefix: "sshd"  # Optional
+    success_msg: "os_loader: module_name validated ({{ module_name }})"
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# 1.5 Load API Schema Variables
+# ---------------------------------------------------------------------
+- name: "Load OS loader schema for {{ module_name }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_vars:
+    file: "vars/os_loader_schema.yml"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# 2. Reset Loader & API State
+#    Prevent fact leakage from previous calls on the same host.
+#    All variables defined in os_loader_schema.yml are reset to null.
+# ---------------------------------------------------------------------
+- ansible.builtin.set_fact:
+    "{{ os_loader_var_item }}": null
+  loop: "{{ os_loader_api_vars }}"
+  loop_control:
+    loop_var: os_loader_var_item
+    label: "reset {{ os_loader_var_item }} (null)"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Mode Auto-Detection (Independent)
+# ---------------------------------------------------------------------
+- name: "Auto-detect app_delivery_mode for {{ module_name }}"
+  ansible.builtin.set_fact:
+    app_delivery_mode: >-
+      {{
+        app_delivery_mode | default('kube' if (is_k8s_host | default(false, true)) else (
+            'container' if (is_docker_host | default(false, true) or is_podman_host | default(false, true)) else 'native'
+          ), true)
+      }}
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Path Resolution: Determine the base directory of the active role.
+# We prioritize module_role_path if provided, then fall back to the
+# immediate parent role or the current role path.
+# ---------------------------------------------------------------------
+- name: "Resolve base role path for {{ module_name }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    resolved_role_path: >-
+      {{
+        module_role_path
+          | default(((ansible_parent_role_paths | default([], true)) | first), true)
+          | default(role_path, true)
+      }}
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# 4. Discovery: Multi-Mode Presence Check
+#    Check for any custom definitions (folders or files) for this module.
+# ---------------------------------------------------------------------
+- name: "Probe for custom definitions of {{ module_name }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  block:
+    - name: "Detect module-mode structures for {{ module_name }}"
+      ansible.builtin.stat:
+        path: "{{ resolved_role_path }}/{{ loader_item.path }}/{{ module_name }}"
+      loop:
+        - { path: "vars", type: "dir" }
+        - { path: "tasks", type: "dir" }
+      loop_control:
+        loop_var: loader_item
+      register: _module_mod_stat
+      delegate_to: localhost
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+    - name: "Detect root-mode tasks directory"
+      ansible.builtin.stat:
+        path: "{{ resolved_role_path }}/tasks"
+      register: _root_tasks_stat
+      delegate_to: localhost
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+    - name: "Set discovery facts for {{ module_name }}"
+      ansible.builtin.set_fact:
+        os_loader_root_mode: >-
+          {{
+            not (
+              (_module_mod_stat.results[0].stat.exists | default(false, true)) or
+              (_module_mod_stat.results[1].stat.exists | default(false, true))
+            )
+          }}
+        os_loader_skip: >-
+          {{
+            not (
+              (_module_mod_stat.results[0].stat.exists | default(false, true)) or
+              (_module_mod_stat.results[1].stat.exists | default(false, true)) or
+              (_root_tasks_stat.stat.exists | default(false, true))
+            )
+          }}
+        # Backward compatibility for internal registers
+        module_vars_dir: "{{ _module_mod_stat.results[0] }}"
+        module_tasks_dir: "{{ _module_mod_stat.results[1] }}"
+        root_tasks_dir: "{{ _root_tasks_stat }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Variables Loading: Perform hierarchical/additive loading.
+# Priority: Default > Family > Distro > Mode
+# ---------------------------------------------------------------------
+- name: "Load hierarchical variables for {{ module_name }}"
+  ansible.builtin.include_vars:
+    file: "{{ vars_path }}/{{ loader_item }}"
+  loop:
+    - "default.yml"
+    - "{{ module_name }}.yml"
+    - "{{ family }}.yml"
+    - "{{ family }}-{{ version }}.yml"
+    - "{{ distro }}.yml"
+    - "{{ distro }}-{{ version }}.yml"
+    - "{{ mode }}.yml"
+    - "{{ mode }}/default.yml"
+    - "{{ mode }}/{{ family }}.yml"
+    - "{{ mode }}/{{ family }}-{{ version }}.yml"
+    - "{{ mode }}/{{ distro }}.yml"
+    - "{{ mode }}/{{ distro }}-{{ version }}.yml"
+  vars:
+    distro: "{{ os_distribution | default('unknown', true) }}"
+    family: "{{ os_family | default('unknown', true) }}"
+    version: "{{ os_version_major | default('0', true) }}"
+    mode: "{{ app_delivery_mode | default('native', true) }}"
+    vars_path: >-
+      {{
+        (os_loader_root_mode | default(false, true))
+        | ternary(resolved_role_path ~ '/vars', resolved_role_path ~ '/vars/' ~ module_name)
+      }}
+  when:
+    - not os_loader_skip | default(false, true)
+    - "lookup('first_found', {'paths': [vars_path], 'files': [loader_item]}, errors='ignore') != ''"
+  failed_when: false
+  loop_control:
+    loop_var: loader_item
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Variable Prefixing: Aggregate all variable prefixes to be used
+# in the subsequent merging step.
+# ---------------------------------------------------------------------
+- name: "Resolve effective variable prefixes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    os_loader_effective_prefixes: >-
+      {{
+        module_var_prefixes
+          | default([module_var_prefix], true)
+          | select('defined')
+          | reject('none')
+          | list
+      }}
+  when: not os_loader_skip | default(false, true) | bool
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Variable Merging: Dynamically merge defaults and overrides for
+# each variable prefix (e.g., sshd_defaults + sshd_overrides -> sshd).
+# ---------------------------------------------------------------------
+- name: "Merge defaults/overrides for multiple objects {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    "{{ loader_item }}": >-
+      {{
+        (lookup('vars', loader_item ~ '_defaults') | default({}, true))
+        | combine(
+            lookup('vars', loader_item ~ '_overrides') | default({}, true),
+            recursive=True
+          )
+      }}
+  loop: "{{ os_loader_effective_prefixes | default([], true) }}"
+  when:
+    - loader_item is string
+    - not os_loader_skip | default(false, true) | bool
+    - os_loader_effective_prefixes is defined
+    - os_loader_effective_prefixes | length > 0
+    - (
+      lookup('vars', loader_item ~ '_defaults', default={}) is mapping
+      or
+      lookup('vars', loader_item ~ '_overrides', default={}) is mapping
+      )
+  loop_control:
+    loop_var: loader_item
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Tasks Loading: Resolve the best-matching tasks file
+# (Distro > Family > Default) and execute it via include_tasks.
+# ---------------------------------------------------------------------
+- name: "Resolve OS-specific tasks file for {{ module_name }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    os_tasks_file: "{{ lookup('first_found', params_tasks, errors='ignore') }}"
+  vars:
+    distro: "{{ os_distribution | default('unknown', true) }}"
+    family: "{{ os_family | default('unknown', true) }}"
+    version: "{{ os_version_major | default('0', true) }}"
+    mode: "{{ app_delivery_mode | default('native', true) }}"
+    tasks_path: >-
+      {{
+        (os_loader_root_mode | default(false, true))
+        | ternary(resolved_role_path ~ '/tasks', resolved_role_path ~ '/tasks/' ~ module_name)
+      }}
+    params_tasks:
+      paths: ["{{ tasks_path }}"]
+      files:
+        - "{{ mode }}/{{ distro }}-{{ version }}.yml"
+        - "{{ mode }}/{{ distro }}.yml"
+        - "{{ mode }}/{{ family }}-{{ version }}.yml"
+        - "{{ mode }}/{{ family }}.yml"
+        - "{{ mode }}/{{ module_name }}.yml"
+        - "{{ module_name }}.yml"
+        - "{{ mode }}/default.yml"
+        - "{{ mode }}.yml"
+        - "{{ distro }}-{{ version }}.yml"
+        - "{{ distro }}.yml"
+        - "{{ family }}-{{ version }}.yml"
+        - "{{ family }}.yml"
+        - "default.yml"
+  when: not os_loader_skip | default(false, true) | bool
+  tags: ["always"]
+
+- name: "Audit: OS_LOADER {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      [ {{ module_name }} ]
+      Result: {{ os_tasks_file | default('SKIPPED', true) }}
+      Path Context:
+      - Resolved Role: {{ resolved_role_path }}
+      - Parent Role Paths: {{ ansible_parent_role_paths | default([], true) | to_json }}
+      - Mode: {{ 'Root-Mode' if (os_loader_root_mode | default(false, true)) else 'Module-Mode' }}
+
+      OS Context:
+      - Family: {{ os_family | default('unknown', true) }}
+      - Distribution: {{ os_distribution | default('unknown', true) }}
+      - Major Version: {{ os_version_major | default('0', true) }}
+      - Delivery Mode: {{ app_delivery_mode | default('native', true) }}
+  when: not os_loader_skip | default(false, true)
+
+- name: "Assert os_tasks_file is valid for {{ module_name }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_tasks_file is defined
+      - os_tasks_file is string
+      - os_tasks_file | length > 0
+    fail_msg: "Could not resolve a valid os_tasks_file for module '{{ module_name }}'. Searched in {{ tasks_path | default('unknown', true) }}."
+  when: not os_loader_skip | default(false, true) | bool
+  tags: ["always"]
+
+- name: "Execute resolved OS tasks for {{ module_name }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "{{ os_tasks_file }}"
+  when:
+    - not os_loader_skip | default(false, true) | bool
+    - os_tasks_file is string
+    - os_tasks_file | length > 0

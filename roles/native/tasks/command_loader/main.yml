@@ -1,0 +1,47 @@
+---
+# =====================================================================
+# roles/native/tasks/command_loader/main.yml
+#
+# Purpose:
+#   Universal command execution engine.
+#   Provides a robust abstraction for running shell or direct commands
+#   with features like automatic retries, fallbacks, timeout management,
+#   and structured audit logging.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "command_loader/main"
+#     vars:
+#       command: "ls -la"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: "command_loader/main"
+#     vars:
+#       command_name: "custom_init"
+#       command_map: { "custom_init": "/usr/local/bin/init.sh" }
+#       command_fallback: ["echo Init secondary"]
+#       command_shell: true
+#       command_become: true
+#       command_timeout: 300
+#       command_retries: 5
+#       command_retry_delay: 10
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Phase 1: Validation & Initialization
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "validate.yml"
+
+# ---------------------------------------------------------------------
+# Phase 2: Execution
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "execute.yml"
+
+# ---------------------------------------------------------------------
+# Phase 3: Reporting & Teardown
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "report.yml"

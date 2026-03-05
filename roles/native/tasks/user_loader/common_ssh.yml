@@ -1,0 +1,54 @@
+---
+# =====================================================================
+# roles/native/tasks/user_loader/common_ssh.yml
+#
+# Purpose:
+#   Common SSH directory and configuration management.
+#   Shared across Linux, macOS, and Alpine.
+# =====================================================================
+
+# WHY: Ensure the .ssh directory exists with secure permissions.
+- name: "User (Common): Ensure .ssh directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.ssh"
+    state: "directory"
+    owner: "{{ user_name }}"
+    group: "{{ user_primary_group | default(user_name, true) }}"
+    mode: "0700"
+  when:
+    - (user_authorized_keys is defined or user_ssh_config is defined)
+    - user_skip is not defined
+  become: "{{ become_enabled }}"
+
+# WHY: Populate authorized_keys for SSH access.
+- name: "User (Common): Install authorized_keys {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "{{ ansible_user_home }}/.ssh/authorized_keys"
+    content: "{{ user_authorized_keys | join('\n') }}"
+    owner: "{{ user_name }}"
+    group: "{{ user_primary_group | default(user_name, true) }}"
+    mode: "0600"
+  when:
+    - user_authorized_keys is defined
+    - user_skip is not defined
+  become: "{{ become_enabled }}"
+
+# WHY: Install custom SSH client configurations.
+- name: "User (Common): Install SSH config {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "{{ ansible_user_home }}/.ssh/config"
+    content: |
+      {% for entry in user_ssh_config %}
+      Host {{ entry.host }}
+      {% for key, value in entry.options.items() %}
+          {{ key }} {{ value }}
+      {% endfor %}
+
+      {% endfor %}
+    owner: "{{ user_name }}"
+    group: "{{ user_primary_group | default(user_name, true) }}"
+    mode: "0600"
+  when:
+    - user_ssh_config is defined
+    - user_skip is not defined
+  become: "{{ become_enabled }}"

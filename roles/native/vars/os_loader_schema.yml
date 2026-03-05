@@ -1,0 +1,32 @@
+---
+# =====================================================================
+# roles/native/vars/os_loader_schema.yml
+#
+# Purpose:
+#   Definition of the OS-specific loader (os_loader) variable schema.
+#   This file acts as a single source of truth for all loader-related
+#   variables, ensuring clean state between different module loads.
+# =====================================================================
+
+os_loader_api_vars:
+  # Core Identifiers (Inputs)
+  - module_name
+  - module_var_prefix
+  - module_var_prefixes
+  - module_role_path
+
+  # Loader Internal State (Temporary Facts)
+  - os_loader_skip
+  - os_loader_root_mode
+  - os_vars_file
+  - os_tasks_file
+  - os_loader_effective_prefixes
+  - app_delivery_mode
+  - resolved_role_path
+
+  # Registry/Stat Buffers (Registers)
+  - module_vars_dir
+  - module_tasks_dir
+  - root_tasks_dir
+  - _module_mod_stat
+  - _root_tasks_stat
