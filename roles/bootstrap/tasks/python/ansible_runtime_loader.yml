@@ -63,7 +63,7 @@
 # ---------------------------------------------------------------------
 - name: "Install ansible collections {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.command: >-
-    {{ python_venv_path }}/bin/ansible-galaxy collection install {{ collection_name }}
+    "{{ python_venv_path }}/bin/ansible-galaxy" collection install {{ collection_name }}
   loop: "{{ ansible_collections }}"
   loop_control:
     loop_var: collection_name

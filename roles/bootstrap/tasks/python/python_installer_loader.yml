@@ -33,47 +33,47 @@
     echo "[PYTHON_INSTALLER_LOADER] Detecting package manager..."
 
     # Detect package manager
-    if PATH={{ os_paths }} command -v apk >/dev/null 2>&1; then
+    if PATH="{{ os_paths }}" command -v apk >/dev/null 2>&1; then
       PM="apk"
-    elif PATH={{ os_paths }} command -v apt-get >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v apt-get >/dev/null 2>&1; then
       PM="apt"
-    elif PATH={{ os_paths }} command -v microdnf >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v microdnf >/dev/null 2>&1; then
       PM="microdnf"
-    elif PATH={{ os_paths }} command -v dnf >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v dnf >/dev/null 2>&1; then
       PM="dnf"
-    elif PATH={{ os_paths }} command -v yum >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v yum >/dev/null 2>&1; then
       PM="yum"
-    elif PATH={{ os_paths }} command -v pacman >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v pacman >/dev/null 2>&1; then
       PM="pacman"
-    elif PATH={{ os_paths }} command -v zypper >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v zypper >/dev/null 2>&1; then
       PM="zypper"
-    elif PATH={{ os_paths }} command -v xbps-install >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v xbps-install >/dev/null 2>&1; then
       PM="xbps"
-    elif PATH={{ os_paths }} command -v emerge >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v emerge >/dev/null 2>&1; then
       PM="emerge"
-    elif PATH={{ os_paths }} command -v pkg >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v pkg >/dev/null 2>&1; then
       PM="freebsd"
-    elif PATH={{ os_paths }} command -v brew >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v brew >/dev/null 2>&1; then
       PM="homebrew"
-    elif PATH={{ os_paths }} command -v port >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v port >/dev/null 2>&1; then
       PM="macports"
-    elif PATH={{ os_paths }} command -v urpmi >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v urpmi >/dev/null 2>&1; then
       PM="urpmi"
-    elif PATH={{ os_paths }} command -v swupd >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v swupd >/dev/null 2>&1; then
       PM="swupd"
-    elif PATH={{ os_paths }} command -v eopkg >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v eopkg >/dev/null 2>&1; then
       PM="eopkg"
-    elif PATH={{ os_paths }} command -v opkg >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v opkg >/dev/null 2>&1; then
       PM="opkg"
-    elif PATH={{ os_paths }} command -v pkg_add >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v pkg_add >/dev/null 2>&1; then
       PM="pkg_add"
-    elif PATH={{ os_paths }} command -v pkgin >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v pkgin >/dev/null 2>&1; then
       PM="pkgin"
-    elif PATH={{ os_paths }} command -v installp >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v installp >/dev/null 2>&1; then
       PM="installp"
-    elif PATH={{ os_paths }} command -v swinstall >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v swinstall >/dev/null 2>&1; then
       PM="swinstall"
-    elif PATH={{ os_paths }} command -v nix-env >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v nix-env >/dev/null 2>&1; then
       PM="nix-env"
     else
       echo "[PYTHON_INSTALLER_LOADER] ERROR: Unsupported OS (no known package manager found)"
@@ -190,9 +190,9 @@
     echo "[PYTHON_INSTALLER_LOADER] Validating Python..."
 
     # Validate python
-    if PATH={{ os_paths }} command -v python3 >/dev/null 2>&1; then
+    if PATH="{{ os_paths }}" command -v python3 >/dev/null 2>&1; then
       PY=python3
-    elif PATH={{ os_paths }} command -v python >/dev/null 2>&1; then
+    elif PATH="{{ os_paths }}" command -v python >/dev/null 2>&1; then
       PY=python
     else
       echo "[PYTHON_INSTALLER_LOADER] ERROR: Python installation failed"
@@ -204,11 +204,11 @@
     # Ensure /usr/bin/python exists
     if [ ! -e /usr/bin/python ]; then
       echo "[PYTHON_INSTALLER_LOADER] Creating /usr/bin/python symlink"
-      ln -s "$(PATH={{ os_paths }} command -v python3)" /usr/bin/python || true
+      ln -s "$(PATH="{{ os_paths }}" command -v python3)" /usr/bin/python || true
     fi
 
     # Validate pip
-    if ! PATH={{ os_paths }} command -v pip3 >/dev/null 2>&1 && ! PATH={{ os_paths }} command -v pip >/dev/null 2>&1; then
+    if ! PATH="{{ os_paths }}" command -v pip3 >/dev/null 2>&1 && ! PATH="{{ os_paths }}" command -v pip >/dev/null 2>&1; then
       echo "[PYTHON_INSTALLER_LOADER] pip not found, attempting fallback installation..."
       $PY -m ensurepip --default-pip || true
     fi
