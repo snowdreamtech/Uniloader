@@ -1,0 +1,30 @@
+---
+# =====================================================================
+# roles/common/base/meta/main.yml
+#
+# Purpose:
+#   Metadata and dependency configuration for the common/base role.
+#   Defines the role properties for Ansible Galaxy and specifies
+#   architectural dependencies.
+#
+# =====================================================================
+
+galaxy_info:
+  author: "Hui"
+  description: "Universal cross-distribution base role for infrastructure primitives."
+  license: "MIT"
+  min_ansible_version: "2.14"
+  platforms:
+    - name: "EL"
+      versions: ["8", "9"]
+    - name: "Debian"
+      versions: ["11", "12"]
+    - name: "Ubuntu"
+      versions: ["20.04", "22.04"]
+    - name: "Alpine"
+      versions: ["3.18", "3.19"]
+  galaxy_tags:
+    - "system"
+    - "infrastructure"
+
+dependencies: []

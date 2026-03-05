@@ -1,0 +1,258 @@
+---
+# =====================================================================
+# roles/base/tasks/mas.yml
+#
+# Purpose:
+#   Install mas (Mac App Store CLI) on macOS with version compatibility.
+#   Implements cascading fallback installation logic:
+#
+#   macOS 13+ (Ventura or newer):
+#     1. Homebrew Core -> brew install mas
+#     2. MacPorts -> port install mas
+#     3. GitHub Releases -> v5.x
+#
+#   macOS 10.11-12 (El Capitan to Monterey):
+#     1. Homebrew Tap -> brew install mas-cli/tap/mas
+#     2. GitHub Releases -> v4.1.2
+#
+# Simple Usage:
+#   - ansible.builtin.include_tasks: "mas.yml"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_tasks: "mas.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pre-flight Check: Detect if mas is already installed
+# ---------------------------------------------------------------------
+
+# WHY: Avoid redundant installation if mas is already present
+- name: "mas: Check if already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} command -v mas"
+  register: _mas_check
+  failed_when: false
+  changed_when: false
+  tags: ["always"]
+
+- name: "mas: Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _mas_already_installed: "{{ _mas_check.rc == 0 }}"
+  tags: ["always"]
+
+- name: "mas: Skip installation (already present) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "mas is already installed at {{ _mas_check.stdout }}"
+  when: _mas_already_installed | bool
+
+# ---------------------------------------------------------------------
+# Version Detection
+# ---------------------------------------------------------------------
+
+# WHY: mas v5.0.0+ requires macOS 13+, v4.x for older versions
+# mas minimum requirement: macOS 10.11 (El Capitan)
+- name: "mas: Detect macOS version {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _is_macos_13_plus: "{{ os_version_major | int >= 13 }}"
+    _is_macos_11_plus: "{{ os_version_major | int >= 11 }}"
+    _mas_not_supported: "{{ os_version_major | int < 11 }}"
+  when: not _mas_already_installed | bool
+  tags: ["always"]
+
+# WHY: Fail early on unsupported macOS versions
+- name: "mas: Error for unsupported macOS (10.10 or older) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: >-
+      ERROR: macOS {{ os_version_full }} is not supported by mas.
+      mas requires macOS 10.11 (El Capitan) or newer.
+      Current version: macOS {{ os_version_full }}
+      Please upgrade your macOS to use mas (Mac App Store CLI).
+  when:
+    - not _mas_already_installed | bool
+    - _mas_not_supported | default(false) | bool
+
+# ---------------------------------------------------------------------
+# Strategy 1: Homebrew Core (macOS 13+ only)
+# ---------------------------------------------------------------------
+
+# WHY: macOS 13+ can use the standard Homebrew Core formula
+- name: "mas: Install via Homebrew Core {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_name: "mas"
+    package_list: ["mas"]
+  when:
+    - not _mas_already_installed | bool
+    - _is_macos_13_plus | bool
+    - is_homebrew_installed | default(false) | bool
+
+# ---------------------------------------------------------------------
+# Strategy 2: Homebrew Tap (macOS 10.11-12 only)
+# ---------------------------------------------------------------------
+
+# WHY: Older macOS versions require the mas-cli/tap third-party repository
+- name: "mas: Add Homebrew Tap for legacy macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.homebrew_tap:
+    name: "mas-cli/tap"
+    state: present
+  when:
+    - not _mas_already_installed | bool
+    - not _is_macos_13_plus | bool
+    - is_homebrew_installed | default(false) | bool
+  become: false # Homebrew operations should not run as root
+
+# WHY: Tap formula uses full path syntax
+- name: "mas: Install via Homebrew Tap {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_name: "mas-cli/tap/mas"
+    package_list: ["mas-cli/tap/mas"]
+  when:
+    - not _mas_already_installed | bool
+    - not _is_macos_13_plus | bool
+    - is_homebrew_installed | default(false) | bool
+
+# ---------------------------------------------------------------------
+# Strategy 3: MacPorts Fallback (macOS 13+ only)
+# ---------------------------------------------------------------------
+
+# WHY: MacPorts only supports mas on macOS 13+
+- name: "mas: Install via MacPorts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_name: "mas"
+    package_list: ["mas"]
+  when:
+    - not _mas_already_installed | bool
+    - _is_macos_13_plus | bool
+    - not is_homebrew_installed | default(false) | bool
+    - is_macports_installed | default(false) | bool
+
+# ---------------------------------------------------------------------
+# Strategy 4: GitHub Releases Fallback (when no package manager)
+# ---------------------------------------------------------------------
+
+# WHY: Detect architecture-aware binary installation path
+# Apple Silicon: /opt/homebrew/bin
+# Intel: /usr/local/bin
+- name: "mas: Detect binary installation path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _mas_bin_path: "{{ '/opt/homebrew/bin' if os_architecture == 'arm64' else '/usr/local/bin' }}"
+  when:
+    - not _mas_already_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - not is_macports_installed | default(false) | bool
+  tags: ["always"]
+
+# WHY: Download binary directly when no package manager is installed
+# macOS 13+: Use latest v5.x release (Universal Binary)
+# macOS 10.11-12: Use v4.1.2 (last version supporting older macOS)
+# Uses github_proxy for China network acceleration
+# NOTE: mas releases are Universal Binaries (support both ARM and Intel)
+- name: "mas: Determine GitHub release URL {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _mas_github_url: >-
+      {%- set no_pkg_mgr = not (is_homebrew_installed | default(false) | bool) and not (is_macports_installed | default(false) | bool) -%}
+      {%- set macos_12_no_brew = not (_is_macos_13_plus | bool) and not (is_homebrew_installed | default(false) | bool) -%}
+      {%- if _is_macos_13_plus | bool and no_pkg_mgr -%}
+        {{ github_proxy | default('', true) }}https://github.com/mas-cli/mas/releases/latest/download/mas.zip
+      {%- elif macos_12_no_brew -%}
+        {%- if os_architecture in ['arm64', 'aarch64'] -%}
+          {{ github_proxy | default('', true) }}https://github.com/mas-cli/mas/releases/download/v4.1.2/mas-4.1.2-arm64.pkg
+        {%- else -%}
+          {{ github_proxy | default('', true) }}https://github.com/mas-cli/mas/releases/download/v4.1.2/mas-4.1.2-x86_64.pkg
+        {%- endif -%}
+      {%- else -%}
+
+      {%- endif -%}
+  when:
+    - not _mas_already_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - not is_macports_installed | default(false) | bool
+  tags: ["always"]
+
+- name: "mas: Download from GitHub Releases {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ _mas_github_url }}"
+    dest: "/tmp/mas.{{ 'pkg' if _mas_github_url.endswith('.pkg') else 'zip' }}"
+    mode: "0644"
+    timeout: 60
+  retries: 5
+  delay: 10
+  register: _mas_download
+  until: _mas_download is succeeded
+  when:
+    - not _mas_already_installed | bool
+    - _mas_github_url is defined
+    - _mas_github_url | length > 0
+  become: false # /tmp is writable by all users
+
+# WHY: Ensure binary directory exists before extraction
+# On systems without Homebrew/MacPorts, the directory may not exist
+- name: "mas: Ensure binary directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ _mas_bin_path }}"
+    state: directory
+    mode: "0755"
+  when:
+    - not _mas_already_installed | bool
+    - _mas_github_url is defined
+    - _mas_github_url | length > 0
+  become: "{{ become_enabled }}"
+
+# WHY: Extract to architecture-appropriate binary path
+# Ensures mas binary is in the correct location for the architecture
+- name: "mas: Extract GitHub release (ZIP) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.unarchive:
+    src: "/tmp/mas.zip"
+    dest: "{{ _mas_bin_path }}"
+    remote_src: true
+    mode: "0755"
+  when:
+    - not _mas_already_installed | bool
+    - _mas_github_url is defined
+    - _mas_github_url | length > 0
+    - _mas_github_url.endswith('.zip')
+  become: "{{ become_enabled }}"
+
+- name: "mas: Install GitHub release (PKG) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "installer -pkg /tmp/mas.pkg -target /"
+  when:
+    - not _mas_already_installed | bool
+    - _mas_github_url is defined
+    - _mas_github_url | length > 0
+    - _mas_github_url.endswith('.pkg')
+  become: "{{ become_enabled }}"
+
+- name: "mas: Cleanup downloaded archive {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/tmp/mas.{{ 'pkg' if _mas_github_url.endswith('.pkg') else 'zip' }}"
+    state: absent
+  when:
+    - not _mas_already_installed | bool
+    - _mas_github_url is defined
+    - _mas_github_url | length > 0
+  become: false # /tmp cleanup doesn't need root
+
+# ---------------------------------------------------------------------
+# PATH Integration: Update PATH after GitHub installation
+# ---------------------------------------------------------------------
+
+# WHY: When installing from GitHub, mas binary path needs to be added to os_paths
+# This only applies to GitHub fallback installation (no package manager)
+# Package manager installations handle PATH automatically
+- name: "mas: Update os_paths with mas binary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    os_paths: "{{ ([_mas_bin_path] + os_paths.split(':')) | unique | join(':') }}"
+  when:
+    - _mas_github_url is defined
+    - _mas_github_url | length > 0
+  tags: ["always"]

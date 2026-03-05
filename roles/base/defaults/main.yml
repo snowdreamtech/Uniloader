@@ -1,0 +1,40 @@
+---
+# =====================================================================
+# roles/base/defaults/main.yml
+#
+# Purpose:
+#   Default variables for the common base role.
+#   Defines the core set of packages and system configurations
+#   applied to every managed node.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Base Packages: Essential utilities required for system administration,
+# networking, and basic automation tasks.
+# ---------------------------------------------------------------------
+base_packages:
+  - "sudo"
+  - "procps"
+  - "vim"
+  - "zip"
+  - "unzip"
+  - "bzip2"
+  - "xz-utils"
+  - "file"
+  - "gzip"
+  - "jq"
+  - "tzdata"
+  - "openssl"
+  - "gnupg"
+  - "sysstat"
+  - "wget"
+  - "curl"
+  - "git"
+  - "lsof"
+  - "ca-certificates"
+
+# ---------------------------------------------------------------------
+# Development Packages: Optional set of packages for development nodes.
+# ---------------------------------------------------------------------
+base_dev_packages: []

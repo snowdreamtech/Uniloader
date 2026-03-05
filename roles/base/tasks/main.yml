@@ -1,0 +1,28 @@
+---
+# =====================================================================
+# roles/common/base/tasks/main.yml
+#
+# Purpose:
+#   Entry point for general system base configuration.
+#   Delegates to the OS-specific loader to handle foundational settings
+#   like timezones, locales, and base security hardening.
+#
+# Simple Usage:
+#   - role: common/base
+#
+# Comprehensive Usage:
+#   - role: common/base
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to select the appropriate base configuration
+# tasks based on the target OS.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "common_base"

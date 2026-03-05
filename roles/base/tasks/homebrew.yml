@@ -1,0 +1,233 @@
+---
+# =====================================================================
+# roles/base/tasks/homebrew.yml
+#
+# Purpose:
+#   Install Homebrew (brew) on macOS with version compatibility.
+#   Implements intelligent installation logic:
+#
+#   macOS 14+ (Sonoma or newer):
+#     - Officially supported, install latest Homebrew
+#
+#   macOS 10.15-13 (Catalina to Ventura):
+#     - May work but not officially supported
+#     - Install with warning
+#
+#   macOS 10.14- (Mojave or older):
+#     - Not supported, skip installation
+#
+# Simple Usage:
+#   - ansible.builtin.include_tasks: "homebrew.yml"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_tasks: "homebrew.yml"
+#     vars:
+#       homebrew_force_install: true  # Force install on unsupported versions
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pre-flight Check: Detect if Homebrew is already installed
+# ---------------------------------------------------------------------
+
+# WHY: Avoid redundant installation if brew is already present
+- name: "Homebrew: Check if already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} command -v brew"
+  register: _brew_check
+  failed_when: false
+  changed_when: false
+  tags: ["always"]
+
+- name: "Homebrew: Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    is_homebrew_installed: "{{ _brew_check.rc == 0 }}"
+  tags: ["always"]
+
+- name: "Homebrew: Skip installation (already present) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Homebrew is already installed at {{ _brew_check.stdout }}"
+  when: is_homebrew_installed | bool
+
+# ---------------------------------------------------------------------
+# MacPorts Conflict Detection
+# ---------------------------------------------------------------------
+
+# WHY: Check if MacPorts is already installed to avoid package manager conflicts
+# Homebrew and MacPorts should not coexist on the same system
+- name: "Homebrew: Check if MacPorts is installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/opt/local/bin/port"
+  register: _macports_check
+  when: not is_homebrew_installed | bool
+  tags: ["always"]
+
+- name: "Homebrew: Set MacPorts status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    is_macports_installed: "{{ _macports_check.stat.exists }}"
+  when:
+    - not is_homebrew_installed | bool
+    - _macports_check is defined
+  tags: ["always"]
+
+- name: "Homebrew: Skip installation (MacPorts already present) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: >-
+      MacPorts is already installed at /opt/local/bin/port.
+      Skipping Homebrew installation to avoid package manager conflicts.
+      Homebrew and MacPorts should not coexist on the same system.
+  when:
+    - not is_homebrew_installed | bool
+    - is_macports_installed | default(false) | bool
+
+# ---------------------------------------------------------------------
+# Version Compatibility Detection
+# ---------------------------------------------------------------------
+
+# WHY: Homebrew officially supports macOS 14+, may work on 10.15-13
+- name: "Homebrew: Detect macOS version compatibility {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _brew_officially_supported: "{{ os_version_major | int >= 14 }}"
+    _brew_may_work: "{{ os_version_major | int >= 10 and os_version_major | int <= 13 }}"
+    _brew_not_supported: "{{ os_version_major | int < 10 }}"
+  when:
+    - not is_homebrew_installed | bool
+    - not is_macports_installed | default(false) | bool
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Installation Decision Logic
+# ---------------------------------------------------------------------
+
+# WHY: Warn users on unsupported versions
+- name: "Homebrew: Warning for legacy macOS (10.15-13) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: macOS {{ os_version_full }} is not officially supported by Homebrew.
+      Homebrew officially supports macOS 14 (Sonoma) or higher.
+      Installation may work but is not guaranteed.
+      Set homebrew_force_install: true to proceed anyway.
+  when:
+    - not is_homebrew_installed | bool
+    - not is_macports_installed | default(false) | bool
+    - _brew_may_work | default(false) | bool
+    - not homebrew_force_install | default(false) | bool
+
+- name: "Homebrew: Warning for very old macOS (10.14-) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: macOS {{ os_version_full }} (Mojave or older) is not compatible with Homebrew.
+      Homebrew requires macOS 10.15 (Catalina) or newer.
+      Skipping Homebrew installation. MacPorts will be used as fallback if available.
+  when:
+    - not is_homebrew_installed | bool
+    - not is_macports_installed | default(false) | bool
+    - _brew_not_supported | default(false) | bool
+
+# ---------------------------------------------------------------------
+# Installation: Official Homebrew Script
+# ---------------------------------------------------------------------
+
+# WHY: Use official installation script from Homebrew GitHub
+# Supports github_proxy for China network acceleration
+# Skips installation on macOS 10.14- (will use MacPorts fallback)
+# Skips if MacPorts is already installed (avoid conflicts)
+- name: "Homebrew: Install via official script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    PATH={{ os_paths }} /bin/bash -c "$(curl -fsSL --retry 5 --retry-delay 10 --connect-timeout 60 {{ github_proxy | default('', true) }}https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  environment:
+    NONINTERACTIVE: "1" # Skip interactive prompts
+  when:
+    - not is_homebrew_installed | bool
+    - not is_macports_installed | default(false) | bool
+    - not _brew_not_supported | default(false) | bool
+    - (_brew_officially_supported | default(false) | bool) or
+      (_brew_may_work | default(false) | bool and homebrew_force_install | default(false) | bool)
+  register: _brew_install_result
+  become: false # Homebrew should NOT run as root
+
+# ---------------------------------------------------------------------
+# Post-installation: Update PATH and verify
+# ---------------------------------------------------------------------
+
+# WHY: Homebrew installs to different locations on Intel vs Apple Silicon
+- name: "Homebrew: Detect installation path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _brew_prefix: "{{ '/opt/homebrew' if os_architecture == 'arm64' else '/usr/local' }}"
+  when: _brew_install_result is changed
+  tags: ["always"]
+
+# WHY: Re-verify installation after install attempt
+- name: "Homebrew: Verify installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "{{ _brew_prefix }}/bin/brew --version"
+  register: _brew_verify
+  failed_when: false
+  changed_when: false
+  when: _brew_install_result is changed
+
+- name: "Homebrew: Update installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    is_homebrew_installed: "{{ _brew_verify.rc == 0 }}"
+  when: _brew_verify is defined and not _brew_verify.skipped | default(false)
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# PATH Integration: Rescan PATH after installation
+# ---------------------------------------------------------------------
+
+# WHY: Homebrew directories need to be added to os_paths
+# The context role scans for /opt/homebrew/bin and /usr/local/bin
+# After installation, we need to rescan to update os_paths
+- name: "Homebrew: Rescan PATH directories {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "{{ brew_path_item }}"
+  loop:
+    - "{{ _brew_prefix }}/bin"
+    - "{{ _brew_prefix }}/sbin"
+  loop_control:
+    loop_var: brew_path_item
+  register: _brew_path_scan
+  when:
+    - is_homebrew_installed | bool
+    - _brew_install_result is changed
+  changed_when: false
+  tags: ["always"]
+
+- name: "Homebrew: Update os_paths with Homebrew directories {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    os_paths: "{{ ([_brew_prefix ~ '/bin', _brew_prefix ~ '/sbin'] + os_paths.split(':')) | unique | join(':') }}"
+  when:
+    - is_homebrew_installed | bool
+    - _brew_install_result is changed
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Homebrew Cask: Ensure Cask support is available
+# ---------------------------------------------------------------------
+
+# WHY: Homebrew Cask is now built-in to Homebrew (no separate installation needed)
+# We just verify it's available
+- name: "Homebrew Cask: Verify availability {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} brew --version"
+  register: _cask_check
+  failed_when: false
+  changed_when: false
+  when: is_homebrew_installed | bool
+
+- name: "Homebrew Cask: Confirmation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Homebrew Cask is available (built-in to Homebrew)"
+  when:
+    - is_homebrew_installed | bool
+    - _cask_check.rc == 0
+
+# ---------------------------------------------------------------------
+# Analytics: Disable Homebrew analytics (privacy)
+# ---------------------------------------------------------------------
+
+# WHY: Disable analytics for privacy and faster operations
+- name: "Homebrew: Disable analytics {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} brew analytics off"
+  when: is_homebrew_installed | bool
+  changed_when: false
+  become: false

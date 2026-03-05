@@ -1,0 +1,95 @@
+---
+# =====================================================================
+# roles/common/base/tasks/default.yml
+#
+# Purpose:
+#   Default set of baseline configuration tasks.
+#   Includes installation of core packages, VIM customization,
+#   and global Git settings applied system-wide.
+#
+# Simple Usage:
+#   - include_tasks: "default.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "default.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Preparation: resolve known curl conflicts during package manager
+# initialization.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "curl_conflict_loader/main"
+  when: os_family == 'redhat'
+
+# ---------------------------------------------------------------------
+# Execution: Install the baseline utilities defined in the base role
+# defaults (e.g., zip, jq, vim, procps).
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "base"
+    app_desc: "Base system packages"
+    app_packages: "{{ base_packages }}"
+    app_state: "present"
+
+# ---------------------------------------------------------------------
+# Configuration: Apply global VIM preferences.
+# ---------------------------------------------------------------------
+- name: "Set VIM configuration path fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    vim_config_root: "/etc/vim"
+  tags: ["always"]
+
+- name: "Ensure vim config directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ vim_config_root }}"
+    state: "directory"
+    mode: "0755"
+  become: "{{ become_enabled }}"
+  when: not (is_container | default(false, true))
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "copy_loader"
+  vars:
+    src: "vimrc.local"
+    dest: "{{ vim_config_root }}/vimrc.local"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  when: not (is_container | default(false, true))
+
+- name: "Integrate vimrc.local (RedHat) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.blockinfile:
+    path: "/etc/vimrc"
+    marker: '" {mark} ANSIBLE vimrc.local loader'
+    block: |
+      if filereadable("/etc/vim/vimrc.local")
+        source /etc/vim/vimrc.local
+      endif
+    insertafter: "EOF"
+  become: "{{ become_enabled }}"
+  when:
+    - os_family | default('', true) == 'redhat'
+
+# ---------------------------------------------------------------------
+# Lifecycle: Execute the git_config shell script to apply global
+# identity and performance settings.
+# ---------------------------------------------------------------------
+- name: "Configure system-wide Git settings {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.script: "git_config.sh"
+  environment:
+    GIT_USER_NAME: "{{ git_user_name | default('', true) }}"
+    GIT_USER_EMAIL: "{{ git_user_email | default('', true) }}"
+    GIT_EDITOR: "{{ git_editor | default('vim', true) }}"
+    GIT_SIGNING_KEY: "{{ git_signing_key | default('', true) }}"
+    GIT_SIGNING: "{{ git_signing | default(false, true) }}"
+  become: "{{ become_enabled }}"
+  changed_when: false

@@ -1,0 +1,293 @@
+---
+# =====================================================================
+# roles/base/tasks/macports.yml
+#
+# Purpose:
+#   Install MacPorts on macOS with version compatibility.
+#   Implements intelligent installation logic:
+#
+#   macOS 10.5+ (Leopard or newer):
+#     - Officially supported, install appropriate version
+#
+#   Older macOS:
+#     - Not supported
+#
+# Simple Usage:
+#   - ansible.builtin.include_tasks: "macports.yml"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_tasks: "macports.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Pre-flight Check: Detect if MacPorts is already installed
+# ---------------------------------------------------------------------
+
+# WHY: Avoid redundant installation if port is already present
+- name: "MacPorts: Check if executable exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/opt/local/bin/port"
+  register: _port_stat
+  tags: ["always"]
+
+- name: "MacPorts: Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    is_macports_installed: "{{ _port_stat.stat.exists }}"
+  tags: ["always"]
+
+- name: "MacPorts: Skip installation (already present) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "MacPorts is already installed at /opt/local/bin/port"
+  when: is_macports_installed | bool
+
+# ---------------------------------------------------------------------
+# Homebrew Conflict Detection
+# ---------------------------------------------------------------------
+
+# WHY: Check if Homebrew is already installed to avoid package manager conflicts
+# Homebrew and MacPorts should not coexist on the same system
+- name: "MacPorts: Check if Homebrew is installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} command -v brew"
+  register: _brew_check_for_macports
+  failed_when: false
+  changed_when: false
+  when: not is_macports_installed | bool
+  tags: ["always"]
+
+- name: "MacPorts: Set Homebrew status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    is_homebrew_installed: "{{ _brew_check_for_macports.rc == 0 }}"
+  when:
+    - not is_macports_installed | bool
+    - _brew_check_for_macports is defined
+  tags: ["always"]
+
+- name: "MacPorts: Skip installation (Homebrew already present) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: >-
+      Homebrew is already installed at {{ _brew_check_for_macports.stdout }}.
+      Skipping MacPorts installation to avoid package manager conflicts.
+      Homebrew and MacPorts should not coexist on the same system.
+  when:
+    - not is_macports_installed | bool
+    - is_homebrew_installed | default(false) | bool
+
+# ---------------------------------------------------------------------
+# Version Compatibility Detection
+# ---------------------------------------------------------------------
+
+# WHY: MacPorts supports macOS 10.5+, much broader than Homebrew
+- name: "MacPorts: Detect macOS version compatibility {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _macports_supported: "{{ os_version_major | int >= 10 }}"
+    _macports_legacy: "{{ os_version_major | int >= 10 and os_version_major | int <= 12 }}"
+    _macports_modern: "{{ os_version_major | int >= 13 }}"
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+  tags: ["always"]
+
+# WHY: Fail on very old macOS (pre-10.5) that doesn't support MacPorts
+- name: "MacPorts: Error for unsupported macOS (10.4 or older) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: >-
+      ERROR: macOS {{ os_version_full }} (Tiger or older) is not supported by MacPorts.
+      MacPorts requires macOS 10.5 (Leopard) or newer.
+      Current version: macOS {{ os_version_full }}
+      Please upgrade your macOS to use MacPorts.
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - not _macports_supported | default(false) | bool
+
+# ---------------------------------------------------------------------
+# Xcode Command Line Tools Check
+# ---------------------------------------------------------------------
+
+# WHY: MacPorts requires Xcode Command Line Tools to compile ports
+- name: "MacPorts: Check for Xcode Command Line Tools {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "xcode-select -p"
+  register: _xcode_check
+  failed_when: false
+  changed_when: false
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _macports_supported | default(false) | bool
+  tags: ["always"]
+
+- name: "MacPorts: Warning about missing Xcode CLT {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: Xcode Command Line Tools not found.
+      MacPorts requires Xcode CLT to compile ports.
+      Attempting to install Xcode CLT (this will open a GUI dialog).
+      You may need to manually approve the installation.
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _xcode_check is defined
+    - _xcode_check.rc != 0
+
+- name: "MacPorts: Trigger Xcode CLT installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "xcode-select --install"
+  register: _xcode_install
+  failed_when: false
+  changed_when: _xcode_install.rc == 0
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _xcode_check is defined
+    - _xcode_check.rc != 0
+
+- name: "MacPorts: Wait for Xcode CLT installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "xcode-select -p"
+  register: _xcode_verify
+  retries: 30
+  delay: 10
+  until: _xcode_verify.rc == 0
+  failed_when: false
+  changed_when: false
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _xcode_install is defined
+    - _xcode_install is changed
+
+- name: "MacPorts: Error if Xcode CLT installation failed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: >-
+      ERROR: Xcode Command Line Tools installation failed or timed out.
+      MacPorts requires Xcode CLT to function properly.
+      Please install manually: xcode-select --install
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _xcode_verify is defined
+    - not _xcode_verify.skipped | default(false)
+    - _xcode_verify.rc | default(0) != 0
+
+# ---------------------------------------------------------------------
+# Installation: Download and Install MacPorts Package
+# ---------------------------------------------------------------------
+
+# WHY: Determine MacPorts installer URL based on macOS version
+# MacPorts provides specific installers for each macOS version
+# Uses github_proxy for China network acceleration
+- name: "MacPorts: Determine installer URL {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _macports_installer_url: >-
+      {%- set base_url = github_proxy | default('', true) ~ 'https://github.com/macports/macports-base/releases/download/v2.11.6/' -%}
+      {%- if os_version_major | int == 15 -%}
+        {{ base_url }}MacPorts-2.11.6-15-Sequoia.pkg
+      {%- elif os_version_major | int == 14 -%}
+        {{ base_url }}MacPorts-2.11.6-14-Sonoma.pkg
+      {%- elif os_version_major | int == 13 -%}
+        {{ base_url }}MacPorts-2.11.6-13-Ventura.pkg
+      {%- elif os_version_major | int == 12 -%}
+        {{ base_url }}MacPorts-2.11.6-12-Monterey.pkg
+      {%- elif os_version_major | int == 11 -%}
+        {{ base_url }}MacPorts-2.11.6-11-BigSur.pkg
+      {%- elif os_version_major | int == 10 -%}
+        {%- if os_version_minor | int >= 15 -%}
+          {{ base_url }}MacPorts-2.11.6-10.15-Catalina.pkg
+        {%- elif os_version_minor | int >= 14 -%}
+          {{ base_url }}MacPorts-2.11.6-10.14-Mojave.pkg
+        {%- elif os_version_minor | int >= 13 -%}
+          {{ base_url }}MacPorts-2.11.6-10.13-HighSierra.pkg
+        {%- elif os_version_minor | int >= 12 -%}
+          {{ base_url }}MacPorts-2.11.6-10.12-Sierra.pkg
+        {%- else -%}
+          {{ base_url }}MacPorts-2.11.6-10.11-ElCapitan.pkg
+        {%- endif -%}
+      {%- else -%}
+
+      {%- endif -%}
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _macports_supported | default(false) | bool
+  tags: ["always"]
+
+- name: "MacPorts: Download installer {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ _macports_installer_url }}"
+    dest: "/tmp/MacPorts.pkg"
+    mode: "0644"
+    timeout: 60
+  retries: 5
+  delay: 10
+  register: _macports_download
+  until: _macports_download is succeeded
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _macports_installer_url is defined
+    - _macports_installer_url | length > 0
+  become: "{{ become_enabled }}"
+
+- name: "MacPorts: Install from package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "installer -pkg /tmp/MacPorts.pkg -target /"
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _macports_installer_url is defined
+    - _macports_installer_url | length > 0
+  register: _macports_install_result
+  become: "{{ become_enabled }}"
+
+- name: "MacPorts: Cleanup installer {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/tmp/MacPorts.pkg"
+    state: absent
+  when:
+    - not is_macports_installed | bool
+    - not is_homebrew_installed | default(false) | bool
+    - _macports_installer_url is defined
+    - _macports_installer_url | length > 0
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Post-installation: Verify and Update
+# ---------------------------------------------------------------------
+
+# WHY: Re-verify installation after install attempt
+- name: "MacPorts: Verify installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "/opt/local/bin/port version"
+  register: _macports_verify
+  failed_when: false
+  changed_when: false
+  when: _macports_install_result is changed
+
+- name: "MacPorts: Update installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    is_macports_installed: "{{ _macports_verify.rc == 0 }}"
+  when: _macports_verify is defined and not _macports_verify.skipped | default(false)
+  tags: ["always"]
+
+# WHY: Update MacPorts port definitions after installation
+- name: "MacPorts: Update port definitions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "/opt/local/bin/port selfupdate"
+  when:
+    - is_macports_installed | bool
+    - _macports_install_result is changed
+  changed_when: false
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# PATH Integration: Rescan PATH after installation
+# ---------------------------------------------------------------------
+
+# WHY: MacPorts directories need to be added to os_paths
+# The context role scans for /opt/local/bin and /opt/local/sbin
+# After installation, we need to rescan to update os_paths
+- name: "MacPorts: Update os_paths with MacPorts directories {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    os_paths: "{{ (['/opt/local/bin', '/opt/local/sbin'] + os_paths.split(':')) | unique | join(':') }}"
+  when:
+    - is_macports_installed | bool
+    - _macports_install_result is changed
+  tags: ["always"]
