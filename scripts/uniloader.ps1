@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Windows smart wrapper for ansible.sh.
+    Windows smart wrapper for uniloader.sh.
 #>
 
 $ErrorActionPreference = "Stop"
