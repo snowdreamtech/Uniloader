@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/containerd_compose_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/containerd_compose_loader.yml
 #
 # Purpose:
 #   Simplified loader for managing Compose projects using nerdctl

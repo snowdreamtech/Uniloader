@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/podman_network_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # podman_network_loader.yml
 #
 # Enterprise-grade loader for managing Podman networks with full audit

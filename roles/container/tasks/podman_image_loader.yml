@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/podman_image_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # podman_image_loader.yml
 #
 # Enterprise-grade loader for managing Podman images with full audit

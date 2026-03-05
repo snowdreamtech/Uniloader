@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/crio_storage_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # crio_storage_loader.yml
 #
 # Enterprise-grade loader for configuring CRI-O storage drivers with

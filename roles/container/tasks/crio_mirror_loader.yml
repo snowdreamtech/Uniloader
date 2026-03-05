@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/crio_mirror_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # crio_mirror_loader.yml
 #
 # Enterprise-grade loader for configuring CRI-O registry mirrors with

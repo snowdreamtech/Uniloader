@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/lxc_image_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # lxc_image_loader.yml
 #
 # Enterprise-grade loader for managing LXC/LXD images with full audit

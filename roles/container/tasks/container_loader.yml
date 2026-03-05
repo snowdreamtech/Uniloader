@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/container_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/container_loader.yml
 #
 # Purpose:
 #   Abstract deployment layer for containerized applications.

@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/docker_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/docker_loader.yml
 #
 # Purpose:
 #   Advanced Docker container lifecycle management engine.

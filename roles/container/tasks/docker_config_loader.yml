@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/docker_config_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # docker_config_loader.yml
 #
 # Enterprise-grade loader for configuring Docker daemon.json with full

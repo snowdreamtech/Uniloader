@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/docker_registry_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # docker_registry_loader.yml
 #
 # Enterprise-grade loader for managing Docker registry authentication

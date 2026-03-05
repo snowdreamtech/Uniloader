@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/kubectl_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/kubectl_loader.yml
 #
 # Purpose:
 #   Generic loader for managing Kubernetes workloads using kubectl.

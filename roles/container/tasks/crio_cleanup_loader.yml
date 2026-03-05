@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/crio_cleanup_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # crio_cleanup_loader.yml
 #
 # Enterprise-grade loader for cleaning CRI-O unused resources with full

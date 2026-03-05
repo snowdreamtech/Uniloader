@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/podman_healthcheck_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # podman_healthcheck_loader.yml
 #
 # Enterprise-grade loader for performing Podman health checks with full

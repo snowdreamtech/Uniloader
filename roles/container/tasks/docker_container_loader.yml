@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/docker_container_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/docker_container_loader.yml
 #
 # Purpose:
 #   Low-level Docker container orchestration.

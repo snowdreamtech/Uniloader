@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/podman_system_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # podman_system_loader.yml
 #
 # Enterprise-grade loader for managing Podman system-level operations

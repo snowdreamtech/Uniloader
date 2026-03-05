@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/docker_network_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # docker_network_loader.yml
 #
 # Enterprise-grade loader for managing Docker networks with full audit

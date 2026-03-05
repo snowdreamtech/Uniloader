@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/podman_compose_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/podman_compose_loader.yml
 #
 # Purpose:
 #   Enterprise-grade loader for managing Podman Compose projects using

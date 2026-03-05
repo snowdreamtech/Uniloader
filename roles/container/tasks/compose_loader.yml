@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/compose_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/compose_loader.yml
 #
 # Purpose:
 #   Unified entry point for Compose project management.

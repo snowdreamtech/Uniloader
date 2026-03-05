@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/podman_volume_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # podman_volume_loader.yml
 #
 # Enterprise-grade loader for managing Podman volumes with full audit

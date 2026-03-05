@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/crio_runtime_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # crio_runtime_loader.yml
 #
 # Enterprise-grade loader for configuring CRI-O runtimes including runc,

@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/docker_healthcheck_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # docker_healthcheck_loader.yml
 #
 # Enterprise-grade loader for performing Docker health checks with full

@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/containerd_cleanup_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/containerd_cleanup_loader.yml
 #
 # Purpose:
 #   Enterprise-grade loader for cleaning containerd system resources.

@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/podman_registry_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # podman_registry_loader.yml
 #
 # Enterprise-grade loader for managing Podman registry authentication

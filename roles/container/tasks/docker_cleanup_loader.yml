@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/docker_cleanup_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # docker_cleanup_loader.yml
 #
 # Enterprise-grade loader for cleaning Docker unused resources with full

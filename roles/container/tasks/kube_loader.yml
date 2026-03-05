@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/kube_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/kube_loader.yml
 #
 # Purpose:
 #   Unified entry point for Kubernetes YAML manifest deployment.

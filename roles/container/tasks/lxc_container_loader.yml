@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/lxc_container_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # lxc_container_loader.yml
 #
 # Enterprise-grade loader for managing LXC/LXD system containers with

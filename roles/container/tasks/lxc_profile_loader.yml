@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/lxc_profile_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # lxc_profile_loader.yml
 #
 # Enterprise-grade loader for managing LXC/LXD profiles with full audit

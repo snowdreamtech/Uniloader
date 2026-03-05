@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/podman_config_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # podman_config_loader.yml
 #
 # Enterprise-grade loader for configuring Podman system-level settings

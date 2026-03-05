@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/crio_network_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # crio_network_loader.yml
 #
 # Enterprise-grade loader for configuring CRI-O CNI networks with full

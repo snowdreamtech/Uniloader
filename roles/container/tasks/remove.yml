@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/remove.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/remove.yml
 #
 # Purpose:
 #   Simplified interface for removing application containers.

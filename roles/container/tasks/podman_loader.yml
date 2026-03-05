@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/podman_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/podman_loader.yml
 #
 # Purpose:
 #   Enterprise-grade universal loader for managing Podman containers.

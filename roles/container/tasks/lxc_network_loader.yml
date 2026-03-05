@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/lxc_network_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # lxc_network_loader.yml
 #
 # Enterprise-grade loader for managing LXC/LXD networks with full audit

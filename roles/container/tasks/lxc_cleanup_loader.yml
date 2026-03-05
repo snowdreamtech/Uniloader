@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/lxc_cleanup_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # lxc_cleanup_loader.yml
 #
 # Enterprise-grade loader for cleaning LXC unused resources with full

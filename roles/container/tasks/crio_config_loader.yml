@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/crio_config_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # crio_config_loader.yml
 #
 # Enterprise-grade loader for configuring CRI-O system-level settings

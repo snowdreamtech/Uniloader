@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/docker_image_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # docker_image_loader.yml
 #
 # Enterprise-grade loader for managing Docker images with full audit

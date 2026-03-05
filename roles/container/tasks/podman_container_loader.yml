@@ -1,11 +1,6 @@
 ---
 # =====================================================================
 # roles/container/tasks/podman_container_loader.yml
-# =====================================================================
-
----
-# =====================================================================
-# roles/container/tasks/podman_container_loader.yml
 #
 # Purpose:
 #   Podman container lifecycle management engine.

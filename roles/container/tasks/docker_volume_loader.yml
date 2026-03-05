@@ -1,10 +1,5 @@
 ---
 # =====================================================================
-# roles/container/tasks/docker_volume_loader.yml
-# =====================================================================
-
----
-# =====================================================================
 # docker_volume_loader.yml
 #
 # Enterprise-grade loader for managing Docker volumes with full audit
