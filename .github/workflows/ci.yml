@@ -1,6 +1,7 @@
+---
 name: Uniloader CI
 
-on:
+"on":
   push:
     branches:
       - main

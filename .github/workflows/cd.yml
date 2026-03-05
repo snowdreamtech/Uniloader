@@ -1,6 +1,7 @@
+---
 name: Uniloader CD
 
-on:
+"on":
   push:
     branches:
       - main
