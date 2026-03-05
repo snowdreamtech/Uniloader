@@ -1,0 +1,99 @@
+---
+# =====================================================================
+# roles/init/tasks/kubeadm/debian.yml
+#
+# Purpose:
+#   Install Kubeadm, Kubelet, Kubectl on Debian-based systems.
+#   Uses pkgs.k8s.io repositories.
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "debian.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Kubeadm {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'debian'
+    fail_msg: "This loader only supports Debian-based systems."
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Dependencies: Install apt-transport-https etc.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "kubeadm_dependencies"
+    app_delivery_mode: "native"
+    app_desc: "Kubeadm installation dependencies"
+    app_state: "present"
+    app_packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg
+
+# ---------------------------------------------------------------------
+# Repository: Setup pkgs.k8s.io
+# ---------------------------------------------------------------------
+- name: "Ensure keyrings directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/etc/apt/keyrings"
+    state: directory
+    mode: "0755"
+  become: "{{ become_enabled }}"
+
+- name: "Check if Kubernetes GPG key exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+  register: k8s_gpg_stat
+  tags: ["always"]
+
+- name: "Download Kubernetes GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ k8s_version | default('v1.30', true) }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  when: not (k8s_gpg_stat.stat.exists | default(false, true))
+  changed_when: true
+  become: "{{ become_enabled }}"
+
+- name: "Add Kubernetes repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/etc/apt/sources.list.d/kubernetes.list"
+    content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ k8s_version | default('v1.30', true) }}/deb/ /"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+
+- name: "Update apt cache {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apt:
+    update_cache: true
+  become: "{{ become_enabled }}"
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# Installation: Kubeadm packages
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "kubeadm"
+    app_delivery_mode: "native"
+    app_desc: "Kubeadm core packages"
+    app_state: "present"
+    app_packages:
+      - kubelet
+      - kubeadm
+      - kubectl
+
+- name: "Hold Kubernetes packages {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  become: "{{ become_enabled }}"

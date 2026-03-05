@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/kubespray/ubuntu.yml
+#
+# Purpose:
+#   Setup Kubespray Controller on Ubuntu (delegates to debian.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "debian.yml"

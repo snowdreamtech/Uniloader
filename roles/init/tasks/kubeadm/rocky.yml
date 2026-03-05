@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/kubeadm/rocky.yml
+#
+# Purpose:
+#   Install Kubeadm on Rocky Linux (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

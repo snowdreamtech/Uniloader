@@ -1,0 +1,177 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/darwin.yml
+#
+# Purpose:
+#   macOS specialized mirror configuration for package managers.
+#   Configures mirrors for Homebrew/MacPorts and generates environment scripts.
+# =====================================================================
+
+# Simple Usage:
+#   - ansible.builtin.include_tasks: mirror/darwin.yml
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_tasks: mirror/darwin.yml
+#     vars:
+#       mirror_enable_homebrew: true
+#       mirror_enable_macports: true
+#       mirror_region: "cn"  # or "global"
+#       mirror_custom_vars: {}  # custom overrides
+
+# ---------------------------------------------------------------------
+# MacPorts Configuration
+# ---------------------------------------------------------------------
+- name: "Check if MacPorts is installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/opt/local/etc/macports/sources.conf"
+  register: macports_sources_stat
+  when: mirror_enable_macports | bool
+  tags: ["always"]
+
+- name: "Configure MacPorts sources.conf {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "macports_sources.conf.j2"
+    dest: "/opt/local/etc/macports/sources.conf"
+    owner: "root"
+    group: "wheel"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - mirror_enable_macports | bool
+    - macports_sources_stat.stat.exists | default(false, true)
+
+- name: "Configure MacPorts master macports.conf {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "macports.conf.j2"
+    dest: "/opt/local/etc/macports/macports.conf"
+    owner: "root"
+    group: "wheel"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - mirror_enable_macports | bool
+    - macports_sources_stat.stat.exists | default(false, true)
+
+- name: "Update MacPorts definitions (selfupdate) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "/opt/local/bin/port -v selfupdate"
+  become: true
+  register: port_selfupdate_result
+  environment:
+    PATH: "/opt/local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{{ ansible_env.PATH }}"
+  changed_when:
+    - "'The ports tree has been updated' in port_selfupdate_result.stdout"
+    - "'MacPorts base is already the latest version' not in port_selfupdate_result.stdout"
+  when:
+    - mirror_enable_macports | bool
+    - macports_sources_stat.stat.exists | default(false, true)
+
+# ---------------------------------------------------------------------
+# Homebrew Configuration
+# ---------------------------------------------------------------------
+- name: "Get Homebrew repository path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "brew --repo"
+  register: brew_repo_path
+  changed_when: false
+  failed_when: false
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+  when: mirror_enable_homebrew | bool
+  tags: ["always"]
+
+- name: "Apply Homebrew main repo mirror settings {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.git_config:
+    name: "remote.origin.url"
+    value: "{{ mirror_info.homebrew.brew_git }}"
+    repo: "{{ brew_repo_path.stdout }}"
+    scope: local
+  when:
+    - mirror_enable_homebrew | bool
+    - brew_repo_path.rc | default(1) == 0
+    - brew_repo_path.stdout is defined and brew_repo_path.stdout | length > 0
+
+- name: "Apply Homebrew tap mirror settings {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.git_config:
+    name: "remote.origin.url"
+    value: "{{ mirror_info.homebrew[item ~ '_git'] }}"
+    repo: "{{ brew_repo_path.stdout }}/Library/Taps/homebrew/homebrew-{{ item }}"
+    scope: local
+  loop:
+    - core
+    - cask
+  register: tap_config_result
+  failed_when: false # Taps might not exist
+  when:
+    - mirror_enable_homebrew | bool
+    - brew_repo_path.rc | default(1) == 0
+    - brew_repo_path.stdout is defined and brew_repo_path.stdout | length > 0
+
+# Detect which package managers are available on the system
+- name: "Check for package manager presence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "command -v {{ item }}"
+  loop: [brew, port]
+  register: _pkg_mgr_check
+  changed_when: false
+  failed_when: false
+  environment:
+    PATH: "/opt/homebrew/bin:/opt/local/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+  tags: ["always"]
+
+# Store the detection results as reusable facts
+- name: "Set package manager facts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    has_brew: "{{ _pkg_mgr_check.results[0].rc == 0 }}"
+    has_port: "{{ _pkg_mgr_check.results[1].rc == 0 }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Environment Script Configuration
+# ---------------------------------------------------------------------
+
+# Generate environment script with mirror settings for detected package managers
+- name: "Generate macOS environment mirror script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "darwin_env_mirror.sh.j2"
+    dest: "{{ ansible_user_home }}/.darwin_mirror.sh"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when: (has_brew | bool or has_port | bool)
+
+# Remove legacy mirror script references from shell configuration
+- name: "Cleanup deprecated Homebrew mirror script from .zshrc {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_user_home }}/.zshrc"
+    line: "[[ -f ~/.brew_mirror.sh ]] && source ~/.brew_mirror.sh"
+    state: absent
+  become: "{{ become_enabled }}"
+
+# Ensure the new mirror script is sourced in the user's shell configuration
+- name: "Ensure macOS mirror script is sourced in .zshrc {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_user_home }}/.zshrc"
+    line: "[[ -f ~/.darwin_mirror.sh ]] && source ~/.darwin_mirror.sh"
+    create: true
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when: (has_brew | bool or has_port | bool)
+
+# ---------------------------------------------------------------------
+# Verification
+# ---------------------------------------------------------------------
+
+# Perform Homebrew update to verify mirror configuration
+- name: "Update Homebrew via new mirrors {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "brew update"
+  environment:
+    PATH: "/opt/homebrew/bin:/usr/local/bin:{{ ansible_env.PATH }}"
+  register: _brew_update_res
+  changed_when: _brew_update_res.rc == 0
+  async: 300
+  poll: 10
+  when:
+    - mirror_enable_homebrew | bool
+    - has_brew | bool

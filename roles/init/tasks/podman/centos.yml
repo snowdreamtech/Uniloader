@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/centos.yml
+#
+# Purpose:
+#   Install Podman on CentOS (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

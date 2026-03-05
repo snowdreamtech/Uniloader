@@ -1,0 +1,46 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/alpine.yml
+#
+# Purpose:
+#   Install and configure Podman on Alpine Linux.
+#   Ensures cgroups v2 is mounted properly for rootless containers.
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "alpine.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Podman {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'alpine'
+    fail_msg: "This loader only supports Alpine Linux."
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Installation: Core Packages
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "podman"
+    app_delivery_mode: "native"
+    app_desc: "Podman container engine packages"
+    app_state: "present"
+    app_packages:
+      - podman
+      - cgroup-tools
+
+# ---------------------------------------------------------------------
+# Configuration: Enable cgroups
+# ---------------------------------------------------------------------
+- name: "Ensure cgroups is mounted {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.service:
+    name: cgroups
+    state: started
+    enabled: true
+  become: "{{ become_enabled }}"
+  failed_when: false # In case it's already running or handled by init

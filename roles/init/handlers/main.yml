@@ -1,0 +1,99 @@
+---
+# =====================================================================
+# roles/common/init/handlers/main.yml
+#
+# Purpose:
+#   Global handlers for infrastructure initialization.
+#   Provides safe, multivariate strategies for restarting the SSH
+#   daemon (sshd) across native hosts and containerized environments
+#   (Docker/Podman/LXC), with specialized connection-recovery logic.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Handler: Restart sshd safely
+#
+# Logic:
+#   1. On Native Hosts: Uses the 'service' module.
+#   2. In Containers: Uses CLI signals (HUP) to avoid container exit.
+#   3. Wait Logic: Ensures the port is open before proceeding,
+#      handling localhost vs remote host session breaks.
+# ---------------------------------------------------------------------
+
+- name: "systemd : daemon-reload"
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: "{{ become_enabled }}"
+
+- name: "Restart sshd safely (Host) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.service:
+    name: "{{ sshd.service_name }}"
+    state: "restarted"
+  become: "{{ become_enabled }}"
+  listen: "Restart sshd safely"
+  when:
+    - not (is_container | default(false, true))
+    - os_family != 'darwin'
+
+- name: "Restart sshd safely (macOS) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "launchctl kickstart -k system/com.openssh.sshd"
+  become: true
+  listen: "Restart sshd safely"
+  when:
+    - not (is_container | default(false, true))
+    - os_family == 'darwin'
+
+- name: "Restart sshd safely (Container) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: |
+    if PATH={{ os_paths }} command -v pkill >/dev/null 2>&1; then
+      pkill -HUP sshd
+    elif PATH={{ os_paths }} command -v pidof >/dev/null 2>&1; then
+      kill -HUP $(pidof sshd)
+    elif [ -f /var/run/sshd.pid ]; then
+      kill -HUP $(cat /var/run/sshd.pid)
+    else
+      echo "No method to reload sshd" >&2
+      exit 1
+    fi
+  changed_when: false
+  become: "{{ become_enabled }}"
+  listen: "Restart sshd safely"
+  when:
+    - is_container | default(false, true)
+
+- name: "Wait for sshd inside container {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.wait_for:
+    port: "{{ sshd.port | default(22, true) }}"
+    delay: 2
+    timeout: 15
+  listen: "Restart sshd safely"
+  when:
+    - is_container | default(false, true)
+
+- name: "Wait for sshd on localhost (SSH) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.wait_for:
+    port: "{{ sshd.port | default(22, true) }}"
+    host: "{{ ansible_host | default('127.0.0.1', true) }}"
+    delay: 2
+    timeout: 15
+  connection: "local"
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  listen: "Restart sshd safely"
+  when:
+    - not (is_container | default(false, true))
+    - is_localhost | default(false, true)
+
+- name: "Wait for sshd on remote host:{{ inventory_hostname }} (SSH) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.wait_for:
+    port: "{{ sshd.port | default(22, true) }}"
+    host: "{{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname, true) }}"
+    delay: 2
+    timeout: 15
+  connection: "local"
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  listen: "Restart sshd safely"
+  when:
+    - not (is_container | default(false, true))
+    - not (is_localhost | default(false, true))

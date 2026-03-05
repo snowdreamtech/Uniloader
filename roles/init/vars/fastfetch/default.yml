@@ -1,0 +1,16 @@
+---
+# =====================================================================
+# roles/common/init/vars/Fastfetch/default.yml
+#
+# Purpose:
+#   Default configuration for the Fastfetch system information tool.
+#   Defines the standard package mapping for general-purpose
+#   distributions.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Fastfetch distribution mapping
+# ---------------------------------------------------------------------
+fastfetch_packages:
+  - "fastfetch"

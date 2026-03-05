@@ -1,0 +1,39 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/debian_legacy_sources_list.yml
+#
+# Purpose:
+#   Configuration of legacy Debian repositories using the traditional
+#   sources.list format. Used for Debian 11 and older, or standard
+#   Debian 12 installations that have not migrated to deb822.
+#
+# Simple Usage:
+#   - include_tasks: "debian_legacy_sources_list.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "debian_legacy_sources_list.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Configuration: Overwrite 'sources.list' with official Debian
+# repository entries for Main, Updates, and Security.
+# ---------------------------------------------------------------------
+- name: "Write legacy APT sources.list {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/etc/apt/sources.list"
+    mode: "0644"
+    owner: "root"
+    group: "root"
+    content: |
+      # Main repository
+      deb http://deb.debian.org/debian {{ os_codename }} main contrib non-free non-free-firmware
+
+      # Updates repository
+      deb http://deb.debian.org/debian {{ os_codename }}-updates main contrib non-free non-free-firmware
+
+      # Security updates
+      deb http://security.debian.org/debian-security {{ os_codename }}-security main contrib non-free non-free-firmware
+  become: "{{ become_enabled }}"

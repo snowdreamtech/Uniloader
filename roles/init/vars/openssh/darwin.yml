@@ -1,0 +1,25 @@
+---
+# =====================================================================
+# roles/common/init/vars/OpenSSH/darwin.yml
+#
+# Purpose:
+#   OpenSSH distribution-specific variables for macOS (Darwin).
+#   Defines the correct service name and configuration path for macOS.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# OpenSSH Package Management
+# macOS comes with OpenSSH pre-installed.
+# ---------------------------------------------------------------------
+openssh_packages: []
+
+# ---------------------------------------------------------------------
+# SSH Service Configuration Overrides
+# ---------------------------------------------------------------------
+sshd_overrides:
+  service_name: "com.openssh.sshd"
+  config_path: "/etc/ssh/sshd_config.d/99-hardening.conf"
+  use_pam: "yes" # macOS uses OpenPAM
+  print_last_log: "yes"
+  pid_file: "/var/run/sshd.pid"

@@ -1,0 +1,82 @@
+---
+# =====================================================================
+# roles/init/tasks/docker/darwin.yml
+#
+# Purpose:
+#   macOS Specialized Docker Detection and Installation.
+#   Identifies 'docker' binary and handles installation via Homebrew
+#   or MacPorts.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the OS family is Darwin.
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Docker {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family == 'darwin'
+    fail_msg: "This loader only supports macOS (Darwin)."
+
+# ---------------------------------------------------------------------
+# Detection: Check for Docker CLI and Daemon.
+# ---------------------------------------------------------------------
+- name: "Detect docker binary presence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} command -v docker 2>/dev/null || true"
+  register: detect_docker_binary
+  changed_when: false
+  failed_when: false
+
+- name: "Check if Docker daemon is responsive {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} docker version"
+  register: detect_docker_daemon
+  changed_when: false
+  failed_when: false
+  when: detect_docker_binary.rc == 0
+
+- name: "Summarize Docker status {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    docker_installed: "{{ detect_docker_binary.rc == 0 }}"
+    docker_daemon_running: "{{ (detect_docker_daemon.rc | default(1)) == 0 }}"
+
+# ---------------------------------------------------------------------
+# Installation: Deploy Docker and Colima via appropriate package manager.
+# ---------------------------------------------------------------------
+- name: "Install Docker on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "docker"
+    app_delivery_mode: "native"
+    app_packages: ["docker"]
+    app_desc: "Docker CLI"
+    app_state: "present"
+  when: not (docker_installed | bool)
+
+- name: "Check if colima is installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} command -v colima 2>/dev/null || true"
+  register: detect_colima_binary
+  changed_when: false
+  failed_when: false
+
+- name: "Install Colima on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "colima"
+    app_delivery_mode: "native"
+    app_packages: ["colima"]
+    app_desc: "Container runtimes on macOS with minimal setup"
+    app_state: "present"
+  when: detect_colima_binary.rc != 0
+
+# ---------------------------------------------------------------------
+# Informational: Provide advice if the daemon is missing.
+# ---------------------------------------------------------------------
+- name: "Advice: Docker Daemon missing on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      Docker CLI is installed, but the daemon is not reachable.
+      On macOS, you may need to start Docker Desktop, OrbStack, or Colima.
+      Suggested command: 'colima start'
+  when:
+    - not (docker_daemon_running | bool)

@@ -1,0 +1,45 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/ubuntu_deb822.yml
+#
+# Purpose:
+#   Configuration of standardized Ubuntu repositories using the
+#   modern deb822 format. Ensures compliance and reliability by
+#   applying a structured source file.
+#
+# Simple Usage:
+#   - include_tasks: "ubuntu_deb822.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "ubuntu_deb822.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Configuration: Apply a standardized multi-stanza deb822 source file
+# for Ubuntu. This overwrites potentially inconsistent system-generated
+# configurations (e.g., during OS upgrades).
+# ---------------------------------------------------------------------
+- name: "Apply standardized Ubuntu deb822 sources {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/etc/apt/sources.list.d/ubuntu.sources"
+    mode: "0644"
+    owner: "root"
+    group: "root"
+    content: |
+      # Standard Ubuntu Repositories (Main, Updates, Backports)
+      Types: deb
+      URIs: http://archive.ubuntu.com/ubuntu
+      Suites: {{ os_codename }} {{ os_codename }}-updates {{ os_codename }}-backports
+      Components: main restricted universe multiverse
+      Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+      # Ubuntu Security Updates
+      Types: deb
+      URIs: http://security.ubuntu.com/ubuntu
+      Suites: {{ os_codename }}-security
+      Components: main restricted universe multiverse
+      Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+  become: "{{ become_enabled }}"

@@ -1,0 +1,60 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/debian.yml
+#
+# Purpose:
+#   Repository orchestration for Debian and Ubuntu systems.
+#   Automatically detects whether to use the modern deb822 format or
+#   the legacy sources.list based on the presence of existing configuration.
+#
+# Simple Usage:
+#   - include_tasks: "debian.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "debian.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Detection: Check for the existence of deb822 source files.
+# Ubuntu 23.10+ and Debian 12 container images may ship deb822 by default.
+# ---------------------------------------------------------------------
+- name: "Check for deb822 source file {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/etc/apt/sources.list.d/{{ os_distribution }}.sources"
+  register: deb822_file
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Debian Routing: Load deb822 specific tasks if the source file exists.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "debian_deb822.yml"
+  when:
+    - os_distribution == "debian"
+    - deb822_file.stat.exists
+
+# ---------------------------------------------------------------------
+# Debian Routing: Use legacy sources.list logic if deb822 is missing.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "debian_legacy_sources_list.yml"
+  when:
+    - os_distribution == "debian"
+    - not deb822_file.stat.exists
+
+# ---------------------------------------------------------------------
+# Ubuntu Routing: Load deb822 specific tasks for modern Ubuntu releases.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "ubuntu_deb822.yml"
+  when:
+    - os_distribution == "ubuntu"
+    - deb822_file.stat.exists
+
+# ---------------------------------------------------------------------
+# Ubuntu Routing: Use legacy sources.list for older Ubuntu releases.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "ubuntu_legacy_sources_list.yml"
+  when:
+    - os_distribution == "ubuntu"
+    - not deb822_file.stat.exists

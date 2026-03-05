@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/k3s/fedora.yml
+#
+# Purpose:
+#   Install K3s on Fedora (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

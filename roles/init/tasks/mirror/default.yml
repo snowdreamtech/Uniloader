@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/default.yml
+# =====================================================================
+
+- name: "No system-specific mirror configuration found {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Skipping system-specific mirror configuration for {{ os_family }} / {{ os_distribution }}"

@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/default.yml
+#
+# Purpose:
+#   Generic Podman installation fallback.
+# =====================================================================
+
+- name: "Skip Podman initialization on unsupported OS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Podman initialization is skipped or not yet specialized for this OS distribution."
+  when: os_family not in ['debian', 'redhat', 'alpine', 'suse', 'darwin', 'arch']

@@ -1,0 +1,100 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/redhat.yml
+#
+# Purpose:
+#   Repository initialization for RHEL-based distributions (excluding Oracle Linux).
+#   Configures standard repositories (BaseOS, AppStream, CRB) and
+#   extra repositories like EPEL.
+#
+# Simple Usage:
+#   - include_tasks: "redhat.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "redhat.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Detection: Identify the primary package manager based on OS version.
+# yum is used for EL6/7, while dnf is used for EL8/9.
+# ---------------------------------------------------------------------
+- name: "Detect RHEL package manager {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    rhel_pkg_mgr: >-
+      {% if os_version_major >= 8 %}
+        dnf
+      {% else %}
+        yum
+      {% endif %}
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Preparation: Ensure management tools are present.
+# ---------------------------------------------------------------------
+
+# WHY: dnf_config_manager module requires dnf-plugins-core to be installed.
+- name: "Install dnf-plugins-core {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "dnf-plugins-core"
+    state: "present"
+  when: rhel_pkg_mgr == "dnf"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Core OS Repositories: Ensure BaseOS and AppStream are enabled.
+# ---------------------------------------------------------------------
+
+# WHY: We use dnf_config_manager module for better idempotency (EL8+).
+- name: "Enable BaseOS and AppStream (RHEL/Rocky/Alma) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dnf config-manager --set-enabled baseos appstream"
+  changed_when: false
+  when: rhel_pkg_mgr == "dnf"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Development Repositories: Enable CRB / PowerTools.
+# ---------------------------------------------------------------------
+
+# WHY: RHEL 8 calls it 'PowerTools', RHEL 9+ and Oracle call it 'crb' or 'codeready-builder'.
+- name: "Enable CRB/PowerTools repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dnf config-manager --set-enabled {{ repo_crb_name }}"
+  changed_when: false
+  when: rhel_pkg_mgr == "dnf"
+  become: "{{ become_enabled }}"
+  failed_when: false # Some versions might not have the plugin installed yet
+
+# ---------------------------------------------------------------------
+# Extra Repositories: EPEL Deployment.
+# ---------------------------------------------------------------------
+
+# WHY: epel-release is the standard entry point for extra packages.
+- name: "Install EPEL repository (RHEL/Rocky/Alma) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "{{ repo_epel_name }}"
+    state: "present"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Legacy Support: CentOS/RHEL 6/7.
+# ---------------------------------------------------------------------
+
+- name: "Enable extras + optional for RHEL/CentOS 7 {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "yum-config-manager --enable extras optional"
+  changed_when: false
+  when:
+    - rhel_pkg_mgr == "yum"
+    - os_version_major == 7
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Finalization: Index all repositories.
+# ---------------------------------------------------------------------
+
+- name: "Update package cache {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >-
+    {{ 'dnf makecache' if rhel_pkg_mgr == 'dnf' else 'yum makecache' }}
+  changed_when: false
+  become: "{{ become_enabled }}"

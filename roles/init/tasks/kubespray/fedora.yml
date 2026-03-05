@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/kubespray/fedora.yml
+#
+# Purpose:
+#   Setup Kubespray Controller on Fedora (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

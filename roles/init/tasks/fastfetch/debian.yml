@@ -1,0 +1,169 @@
+---
+# =====================================================================
+# roles/init/tasks/fastfetch/debian.yml
+#
+# Purpose:
+#   Debian-specific installation and configuration of Fastfetch.
+#   Implements specialized repository detection and GitHub-based
+#   fallback installation.
+#
+# Simple Usage:
+#   - include_tasks: "debian.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "debian.yml"
+#     vars:
+#       fastfetch_packages: ["fastfetch"]
+#       become_enabled: true
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Check Repository Availability
+# ---------------------------------------------------------------------
+
+# WHY: We query the package manager first to determine if a native
+# package exists. This allows us to prefer stable repository versions
+# over manual binary management.
+- name: "Check if fastfetch exists in APT repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  become: "{{ become_enabled }}"
+  block:
+    - name: "Check fastfetch availability in APT {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.command: "apt-cache show fastfetch"
+      register: fastfetch_apt_search
+      failed_when: false
+      changed_when: false
+      check_mode: false
+
+    # WHY: Persist detection result as a boolean fact for use in
+    # conditional installation branches.
+    - name: "Set fastfetch availability fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.set_fact:
+        fastfetch_available: "{{ fastfetch_apt_search.rc == 0 }}"
+
+# ---------------------------------------------------------------------
+# Installation: Native Repository Branch
+# ---------------------------------------------------------------------
+
+# WHY: If found in repository, we use the standard 'app' role to
+# manage the installation, ensuring consistency across the platform.
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "fastfetch"
+    app_delivery_mode: "native"
+    app_packages: "{{ fastfetch_packages | default(['fastfetch'], true) }}"
+    app_desc: "Fastfetch"
+    app_state: "present"
+  when: fastfetch_available | default(false, true)
+
+# ---------------------------------------------------------------------
+# Installation: GitHub Fallback Branch
+# ---------------------------------------------------------------------
+
+# WHY: When repositories (especially on older Debian/Ubuntu versions)
+# lack Fastfetch, we pull the latest optimized binary from GitHub.
+
+- name: "Query Fastfetch latest release metadata {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest"
+    return_content: true
+    status_code: 200
+    headers:
+      Accept: "application/vnd.github+json"
+  register: fastfetch_latest_api
+  changed_when: false
+  when: not (fastfetch_available | default(false, true))
+
+# WHY: Map Ansible architecture names to asset naming conventions
+# used in Fastfetch release files.
+- name: "Detect Linux architecture {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    fastfetch_linux_arch: >-
+      {{
+        'aarch64'
+        if ansible_architecture in ['arm64', 'aarch64']
+        else 'amd64'
+      }}
+  when: not (fastfetch_available | default(false, true))
+
+# WHY: Select the correct .deb package asset based on the detected
+# system architecture.
+- name: "Extract Fastfetch Debian asset URL {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    fastfetch_latest_url: >-
+      {{
+        fastfetch_latest_api.json.assets
+        | selectattr('name', 'match', 'fastfetch-linux-' ~ fastfetch_linux_arch ~ '\\.deb$')
+        | map(attribute='browser_download_url')
+        | first
+      }}
+  when: not (fastfetch_available | default(false, true))
+
+- name: "Fail if no matching Debian asset found {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "No matching Debian Fastfetch asset found for arch={{ fastfetch_linux_arch }}"
+  when:
+    - not (fastfetch_available | default(false, true))
+    - fastfetch_latest_url is not defined or (fastfetch_latest_url | length == 0)
+
+# WHY: Download the asset to a temporary path for installation.
+- name: "Download Fastfetch latest Debian release {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ fastfetch_latest_url }}"
+    dest: "/tmp/fastfetch.deb"
+    mode: "0644"
+  when: not (fastfetch_available | default(false, true))
+
+# WHY: Use the native APT module to install the downloaded deb file,
+# ensuring all dependencies are solved.
+- name: "Install Fastfetch via apt local deb {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apt:
+    deb: "/tmp/fastfetch.deb"
+    state: "present"
+  become: "{{ become_enabled }}"
+  when: not (fastfetch_available | default(false, true))
+
+# WHY: Remove temporary files to keep the system clean as per Lean principles.
+- name: "Clean up Fastfetch temporary deb file {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/tmp/fastfetch.deb"
+    state: "absent"
+  when: not (fastfetch_available | default(false, true))
+
+# ---------------------------------------------------------------------
+# Configuration: SSH MOTD Integration
+# ---------------------------------------------------------------------
+
+# WHY: Debian/Ubuntu systems use pam_motd for login messages. We
+# modify the configuration to suppress static messages and enable
+# dynamic update-motd.d scripts.
+- name: "Replace pam_motd block in /etc/pam.d/sshd {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  become: "{{ become_enabled }}"
+  block:
+    - name: "Remove old pam_motd lines {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.lineinfile:
+        path: "/etc/pam.d/sshd"
+        regexp: "^session\\s+optional\\s+pam_motd\\.so"
+        state: "absent"
+      changed_when: false
+
+    - name: "Insert new pam_motd block {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.blockinfile:
+        path: "/etc/pam.d/sshd"
+        insertafter: "^# and a static \\(admin-editable\\) part from /etc/motd\\.$"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK: pam_motd"
+        block: |
+          session    optional     pam_motd.so  motd=/etc/motd
+          session    optional     pam_motd.so  motd=/run/motd.dynamic
+          session    optional     pam_motd.so  motd=/dev/null noupdate
+
+# WHY: Deploy the execution hook into the update-motd.d framework.
+# This ensures Fastfetch runs every time a user logs in via SSH.
+- name: "Deploy 20-fastfetch script to /etc/update-motd.d/ (Debian) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    src: "20-fastfetch"
+    dest: "/etc/update-motd.d/20-fastfetch"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  become: "{{ become_enabled }}"

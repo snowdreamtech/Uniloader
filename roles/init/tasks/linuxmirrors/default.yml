@@ -1,0 +1,72 @@
+---
+# =====================================================================
+# roles/init/tasks/linuxmirrors/default.yml
+#
+# Purpose:
+#   Default implementation for Linux mirror configuration.
+#   Used when a generic script-based approach for switching mirrors
+#   is preferred over platform-specific logic.
+#
+# Simple Usage:
+#   - include_tasks: "default.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "default.yml"
+#     vars:
+#       is_restricted_network: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Installation: Deploy dependencies required for the mirror script.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "linuxmirrors"
+    app_delivery_mode: "native"
+    app_packages: "{{ linux_mirror_dependencies }}"
+    app_desc: "Linux mirror configuration dependencies"
+    app_state: "present"
+
+# ---------------------------------------------------------------------
+# Configuration: Apply optimized mirror repositories for environments
+# with restricted network access.
+# ---------------------------------------------------------------------
+- name: "Configure mirror repositories via LinuxMirrors {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "command_loader"
+  vars:
+    command: "{{ linux_change_mirror_commands }}"
+    command_shell: true
+    command_become: "{{ become_enabled }}"
+    command_timeout: 180
+    command_retries: 3
+    command_retry_delay: 2
+    command_args:
+      executable: "/bin/bash"
+  when:
+    - is_restricted_network is defined
+    - is_restricted_network | default(false, true)
+
+# ---------------------------------------------------------------------
+# Configuration: Restore official repositories for environments with
+# open network access.
+# ---------------------------------------------------------------------
+- name: "Configure official repositories via LinuxMirrors {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "command_loader"
+  vars:
+    command: "{{ linux_use_offical_repo_commands }}"
+    command_shell: true
+    command_become: "{{ become_enabled }}"
+    command_timeout: 180
+    command_retries: 3
+    command_retry_delay: 2
+    command_args:
+      executable: "/bin/bash"
+  when:
+    - is_open_network is defined
+    - is_open_network | default(false, true)

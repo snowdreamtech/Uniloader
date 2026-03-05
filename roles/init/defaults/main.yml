@@ -1,0 +1,155 @@
+---
+# =====================================================================
+# roles/common/init/defaults/main.yml
+#
+# Purpose:
+#   Default variables for the system initialization role.
+#   Provides production-hardened defaults for OpenSSH server
+#   configurations, security parameters, and access controls.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# SSH Server Configuration:
+# Defines the default values for the 99-hardening.conf.j2 template.
+# ---------------------------------------------------------------------
+sshd_defaults:
+  # Service management and validation
+  validate_command: "sshd -t -f %s"
+  service_name: "sshd"
+  config_path: "/etc/ssh/sshd_config.d/99-hardening.conf"
+
+  # Basic network configuration
+  port: 22
+  address_family: "any"
+  listen_address:
+    - "0.0.0.0"
+    - "::"
+
+  hostkeys:
+    - "/etc/ssh/ssh_host_rsa_key"
+    - "/etc/ssh/ssh_host_ed25519_key"
+    - "/etc/ssh/ssh_host_ecdsa_key"
+
+  # Authentication and security limits
+  login_grace_time: "30"
+  permit_root_login: "no"
+  strict_modes: "yes"
+  max_auth_tries: 3
+  max_sessions: 10
+
+  public_key_authentication: "yes"
+  authorized_keys_file: ".ssh/authorized_keys"
+
+  password_authentication: "no"
+  permit_empty_passwords: "no"
+  kbd_interactive_authentication: "no"
+  use_pam: "yes"
+
+  # Forwarding and tunneling limits (production defaults)
+  allow_agent_forwarding: "no"
+  allow_tcp_forwarding: "no"
+  permit_open: "none"
+  permit_tunnel: "no"
+  gateway_ports: "no"
+
+  # Graphical session configuration
+  x11_forwarding: "no"
+  x11_display_offset: 10
+  x11_use_localhost: "yes"
+
+  # Interactive session settings
+  permit_tty: "yes"
+  print_motd: "no"
+  print_last_log: "yes"
+
+  tcp_keep_alive: "yes"
+  permit_user_environment: "no"
+  compression: "no"
+
+  client_alive_interval: 60
+  client_alive_count_max: 3
+  use_dns: "no"
+
+  max_startups: "10:30:100"
+  pid_file: "/run/sshd.pid"
+  chroot_directory: "none"
+  version_addendum: "none"
+  banner: "none"
+  subsystem_sftp: "internal-sftp"
+
+  # Access control lists
+  allow_users: []
+  allow_groups: []
+  deny_users: []
+  deny_groups: []
+
+  # Conditional match blocks
+  match_user: []
+  match_user_options: ""
+  match_group: []
+  match_group_options: ""
+  match_address: []
+  match_address_options: ""
+  match_blocks: []
+
+# ---------------------------------------------------------------------
+# Overrides: Placeholder for OS-specific or environment-specific
+# variable merging.
+# ---------------------------------------------------------------------
+sshd_overrides: {}
+
+# =====================================================================
+# Repository Configuration Variables
+# =====================================================================
+
+# CRB repository configuration
+repo_crb_name: >-
+  {%- if os_distribution in ['oraclelinux'] -%}
+    ol{{ os_version_major }}_codeready_builder
+  {%- elif os_version_major | int >= 9 -%}
+    crb
+  {%- elif os_distribution in ['rocky', 'almalinux'] -%}
+    powertools
+  {%- else -%}
+    PowerTools
+  {%- endif -%}
+
+# EPEL repository configuration
+repo_epel_name: >-
+  {%- if os_distribution in ['oraclelinux'] -%}
+    oracle-epel-release-el{{ os_version_major }}
+  {%- else -%}
+    epel-release
+  {%- endif -%}
+
+# =====================================================================
+# Mirror Configuration Variables
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Feature Flags: Enable/Disable mirror configuration for components
+# ---------------------------------------------------------------------
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Feature Flags: Enable/Disable mirror configuration for components
+# ---------------------------------------------------------------------
+mirror_enable_macports: true
+mirror_enable_homebrew: true
+mirror_enable_linux: true
+mirror_enable_docker: true
+mirror_enable_languages: true
+
+# ---------------------------------------------------------------------
+# Region Detection
+# ---------------------------------------------------------------------
+# If mirror_region is not set, the role will auto-detect based on tags.
+# Possible values: 'cn', 'global'
+mirror_region: null
+
+# ---------------------------------------------------------------------
+# Package Manager Overrides
+# ---------------------------------------------------------------------
+# Define which mirrors to use if not using defaults from vars/
+mirror_custom_vars: {}

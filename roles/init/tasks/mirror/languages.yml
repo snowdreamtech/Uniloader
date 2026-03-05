@@ -1,0 +1,242 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/languages.yml
+#
+# Purpose:
+#   Configure mirror for programming languages (Python, Node, Rust, Go, Ruby, Swift/ObjC).
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Detection: Check for tool presence
+# ---------------------------------------------------------------------
+- name: "Detect installed language tools {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "command -v {{ item }}"
+  loop:
+    [
+      python3,
+      pip,
+      pip3,
+      npm,
+      yarn,
+      pnpm,
+      cargo,
+      go,
+      gem,
+      pod,
+      rustup,
+      flutter,
+      nvm,
+      conda,
+      ghcup,
+      mvn,
+      gradle,
+    ]
+  register: _lang_tools_check
+  changed_when: false
+  failed_when: false
+  environment:
+    PATH: "{{ os_paths }}"
+  tags: ["always"]
+
+- name: "Map tool detection results"
+  ansible.builtin.set_fact:
+    has_python: "{{ _lang_tools_check.results[0].rc == 0 }}"
+    has_pip: "{{ _lang_tools_check.results[1].rc == 0 or _lang_tools_check.results[2].rc == 0 }}"
+    has_npm: "{{ _lang_tools_check.results[3].rc == 0 }}"
+    has_yarn: "{{ _lang_tools_check.results[4].rc == 0 }}"
+    has_pnpm: "{{ _lang_tools_check.results[5].rc == 0 }}"
+    has_cargo: "{{ _lang_tools_check.results[6].rc == 0 }}"
+    has_go: "{{ _lang_tools_check.results[7].rc == 0 }}"
+    has_gem: "{{ _lang_tools_check.results[8].rc == 0 }}"
+    has_pod: "{{ _lang_tools_check.results[9].rc == 0 }}"
+    has_rustup: "{{ _lang_tools_check.results[10].rc == 0 }}"
+    has_flutter: "{{ _lang_tools_check.results[11].rc == 0 }}"
+    has_nvm: "{{ _lang_tools_check.results[12].rc == 0 }}"
+    has_conda: "{{ _lang_tools_check.results[13].rc == 0 }}"
+    has_ghcup: "{{ _lang_tools_check.results[14].rc == 0 }}"
+    has_maven: "{{ _lang_tools_check.results[15].rc == 0 }}"
+    has_gradle: "{{ _lang_tools_check.results[16].rc == 0 }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Pip / Python
+# ---------------------------------------------------------------------
+- name: "Ensure Pip configuration directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.pip"
+    state: directory
+    mode: "0755"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_pip | bool
+
+- name: "Configure Pip mirror"
+  ansible.builtin.template:
+    src: "pip.conf.j2"
+    dest: "{{ ansible_user_home }}/.pip/pip.conf"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_pip | bool
+
+# ---------------------------------------------------------------------
+# Node ecosystem
+# ---------------------------------------------------------------------
+- name: "Configure NPM mirror"
+  ansible.builtin.template:
+    src: "npmrc.j2"
+    dest: "{{ ansible_user_home }}/.npmrc"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_npm | bool
+
+- name: "Configure Yarn mirror"
+  ansible.builtin.shell: |
+    yarn config set registry {{ mirror_info.npm.registry | default(mirror_info.yarn.registry) }}
+  environment:
+    PATH: "{{ os_paths }}"
+  changed_when: false
+  failed_when: false
+  when: has_yarn | bool
+
+- name: "Configure pnpm mirror"
+  ansible.builtin.shell: |
+    pnpm config set registry {{ mirror_info.npm.registry | default(mirror_info.pnpm.registry) }}
+  environment:
+    PATH: "{{ os_paths }}"
+  changed_when: false
+  failed_when: false
+  when: has_pnpm | bool
+
+# ---------------------------------------------------------------------
+# Rust / Cargo
+# ---------------------------------------------------------------------
+- name: "Ensure Cargo configuration directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.cargo"
+    state: directory
+    mode: "0755"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_cargo | bool
+
+- name: "Configure Cargo mirror"
+  ansible.builtin.template:
+    src: "cargo_config.j2"
+    dest: "{{ ansible_user_home }}/.cargo/config"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_cargo | bool
+
+# ---------------------------------------------------------------------
+# Go
+# ---------------------------------------------------------------------
+- name: "Configure Go mirrors via go env"
+  ansible.builtin.shell: |
+    go env -w GOPROXY={{ mirror_info.go.proxy }}
+    go env -w GOSUMDB={{ mirror_info.go.sumdb }}
+  environment:
+    PATH: "{{ os_paths }}"
+  become: false
+  changed_when: false
+  when:
+    - has_go | bool
+    - mirror_info.go is defined
+
+# ---------------------------------------------------------------------
+# Ruby / CocoaPods
+# ---------------------------------------------------------------------
+- name: "Configure RubyGems mirror"
+  ansible.builtin.template:
+    src: "gemrc.j2"
+    dest: "{{ ansible_user_home }}/.gemrc"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_gem | bool
+
+- name: "Configure CocoaPods mirror repo"
+  ansible.builtin.shell: |
+    pod repo remove master || true
+    pod repo add master https://mirrors.tuna.tsinghua.edu.cn/git/CocoaPods/Specs.git || true
+    pod repo update || true
+  when:
+    - has_pod | bool
+    - mirror_region_effective == 'cn'
+  changed_when: false
+  failed_when: false
+
+# ---------------------------------------------------------------------
+# Conda
+# ---------------------------------------------------------------------
+- name: "Configure Conda mirror"
+  ansible.builtin.template:
+    src: "condarc.j2"
+    dest: "{{ ansible_user_home }}/.condarc"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_conda | bool
+
+# ---------------------------------------------------------------------
+# Java Build Tools (Maven / Gradle)
+# ---------------------------------------------------------------------
+- name: "Ensure Maven configuration directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.m2"
+    state: directory
+    mode: "0755"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_maven | bool
+
+- name: "Configure Maven mirror"
+  ansible.builtin.template:
+    src: "maven_settings.xml.j2"
+    dest: "{{ ansible_user_home }}/.m2/settings.xml"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_maven | bool
+
+- name: "Ensure Gradle configuration directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.gradle"
+    state: directory
+    mode: "0755"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_gradle | bool
+
+- name: "Configure Gradle mirror (init script)"
+  ansible.builtin.template:
+    src: "gradle_init.gradle.j2"
+    dest: "{{ ansible_user_home }}/.gradle/init.gradle"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    mode: "0644"
+  changed_when: false
+  become: "{{ become_enabled }}"
+  when: has_gradle | bool

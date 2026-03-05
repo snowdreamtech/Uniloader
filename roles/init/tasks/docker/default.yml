@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/init/tasks/docker/default.yml
+#
+# Purpose:
+#   Generic Docker installation fallback.
+#   Currently acts as a placeholder or skip-task for platforms where
+#   specialized Linux/macOS logic is not defined.
+# =====================================================================
+
+- name: "Skip Docker initialization on unsupported OS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Docker initialization is skipped or not yet specialized for this OS distribution."
+  when: os_family not in ['debian', 'redhat', 'alpine', 'darwin', 'suse', 'arch']

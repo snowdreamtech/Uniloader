@@ -1,0 +1,45 @@
+---
+# =====================================================================
+# roles/common/init/vars/LinuxMirrors/default.yml
+#
+# Purpose:
+#   Default command templates for the LinuxMirrors optimization engine.
+#   Provides the primary and fallback strategies for switching between
+#   official repositories and optimized regional mirrors (Aliyun).
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Command configuration: Optimized Mirror
+# ---------------------------------------------------------------------
+linux_change_mirror_commands: |
+  bash <(curl -sSL https://linuxmirrors.cn/main.sh) \
+    --source mirrors.aliyun.com \
+    --protocol https \
+    --use-intranet-source false \
+    --install-epel true \
+    --backup true \
+    --upgrade-software false \
+    --clean-cache false \
+    --ignore-backup-tips
+
+# ---------------------------------------------------------------------
+# Command configuration: Official Repository
+# ---------------------------------------------------------------------
+linux_use_offical_repo_commands: |
+  bash <(curl -sSL https://linuxmirrors.cn/main.sh) \
+    --use-official-source true \
+    --protocol https \
+    --use-intranet-source false \
+    --install-epel true \
+    --backup true \
+    --upgrade-software false \
+    --clean-cache false \
+    --ignore-backup-tips
+
+# ---------------------------------------------------------------------
+# Dependencies: Required local tools for script execution.
+# ---------------------------------------------------------------------
+linux_mirror_dependencies:
+  - "bash"
+  - "curl"

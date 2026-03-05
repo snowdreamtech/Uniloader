@@ -1,0 +1,63 @@
+---
+# =====================================================================
+# roles/init/tasks/k3s/alpine.yml
+#
+# Purpose:
+#   Install K3s on Alpine Linux (OpenRC).
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "alpine.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for K3s {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'alpine'
+    fail_msg: "This loader only supports Alpine Linux."
+
+# ---------------------------------------------------------------------
+# Dependencies: Install curl via App Role
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "k3s"
+    app_delivery_mode: "native"
+    app_desc: "K3s installation dependencies"
+    app_state: "present"
+    app_packages:
+      - curl
+
+# ---------------------------------------------------------------------
+# Installation: Run K3s Script (OpenRC support)
+# ---------------------------------------------------------------------
+- name: "Check if K3s is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/usr/local/bin/k3s"
+  register: k3s_binary
+
+- name: "Install K3s via script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -sfL https://get.k3s.io | sh -
+  environment:
+    INSTALL_K3S_SKIP_START: "true"
+    INSTALL_K3S_VERSION: "{{ k3s_version | default(omit) }}"
+  when: not (k3s_binary.stat.exists | default(false, true))
+  changed_when: true
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Service: Enable and Start K3s
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "k3s"
+    service_desc: "K3s Service"
+    service_state: "started"
+    service_enabled: true

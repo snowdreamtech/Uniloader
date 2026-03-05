@@ -1,0 +1,25 @@
+---
+# =====================================================================
+# roles/init/tasks/sudo/main.yml
+#
+# Purpose:
+#   Entry point for sudo configuration.
+#   Delegates to the sudo_loader in the native role to configure
+#   passwordless sudo and group permissions.
+#
+# Simple Usage:
+#   - import_tasks: "Sudo/main.yml"
+#
+# Comprehensive Usage:
+#   - import_tasks: "Sudo/main.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the specialized sudo_loader to manage sudoers configuration.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "sudo_loader"

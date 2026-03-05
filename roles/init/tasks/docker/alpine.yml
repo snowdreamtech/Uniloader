@@ -1,0 +1,146 @@
+---
+# =====================================================================
+# roles/init/tasks/docker/alpine.yml
+#
+# Purpose:
+#   Installation and configuration of the Docker Engine on Alpine Linux
+#   (3.18+).
+#   Handles Alpine-specific repository management (community repo),
+#   OpenRC service integration, and dependency resolution.
+#
+# Simple Usage:
+#   - ansible.builtin.include_tasks: "alpine.yml"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_tasks: "alpine.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the host environment is compatible with the
+# Docker installation requirements for Alpine.
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Docker {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'alpine'
+    fail_msg: "This task file only supports Alpine Linux."
+
+- name: "Validate Alpine version for Docker {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_version_major | default(0, true) | int == 3
+      - os_version_minor | default(0, true) | int >= 18
+    fail_msg: "Docker Engine installation requires Alpine Linux 3.18 or higher."
+
+- name: "Validate CPU architecture for Docker {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_architecture | default('', true) in ["x86_64", "amd64", "armhf", "arm64", "aarch64", "s390x"]
+    fail_msg: "Docker Engine requires a supported architecture: amd64, armhf, arm64, or s390x. Current architecture: {{ os_architecture | default('unknown', true) }}"
+
+# ---------------------------------------------------------------------
+# Preparation: Remove existing Docker components and conflicting
+# packages (like podman-docker) to ensure a clean installation.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_packages:
+      - "podman-docker"
+      - "docker-systemd"
+    app_desc: "legacy Docker packages"
+    app_state: "absent"
+
+# ---------------------------------------------------------------------
+# Repository: Ensure that the Alpine community repository is enabled,
+# as it hosts the Docker packages.
+# ---------------------------------------------------------------------
+- name: "Check /etc/apk/repositories for community entry {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.slurp:
+    path: "/etc/apk/repositories"
+  register: apk_repos_raw
+  become: "{{ become_enabled }}"
+
+- name: "Decode repository configuration {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    apk_repos_content: "{{ apk_repos_raw.content | b64decode }}"
+
+- name: "Enable community repository if missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.lineinfile:
+    path: "/etc/apk/repositories"
+    regexp: "^[#\\s]*https?://.*/alpine/v[0-9]+\\.[0-9]+/community"
+    line: "{{ apk_repos_content.splitlines() | select('match', 'https?://.*/alpine/v[0-9]+\\.[0-9]+/community') | list | first | default('https://dl-cdn.alpinelinux.org/alpine/v' ~ os_version_major ~ '.' ~ os_version_minor ~ '/community', true) }}"
+    state: "present"
+    create: false
+  notify: "refresh_apk_index"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Dependencies: Install prerequisite tools including 'shadow' for
+# account management and 'iptables' for networking.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_packages:
+      - "ca-certificates"
+      - "curl"
+      - "shadow"
+      - "iptables"
+    app_desc: "required packages for Docker"
+    app_state: "present"
+
+# ---------------------------------------------------------------------
+# Execution: Install the main Docker Engine components and
+# OpenRC integration.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "docker"
+    app_delivery_mode: "native"
+    app_packages:
+      - "docker"
+      - "containerd"
+      - "docker-openrc"
+      - "docker-cli-buildx"
+      - "docker-bash-completion"
+    app_desc: "Docker Engine packages"
+    app_state: "present"
+
+# ---------------------------------------------------------------------
+# Permissions: Ensure account privileges for Docker interaction
+# without requiring sudo for the primary user.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "group_loader/main"
+  vars:
+    group_name: "docker"
+    group_members:
+      - "{{ ansible_user_name }}"
+
+# ---------------------------------------------------------------------
+# Connection: Reset connection to pick up the new docker group membership.
+# ---------------------------------------------------------------------
+- name: "Reset connection to apply docker group changes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.meta: reset_connection
+
+# ---------------------------------------------------------------------
+# Persistence: Enable and start the Docker daemon via OpenRC.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "docker"
+    service_desc: "Docker Daemon"
+    service_state: "started"
+    service_enabled: true

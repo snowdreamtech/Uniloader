@@ -1,0 +1,49 @@
+---
+# =====================================================================
+# roles/init/tasks/kubespray/darwin.yml
+#
+# Purpose:
+#   Setup Kubespray Controller on macOS (Darwin).
+#   Clones repo and installs dependencies.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Kubespray {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family == 'darwin'
+    fail_msg: "This loader only supports macOS (Darwin)."
+
+# ---------------------------------------------------------------------
+# Dependencies: Install git via App Role
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "kubespray"
+    app_delivery_mode: "native"
+    app_desc: "Kubespray controller dependencies"
+    app_state: "present"
+    app_packages:
+      - git
+
+# ---------------------------------------------------------------------
+# Repository: Clone Kubespray
+# ---------------------------------------------------------------------
+- name: "Clone Kubespray repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.git:
+    repo: "https://github.com/kubernetes-sigs/kubespray.git"
+    dest: "{{ kubespray_dir | default(ansible_user_home ~ '/kubespray', true) }}"
+    version: "{{ kubespray_version | default('master', true) }}"
+    update: true
+
+# ---------------------------------------------------------------------
+# Python Dependencies: Install requirements.txt
+# ---------------------------------------------------------------------
+- name: "Install Kubespray Python requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.pip:
+    requirements: "{{ kubespray_dir | default(ansible_user_home ~ '/kubespray', true) }}/requirements.txt"
+    virtualenv: "{{ python_venv_path | default(omit) }}"
+  when: python_venv_path is defined or (ansible_python_interpreter is defined and 'venv' in ansible_python_interpreter)

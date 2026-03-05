@@ -1,0 +1,27 @@
+---
+# =====================================================================
+# roles/init/tasks/docker/main.yml
+#
+# Purpose:
+#   Entry point for Docker-specific engine setup.
+#   Delegates to the OS-specific loader to handle distribution variations
+#   (Debian/RedHat/Alpine) for Docker installation.
+#
+# Simple Usage:
+#   - import_tasks: "Docker/main.yml"
+#
+# Comprehensive Usage:
+#   - import_tasks: "Docker/main.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to select the appropriate Docker setup tasks.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "docker"

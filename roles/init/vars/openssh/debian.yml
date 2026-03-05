@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/common/init/vars/OpenSSH/debian.yml
+#
+# Purpose:
+#   OpenSSH distribution-specific variables for Debian-based systems.
+#   Defines the standard server/client packages and the correct service
+#   name ('ssh') for the Debian family.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# OpenSSH Package Management
+# ---------------------------------------------------------------------
+openssh_packages:
+  - "openssh-server"
+  - "openssh-client"
+
+# ---------------------------------------------------------------------
+# SSH Service Configuration Overrides
+# ---------------------------------------------------------------------
+sshd_overrides:
+  service_name: "ssh"
+  config_path: "/etc/ssh/sshd_config.d/99-hardening.conf"
+  use_pam: "yes"
+  print_last_log: "yes"

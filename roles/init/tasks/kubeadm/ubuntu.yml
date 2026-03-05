@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/kubeadm/ubuntu.yml
+#
+# Purpose:
+#   Install Kubeadm on Ubuntu (delegates to debian.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "debian.yml"

@@ -1,0 +1,46 @@
+---
+# =====================================================================
+# roles/common/init/vars/LinuxMirrors/alpine.yml
+#
+# Purpose:
+#   Alpine-specific configuration for the LinuxMirrors optimization tool.
+#   Provides mirror command templates and additional terminal
+#   dependencies (ncurses) required for Alpine Linux compatibility.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Command configuration: Optimized Mirror
+# ---------------------------------------------------------------------
+linux_change_mirror_commands: |
+  bash <(curl -sSL https://linuxmirrors.cn/main.sh) \
+    --source mirrors.aliyun.com \
+    --protocol https \
+    --use-intranet-source false \
+    --install-epel true \
+    --backup true \
+    --upgrade-software false \
+    --clean-cache false \
+    --ignore-backup-tips
+
+# ---------------------------------------------------------------------
+# Command configuration: Official Repository
+# ---------------------------------------------------------------------
+linux_use_offical_repo_commands: |
+  bash <(curl -sSL https://linuxmirrors.cn/main.sh) \
+    --use-official-source true \
+    --protocol https \
+    --use-intranet-source false \
+    --install-epel true \
+    --backup true \
+    --upgrade-software false \
+    --clean-cache false \
+    --ignore-backup-tips
+
+# ---------------------------------------------------------------------
+# Dependencies: Required local tools for script execution.
+# ---------------------------------------------------------------------
+linux_mirror_dependencies:
+  - "bash"
+  - "curl"
+  - "ncurses"

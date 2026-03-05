@@ -1,0 +1,41 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/alpine.yml
+#
+# Purpose:
+#   Repository configuration for Alpine Linux.
+#   Ensures that both the main and community repositories are correctly
+#   set up, along with edge repositories for specific package versions.
+#
+# Simple Usage:
+#   - include_tasks: "alpine.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "alpine.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Configuration: Overwrite the /etc/apk/repositories file with
+# official CDN URLs tagged with the current OS version.
+# ---------------------------------------------------------------------
+- name: "Ensure Alpine repositories are configured {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/etc/apk/repositories"
+    content: |
+      http://dl-cdn.alpinelinux.org/alpine/v{{ os_version_major }}.{{ os_version_minor }}/main
+      http://dl-cdn.alpinelinux.org/alpine/v{{ os_version_major }}.{{ os_version_minor }}/community
+      @edge http://dl-cdn.alpinelinux.org/alpine/edge/main
+      @edgecommunity http://dl-cdn.alpinelinux.org/alpine/edge/community
+    mode: "0644"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Verification: Refresh the apk cache to apply new repository settings.
+# ---------------------------------------------------------------------
+- name: "Update apk cache {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "apk update"
+  changed_when: false
+  become: "{{ become_enabled }}"

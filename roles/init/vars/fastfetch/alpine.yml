@@ -1,0 +1,21 @@
+---
+# =====================================================================
+# roles/common/init/vars/Fastfetch/alpine.yml
+#
+# Purpose:
+#   Alpine-specific configuration for the Fastfetch tool.
+#   Includes mandatory system dependencies for PAM integration,
+#   cron management, and basic shell utilities on Alpine Linux.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Fastfetch distribution mapping (Alpine)
+# ---------------------------------------------------------------------
+fastfetch_packages:
+  - "cronie"
+  - "linux-pam"
+  - "shadow"
+  - "bash"
+  - "coreutils"
+  - "fastfetch"

@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/rocky.yml
+#
+# Purpose:
+#   Install Podman on Rocky Linux (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

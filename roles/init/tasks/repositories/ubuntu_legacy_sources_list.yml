@@ -1,0 +1,42 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/ubuntu_legacy_sources_list.yml
+#
+# Purpose:
+#   Configuration of legacy Ubuntu repositories using the traditional
+#   sources.list format. Mandatory for Ubuntu versions prior to 23.10
+#   where deb822 is not the default.
+#
+# Simple Usage:
+#   - include_tasks: "ubuntu_legacy_sources_list.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "ubuntu_legacy_sources_list.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Configuration: Overwrite 'sources.list' with official Ubuntu
+# repository entries for Main, Updates, Security, and Backports.
+# ---------------------------------------------------------------------
+- name: "Write legacy Ubuntu APT sources.list {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/etc/apt/sources.list"
+    mode: "0644"
+    owner: "root"
+    group: "root"
+    content: |
+      # Main repository
+      deb http://archive.ubuntu.com/ubuntu {{ os_codename }} main restricted universe multiverse
+
+      # Updates repository
+      deb http://archive.ubuntu.com/ubuntu {{ os_codename }}-updates main restricted universe multiverse
+
+      # Security updates
+      deb http://security.ubuntu.com/ubuntu {{ os_codename }}-security main restricted universe multiverse
+
+      # Backports repository
+      deb http://archive.ubuntu.com/ubuntu {{ os_codename }}-backports main restricted universe multiverse
+  become: "{{ become_enabled }}"

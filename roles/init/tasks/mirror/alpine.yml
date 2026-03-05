@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/alpine.yml
+# =====================================================================
+
+- name: "Configure Alpine mirrors {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "alpine_repositories.j2"
+    dest: "/etc/apk/repositories"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when: mirror_enable_linux | bool

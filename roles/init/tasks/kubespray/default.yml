@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/init/tasks/kubespray/default.yml
+# =====================================================================
+- name: "Skip Kubespray on unsupported OS"
+  ansible.builtin.debug:
+    msg: "Kubespray setup is not yet specialized for this OS."
+  when: os_family not in ['debian', 'redhat', 'alpine', 'suse', 'darwin']

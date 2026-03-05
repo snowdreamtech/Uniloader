@@ -1,0 +1,75 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/oraclelinux.yml
+#
+# Purpose:
+#   Repository initialization for Oracle Linux.
+#   Configures standard Oracle repositories and extra repositories
+#   like EPEL.
+#
+# Simple Usage:
+#   - include_tasks: "oraclelinux.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "oraclelinux.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Detection: Identify the primary package manager based on OS version.
+# yum is used for EL6/7, while dnf is used for EL8/9.
+# ---------------------------------------------------------------------
+- name: "Detect Oracle Linux package manager {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    rhel_pkg_mgr: >-
+      {% if os_version_major >= 8 %}
+        dnf
+      {% else %}
+        yum
+      {% endif %}
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Core OS Repositories: Ensure BaseOS and AppStream are enabled.
+# ---------------------------------------------------------------------
+
+# WHY: Oracle Linux repos use specific naming conventions (olX_baseos_latest).
+- name: "Enable BaseOS and AppStream for Oracle Linux {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dnf config-manager --set-enabled ol{{ os_version_major }}_baseos_latest ol{{ os_version_major }}_appstream"
+  changed_when: false
+  when: rhel_pkg_mgr == "dnf"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Development Repositories: Enable CRB / CodeReady Builder.
+# ---------------------------------------------------------------------
+
+- name: "Enable codeready-builder for Oracle Linux {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dnf config-manager --set-enabled {{ repo_crb_name }}"
+  changed_when: false
+  when: rhel_pkg_mgr == "dnf"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Extra Repositories: EPEL Deployment.
+# ---------------------------------------------------------------------
+
+# WHY: Oracle provides matched EPEL-release packages for stability.
+- name: "Install EPEL-compat for Oracle Linux {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "{{ repo_epel_name }}"
+    state: "present"
+  become: "{{ become_enabled }}"
+  when: os_version_major | int >= 7
+
+# ---------------------------------------------------------------------
+# Verification: Refresh the package cache.
+# ---------------------------------------------------------------------
+
+- name: "Update package cache {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >-
+    {{ 'dnf makecache' if rhel_pkg_mgr == 'dnf' else 'yum makecache' }}
+  changed_when: false
+  become: "{{ become_enabled }}"

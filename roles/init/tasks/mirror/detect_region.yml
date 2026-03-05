@@ -1,0 +1,28 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/detect_region.yml
+#
+# Purpose:
+#   Determine the target region and load corresponding variables.
+# =====================================================================
+
+- name: "Auto-detect region from facts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    mirror_region_effective: >-
+      {{
+        mirror_region | default(
+          'cn' if (is_in_cn_mainland | default(false, true)) else 'global',
+          true
+        )
+      }}
+  tags: ["always"]
+
+- name: "Load mirror variables for {{ mirror_region_effective }}"
+  ansible.builtin.include_vars:
+    file: "mirror/mirrors_{{ mirror_region_effective }}.yml"
+  changed_when: false
+
+- name: "Initialize mirror overrides"
+  ansible.builtin.set_fact:
+    mirror_info_overrides: "{{ mirror_custom_vars | default({}, true) }}"
+  tags: ["always"]

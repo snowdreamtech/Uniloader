@@ -1,0 +1,176 @@
+---
+# example: Install Docker Engine on Fedora-based systems (Fedora 41+)
+#
+# This task file installs Docker Engine on Fedora-based systems (Fedora 41+).
+# It follows strict enterprise-grade Ansible coding standards:
+#   - Fully idempotent
+#   - Explicit FQCN usage
+#   - No implicit boolean logic
+#   - No unnecessary logs
+#   - Structured task sections
+#   - Reuse of standardized loaders (package_loader, app, group_loader, service_loader, log_loader)
+#
+# Usage Example:
+#
+#   - name: "Install Docker Engine on Fedora"
+#     ansible.builtin.include_tasks: fedora.yml
+#
+# Notes:
+#   - No external variables are required.
+#   - The following variables are automatically provided by the framework:
+#       * become_enabled          (from facts_loader / group_vars)
+#       * os_fingerprint          (from facts_loader)
+#       * is_restricted_network   (from group_vars/all or inventory)
+#   - Do NOT pass these variables manually.
+#
+# ------------------------------------------------------------
+# Validate OS compatibility
+# ------------------------------------------------------------
+
+# Validate OS family is RedHat
+# Ensures the task file is not executed on unsupported distributions.
+- ansible.builtin.assert:
+    that:
+      - os_family == "redhat"
+    fail_msg: "This task file only supports RedHat-family systems (Fedora)."
+    success_msg: "OS family validated."
+
+# Validate distribution is Fedora
+# Ensures the task file is executed only on Fedora.
+- ansible.builtin.assert:
+    that:
+      - os_distribution == "fedora"
+    fail_msg: "This task file only supports Fedora systems."
+    success_msg: "Distribution validated."
+
+# Validate Fedora version is >= 41
+# Docker CE supports maintained Fedora versions only.
+- ansible.builtin.assert:
+    that:
+      - os_version_major >= 41
+    fail_msg: "Docker Engine requires Fedora version 41 or higher."
+    success_msg: "OS version validated."
+
+# Validate CPU architecture is supported (all)
+- ansible.builtin.assert:
+    that:
+      - os_architecture in ["x86_64", "amd64", "arm64", "aarch64", "armhf", "s390x", "ppc64le", "ppc64el"]
+    fail_msg: "Docker Engine requires a supported architecture: amd64, arm64, armhf, s390x, or ppc64le. Current architecture: {{ os_architecture | default('unknown', true) }}"
+    success_msg: "CPU architecture validated."
+
+# ------------------------------------------------------------
+# Remove old Docker versions (idempotent)
+# ------------------------------------------------------------
+
+# Remove legacy Docker packages to avoid conflicts with Docker CE.
+# ensures idempotent removal with audit-friendly logging.
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_packages:
+      - docker
+      - docker-client
+      - docker-client-latest
+      - docker-common
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
+      - docker-selinux
+      - docker-engine-selinux
+      - docker-engine
+    app_desc: "legacy Docker packages"
+    app_state: "absent"
+
+# ------------------------------------------------------------
+# Install required dependencies
+# ------------------------------------------------------------
+
+# Install required system dependencies for Docker CE.
+# package_loader ensures idempotent installation with consistent behavior.
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "docker"
+    app_delivery_mode: native
+    app_packages:
+      - dnf-plugins-core
+    app_desc: "required packages"
+    app_state: present
+
+# ------------------------------------------------------------
+# Configure Docker repository using dnf config-manager
+# ------------------------------------------------------------
+
+# Add Docker CE repository.
+# If is_restricted_network is true, use Tsinghua mirror.
+# Otherwise, use the official Docker repository.
+# The 'creates' argument ensures idempotency.
+- name: "Add Docker CE repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >
+    {% if is_restricted_network is defined and is_restricted_network %}
+      dnf config-manager --add-repo https://mirrors.aliyun.com/docker-ce/linux/fedora/docker-ce.repo
+    {% else %}
+      dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    {% endif %}
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+  register: add_repo_result
+  become: "{{ become_enabled }}"
+  changed_when: add_repo_result.rc == 0
+
+# ------------------------------------------------------------
+# Install Docker Engine
+# ------------------------------------------------------------
+
+# Install Docker CE and related components.
+# package_loader ensures idempotent installation.
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: native
+    app_name: "docker"
+    app_packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    app_desc: "Docker Engine packages"
+    app_state: present
+
+# ------------------------------------------------------------
+# Manage Docker as a non-root user
+# ------------------------------------------------------------
+
+# Ensure the docker group exists and add the current user to it.
+# group_loader ensures idempotent group creation and membership management.
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "group_loader/main"
+  vars:
+    group_name: "docker"
+    group_members:
+      - "{{ ansible_user_name }}"
+
+# ---------------------------------------------------------------------
+# Connection: Reset connection to pick up the new docker group membership.
+# ---------------------------------------------------------------------
+- name: "Reset connection to apply docker group changes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.meta: reset_connection
+
+# ------------------------------------------------------------
+# Ensure Docker service is enabled and running
+# ------------------------------------------------------------
+
+# Enable and start the Docker daemon.
+# service_loader ensures consistent service management.
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "docker"
+    service_desc: "Docker Daemon"
+    service_state: "started"
+    service_enabled: true

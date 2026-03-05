@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/kubespray/rocky.yml
+#
+# Purpose:
+#   Setup Kubespray Controller on Rocky Linux (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

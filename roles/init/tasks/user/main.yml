@@ -1,0 +1,28 @@
+---
+# =====================================================================
+# roles/init/tasks/user/main.yml
+#
+# Purpose:
+#   Entry point for system user and account initialization.
+#   Delegates execution to the os_loader to handle distribution-specific
+#   account setup (Alpine, Debian, RedHat).
+#
+# Simple Usage:
+#   - include_tasks: "User/main.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "User/main.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to select the appropriate platform logic.
+# ---------------------------------------------------------------------
+- name: "Dispatch to distribution-specific User initialization {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "user"

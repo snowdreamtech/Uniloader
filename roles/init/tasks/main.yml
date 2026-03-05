@@ -1,0 +1,91 @@
+---
+# =====================================================================
+# roles/init/tasks/main.yml
+#
+# Purpose:
+#   Primary orchestration for system initialization.
+#   Sequentially configures baseline security and access controls
+#   including privileged escalation (Sudo), package sources
+#   (Repositories), user accounts, SSH access, and interactive
+#   experience (Fastfetch).
+#
+# Simple Usage:
+#   - role: "init"
+#
+# Comprehensive Usage:
+#   - role: "init"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Sudo: Configure passwordless escalation for privileged groups.
+# ---------------------------------------------------------------------
+- ansible.builtin.import_tasks: "sudo/main.yml"
+
+# ---------------------------------------------------------------------
+# Repositories: Standardize OS package sources and keys.
+# ---------------------------------------------------------------------
+- ansible.builtin.import_tasks: "repositories/main.yml"
+
+# ---------------------------------------------------------------------
+# User: Provision the primary deployment user and associated home environment.
+# ---------------------------------------------------------------------
+- ansible.builtin.import_tasks: "user/main.yml"
+
+# ---------------------------------------------------------------------
+# Mirror: Configure package sources for mainland China.
+# ---------------------------------------------------------------------
+- ansible.builtin.import_tasks: "mirror/main.yml"
+  when: (is_in_cn_mainland | default(false, true))
+
+# ---------------------------------------------------------------------
+# OpenSSH: Secure the SSH daemon and manage authorized keys.
+# ---------------------------------------------------------------------
+- ansible.builtin.import_tasks: "openssh/main.yml"
+
+# ---------------------------------------------------------------------
+# Fastfetch: Configure the system MOTD and interactive banner.
+# ---------------------------------------------------------------------
+- ansible.builtin.import_tasks: "fastfetch/main.yml"
+
+# ---------------------------------------------------------------------
+# Docker: Configure the Docker Engine and associated components.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "docker/main.yml"
+  when:
+    - is_docker_host | default(false, true)
+    - not (is_container | default(false, true))
+
+# ---------------------------------------------------------------------
+# Podman: Configure the Podman Engine and associated components.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "podman/main.yml"
+  when:
+    - is_podman_host | default(false, true)
+    - not (is_container | default(false, true))
+
+# ---------------------------------------------------------------------
+# K3s: Configure the K3s Kubernetes Engine.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "k3s/main.yml"
+  when:
+    - is_k3s_host | default(false, true)
+    - not (is_container | default(false, true))
+
+# ---------------------------------------------------------------------
+# Kubeadm: Configure standard Kubernetes using Kubeadm.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "kubeadm/main.yml"
+  when:
+    - is_kubeadm_host | default(false, true)
+    - not (is_container | default(false, true))
+
+# ---------------------------------------------------------------------
+# Kubespray: Configure the Kubespray Controller environment.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "kubespray/main.yml"
+  when:
+    - is_kubespray_host | default(false, true)
+    - not (is_container | default(false, true))

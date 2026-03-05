@@ -1,0 +1,51 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/redhat.yml
+#
+# Purpose:
+#   Install and configure Podman on RHEL/CentOS/Fedora systems.
+#   Uses the native 'container-tools' module where available or individual packages.
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "redhat.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Podman {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'redhat'
+    fail_msg: "This loader only supports RedHat-based systems."
+
+# ---------------------------------------------------------------------
+# Installation: Container Tools Module (Preferred for RHEL 8+)
+# ---------------------------------------------------------------------
+- name: "Install container-tools module {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.dnf:
+    name: "@container-tools"
+    state: present
+    update_cache: true
+  ignore_errors: true
+  register: install_module_result
+  become: "{{ become_enabled }}"
+  when: os_version_major | int >= 8
+
+# ---------------------------------------------------------------------
+# Installation: Individual Packages (Fallback)
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "podman"
+    app_delivery_mode: "native"
+    app_desc: "Podman container engine packages"
+    app_state: "present"
+    app_packages:
+      - podman
+      - podman-docker
+      - crun
+      - buildah
+      - skopeo
+  when: install_module_result is skipped or install_module_result is failed

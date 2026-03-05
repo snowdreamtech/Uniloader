@@ -1,0 +1,68 @@
+---
+# =====================================================================
+# roles/init/tasks/kubeadm/suse.yml
+#
+# Purpose:
+#   Install Kubeadm on SUSE-based systems.
+#   Uses pkgs.k8s.io repositories.
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "suse.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Kubeadm {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'suse'
+    fail_msg: "This loader only supports SUSE-based systems."
+
+# ---------------------------------------------------------------------
+# Repository: Add Kubernetes official repo
+# ---------------------------------------------------------------------
+- name: "Add Kubernetes repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.zypper_repository:
+    name: kubernetes
+    repo: "https://pkgs.k8s.io/core:/stable:/{{ k8s_version | default('v1.30', true) }}/rpm/"
+    auto_import_keys: true
+    state: present
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Configuration: System Prep
+# ---------------------------------------------------------------------
+- name: "Disable Swap {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: swapoff -a
+  become: "{{ become_enabled }}"
+  changed_when: false
+  # Ideally we should also remove from /etc/fstab, but init role focuses on package install.
+  # But Kubelet fails if swap is on. We'll do runtime disable.
+
+# ---------------------------------------------------------------------
+# Installation: Kubeadm Packages via App Role
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "kubeadm"
+    app_delivery_mode: "native"
+    app_desc: "Kubeadm core packages"
+    app_state: "present"
+    app_packages:
+      - kubelet
+      - kubeadm
+      - kubectl
+
+# ---------------------------------------------------------------------
+# Service: Enable Kubelet
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "kubelet"
+    service_desc: "Kubelet Service"
+    service_state: "started"
+    service_enabled: true

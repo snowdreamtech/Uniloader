@@ -1,0 +1,17 @@
+---
+# =====================================================================
+# roles/init/tasks/kubeadm/main.yml
+#
+# Purpose:
+#   Entry point for Kubeadm-specific setup.
+#   Delegates to OS-specific loader to handle Kubeadm installation.
+#
+# Usage:
+#   - import_tasks: "Kubeadm/main.yml"
+# =====================================================================
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "kubeadm"

@@ -1,0 +1,199 @@
+---
+# =====================================================================
+# roles/init/tasks/fastfetch/darwin.yml
+#
+# Purpose:
+#   macOS specialized Fastfetch installation and shell integration.
+#   Configures PATH for Homebrew/MacPorts and sets up a dynamic MOTD.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Check if fastfetch is available in the current package manager
+# ---------------------------------------------------------------------
+- name: "Check if fastfetch exists in {{ os_pkg_mgr }} repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when: os_pkg_mgr in ['macports', 'homebrew']
+  block:
+    - name: "Check fastfetch availability in MacPorts"
+      ansible.builtin.command: "port search fastfetch"
+      register: fastfetch_port_check
+      failed_when: false
+      changed_when: false
+      check_mode: false
+      when: os_pkg_mgr == 'macports'
+
+    - name: "Check fastfetch availability in Homebrew"
+      ansible.builtin.command: "brew search fastfetch"
+      register: fastfetch_brew_check
+      failed_when: false
+      changed_when: false
+      check_mode: false
+      when: os_pkg_mgr == 'homebrew'
+
+    - name: "Set fastfetch availability fact"
+      ansible.builtin.set_fact:
+        fastfetch_available: >-
+          {{
+            (os_pkg_mgr == 'macports' and 'fastfetch' in fastfetch_port_check.stdout) or
+            (os_pkg_mgr == 'homebrew' and fastfetch_brew_check.rc == 0)
+          }}
+
+# ---------------------------------------------------------------------
+# Installation: Deploy Fastfetch using the common app API if available.
+# ---------------------------------------------------------------------
+- name: "Install Fastfetch packages {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "fastfetch"
+    app_delivery_mode: "native"
+    app_packages: "{{ fastfetch_packages | default(['fastfetch'], true) }}"
+    app_desc: "Fastfetch"
+    app_state: "present"
+  when: fastfetch_available | default(false, true)
+
+# =====================================================================
+# Fastfetch Darwin Fallback Installer (auto-latest, auto-arch)
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1. Query GitHub API for latest release metadata
+# ---------------------------------------------------------------------
+- name: "Query Fastfetch latest release metadata"
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest"
+    return_content: true
+    status_code: 200
+    headers:
+      Accept: "application/vnd.github+json"
+  register: fastfetch_latest_api
+  changed_when: false
+  when: not (fastfetch_available | default(false, true))
+
+# ---------------------------------------------------------------------
+# 2. Determine macOS architecture (aarch64 / amd64)
+# ---------------------------------------------------------------------
+- name: "Detect macOS architecture"
+  ansible.builtin.set_fact:
+    fastfetch_macos_arch: >-
+      {{
+        'aarch64'
+        if ansible_architecture in ['arm64', 'aarch64']
+        else 'amd64'
+      }}
+  when: not (fastfetch_available | default(false, true))
+
+# ---------------------------------------------------------------------
+# 3. Extract correct macOS asset URL
+# ---------------------------------------------------------------------
+- name: "Extract Fastfetch Darwin asset URL"
+  ansible.builtin.set_fact:
+    fastfetch_latest_url: >-
+      {{
+        fastfetch_latest_api.json.assets
+        | selectattr('name', 'match', 'fastfetch-macos-' ~ fastfetch_macos_arch ~ '.*\\.tar\\.gz$')
+        | map(attribute='browser_download_url')
+        | first
+      }}
+  when: not (fastfetch_available | default(false, true))
+
+- name: "Fail if no matching macOS asset found"
+  ansible.builtin.fail:
+    msg: "No matching macOS Fastfetch asset found for arch={{ fastfetch_macos_arch }}"
+  when:
+    - not (fastfetch_available | default(false, true))
+    - fastfetch_latest_url is not defined or fastfetch_latest_url | length == 0
+
+# ---------------------------------------------------------------------
+# 4. Download + Extract + Install
+# ---------------------------------------------------------------------
+- name: "Download Fastfetch latest macOS release"
+  ansible.builtin.get_url:
+    url: "{{ fastfetch_latest_url }}"
+    dest: "/tmp/fastfetch.tar.gz"
+    mode: "0644"
+  when: not (fastfetch_available | default(false, true))
+
+- name: "Extract Fastfetch archive"
+  ansible.builtin.unarchive:
+    src: "/tmp/fastfetch.tar.gz"
+    dest: "/tmp"
+    remote_src: true
+  when: not (fastfetch_available | default(false, true))
+
+# 解压目录名 = 去掉 .tar.gz 的文件名
+- name: "Compute extracted directory name"
+  ansible.builtin.set_fact:
+    fastfetch_extract_dir: "{{ fastfetch_latest_url | basename | regex_replace('.tar.gz$', '') }}"
+  when: not (fastfetch_available | default(false, true))
+
+- name: "Install Fastfetch binary"
+  ansible.builtin.copy:
+    src: "/tmp/{{ fastfetch_extract_dir }}/usr/bin/fastfetch"
+    dest: "/usr/local/bin/fastfetch"
+    mode: "0755"
+    remote_src: true
+  become: "{{ become_enabled }}"
+  when: not (fastfetch_available | default(false, true))
+
+# ---------------------------------------------------------------------
+# 5. Cleanup
+# ---------------------------------------------------------------------
+- name: "Clean up Fastfetch archive"
+  ansible.builtin.file:
+    path: "/tmp/fastfetch.tar.gz"
+    state: "absent"
+  when: not (fastfetch_available | default(false, true))
+
+- name: "Clean up Fastfetch extracted directory"
+  ansible.builtin.file:
+    path: "/tmp/{{ fastfetch_extract_dir }}"
+    state: "absent"
+  when: not (fastfetch_available | default(false, true))
+
+# # ---------------------------------------------------------------------
+# # Shell Integration: Configure PATH and dynamic MOTD.
+# # ---------------------------------------------------------------------
+# - name: "Configure shell PATH and MOTD for macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+#   ansible.builtin.blockinfile:
+#     path: "/etc/zshenv"
+#     create: true
+#     marker: "# {mark} ANSIBLE MANAGED BLOCK: macOS PATH and MOTD"
+#     block: |
+#       # ===== PATH Loader for macOS =====
+
+#       # Add Homebrew (non-invasive)
+#       if [[ -d /opt/homebrew/bin ]]; then
+#           PATH="$PATH:/opt/homebrew/bin:/opt/homebrew/sbin"
+#       elif [[ -d /usr/local/bin ]]; then
+#           PATH="$PATH:/usr/local/bin:/usr/local/sbin"
+#       fi
+
+#       # Add MacPorts (non-invasive)
+#       if [[ -d /opt/local/bin ]]; then
+#           PATH="$PATH:/opt/local/bin:/opt/local/sbin"
+#       fi
+
+#       export PATH
+
+#       # ===== Dynamic MOTD for SSH =====
+#       if [[ -t 1 ]] && [[ -n "$SSH_CONNECTION" ]] && command -v fastfetch >/dev/null 2>&1; then
+#           fastfetch --pipe false
+#       fi
+#     mode: "0644"
+#   changed_when: false
+#   become: "{{ become_enabled }}"
+
+- name: "Configure local terminal Fastfetch for macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_user_home }}/.zshrc"
+    create: true
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: local terminal Fastfetch"
+    block: |
+      # ===== fastfetch for local Terminal/iTerm =====
+      if [[ -t 1 ]] && command -v fastfetch >/dev/null 2>&1; then
+          fastfetch --pipe false
+      fi
+    mode: "0644"
+    owner: "{{ ansible_user_name }}"
+  changed_when: false
+  become: "{{ become_enabled }}"

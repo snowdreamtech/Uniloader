@@ -1,0 +1,38 @@
+---
+# =====================================================================
+# roles/init/tasks/fastfetch/default.yml
+#
+# Purpose:
+#   Generic Fastfetch installation and configuration.
+#   Provides a baseline configuration compatible with most POSIX
+#   systems including macOS (Darwin).
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Installation: Deploy Fastfetch using the common app API.
+# ---------------------------------------------------------------------
+- name: "Install Fastfetch packages {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "fastfetch"
+    app_delivery_mode: "native"
+    app_packages: "{{ fastfetch_packages | default(['fastfetch'], true) }}"
+    app_desc: "Fastfetch"
+    app_state: "present"
+# # ---------------------------------------------------------------------
+# # Configuration: Apply user-specific Fastfetch settings.
+# # ---------------------------------------------------------------------
+# - name: "Ensure fastfetch config directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+#   ansible.builtin.file:
+#     path: "{{ ansible_user_home }}/.config/fastfetch"
+#     state: "directory"
+#     mode: "0755"
+#   become: true
+
+# - name: "Deploy fastfetch configuration {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+#   ansible.builtin.template:
+#     src: "config.jsonc.j2"
+#     dest: "{{ ansible_user_home }}/.config/fastfetch/config.jsonc"
+#     mode: "0644"
+#   become: true

@@ -1,0 +1,132 @@
+---
+# ------------------------------------------------------------
+# Install Docker Engine on Rocky Linux / AlmaLinux (9+)
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# Validate OS compatibility
+# ------------------------------------------------------------
+
+- ansible.builtin.assert:
+    that:
+      - os_family == "redhat"
+    fail_msg: "This task file only supports RedHat-family systems."
+    success_msg: "OS family validated."
+
+- ansible.builtin.assert:
+    that:
+      - os_distribution in ["rocky", "almalinux"]
+    fail_msg: "This task file only supports Rocky Linux or AlmaLinux."
+    success_msg: "Distribution validated."
+
+- ansible.builtin.assert:
+    that:
+      - os_version_major >= 9
+    fail_msg: "Docker Engine requires Rocky/AlmaLinux 9 or newer."
+    success_msg: "OS version validated."
+
+- ansible.builtin.assert:
+    that:
+      - os_architecture in ["x86_64", "amd64", "arm64", "aarch64"]
+    fail_msg: "Docker Engine requires amd64 or arm64. Current architecture: {{ os_architecture | default('unknown', true) }}"
+    success_msg: "CPU architecture validated."
+
+# ------------------------------------------------------------
+# Remove old Docker versions
+# ------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_packages:
+      - docker
+      - docker-client
+      - docker-client-latest
+      - docker-common
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
+      - docker-engine
+    app_desc: "legacy Docker packages"
+    app_state: "absent"
+
+# ------------------------------------------------------------
+# Install required dependencies
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "docker"
+    app_delivery_mode: native
+    app_packages:
+      - dnf-plugins-core
+    app_desc: "required packages"
+    app_state: present
+
+# ------------------------------------------------------------
+# Configure Docker repository
+# ------------------------------------------------------------
+
+- name: "Add Docker CE repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >
+    {% if is_restricted_network is defined and is_restricted_network %}
+      dnf config-manager --add-repo https://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
+    {% else %}
+      dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    {% endif %}
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+  register: add_repo_result
+  become: "{{ become_enabled }}"
+  changed_when: false
+
+# ------------------------------------------------------------
+# Install Docker Engine
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: native
+    app_name: "docker"
+    app_packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    app_desc: "Docker Engine packages"
+    app_state: present
+
+# ------------------------------------------------------------
+# Manage Docker as a non-root user
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "group_loader/main"
+  vars:
+    group_name: "docker"
+    group_members:
+      - "{{ ansible_user_name }}"
+
+# ------------------------------------------------------------
+# Connection: Reset connection to pick up the new docker group membership
+# ------------------------------------------------------------
+- name: "Reset connection to apply docker group changes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.meta: reset_connection
+
+# ------------------------------------------------------------
+# Ensure Docker service is enabled and running
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "docker"
+    service_desc: "Docker Daemon"
+    service_state: "started"
+    service_enabled: true

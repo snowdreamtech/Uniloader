@@ -1,0 +1,69 @@
+---
+# =====================================================================
+# roles/init/tasks/kubespray/alpine.yml
+#
+# Purpose:
+#   Setup Kubespray Controller on Alpine Linux.
+#   Note: Alpine uses Musl libc, which may affect some compiled pip packages.
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "alpine.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Kubespray {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'alpine'
+      - python_venv_path is defined
+    fail_msg: "This loader only supports Alpine Linux and requires a global virtual environment."
+
+# ---------------------------------------------------------------------
+# Dependencies: Install git, pip via App Role
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "kubespray"
+    app_delivery_mode: "native"
+    app_desc: "Kubespray controller dependencies"
+    app_state: "present"
+    app_packages:
+      - git
+      - py3-pip
+      - python3-dev
+      - gcc
+      - musl-dev
+      - libffi-dev
+      - openssl-dev
+      # Build dependencies often needed for Python wheels on Alpine
+
+# ---------------------------------------------------------------------
+# Repository: Clone Kubespray
+# ---------------------------------------------------------------------
+- name: "Clone Kubespray repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.git:
+    repo: "https://github.com/kubernetes-sigs/kubespray.git"
+    dest: "{{ kubespray_dir | default('/opt/kubespray', true) }}"
+    version: "{{ kubespray_version | default('master', true) }}"
+    update: true
+  become: "{{ become_enabled }}"
+
+- name: "Ensure ownership of Kubespray directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ kubespray_dir | default('/opt/kubespray', true) }}"
+    owner: "{{ ansible_user_name }}"
+    group: "{{ ansible_user_name }}"
+    state: directory
+    recurse: true
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Python Dependencies: Install requirements.txt
+# ---------------------------------------------------------------------
+- name: "Install Kubespray Python requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.pip:
+    requirements: "{{ kubespray_dir | default('/opt/kubespray', true) }}/requirements.txt"
+    virtualenv: "{{ python_venv_path }}"

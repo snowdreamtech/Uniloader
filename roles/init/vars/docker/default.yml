@@ -1,0 +1,60 @@
+---
+# =====================================================================
+# roles/host_with_container_engine/engine/defaults/main.yml
+#
+# Purpose:
+#   Default configuration for the container engine selector role.
+#   Defines parameters for various supported engines (Docker, Podman,
+#   containerd) and global installation toggles.
+#
+# Usage:
+#   Override 'container_engine' in host_vars or group_vars to select
+#   the desired engine for a specific host.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Engine Selection: Choose engine type (docker | podman | containerd).
+# If omit or undefined, more complex detection logic can be
+# implemented in detect.yml.
+# ---------------------------------------------------------------------
+container_engine: "docker"
+
+# ---------------------------------------------------------------------
+# Global Toggle: Whether to install the container engine.
+# Set to false to prevent accidental installation.
+# ---------------------------------------------------------------------
+container_engine_enabled: true
+
+# ---------------------------------------------------------------------
+# Docker Specific Configuration
+# ---------------------------------------------------------------------
+container_engine_docker_package_name: "docker-ce"
+container_engine_docker_service_name: "docker"
+container_engine_docker_config_path: "/etc/docker/daemon.json"
+
+# ---------------------------------------------------------------------
+# Podman Specific Configuration
+# ---------------------------------------------------------------------
+container_engine_podman_package_name: "podman"
+container_engine_podman_service_name: "podman"
+container_engine_podman_config_path: "/etc/containers/containers.conf"
+
+# ---------------------------------------------------------------------
+# Containerd Specific Configuration
+# ---------------------------------------------------------------------
+container_engine_containerd_package_name: "containerd"
+container_engine_containerd_service_name: "containerd"
+container_engine_containerd_config_path: "/etc/containerd/config.toml"
+
+# ---------------------------------------------------------------------
+# Daemon Configuration: Structured settings for the engine daemons.
+# Can be integrated with the multi-object merge system.
+# ---------------------------------------------------------------------
+container_engine_docker_daemon_config: {}
+# Example usage:
+# container_engine_docker_daemon_config:
+#   registry-mirrors:
+#     - "https://your.mirror.example.com"
+#   log-driver: "json-file"
+#   log-opts:
+#     max-size: "100m"

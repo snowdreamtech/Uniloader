@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/kubespray/centos.yml
+#
+# Purpose:
+#   Setup Kubespray Controller on CentOS (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

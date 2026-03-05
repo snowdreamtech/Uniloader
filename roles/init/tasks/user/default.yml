@@ -1,0 +1,18 @@
+---
+# =====================================================================
+# roles/init/tasks/user/default.yml
+#
+# Purpose:
+#   Generic user initialization fallback.
+#   Delegates to the specialized user_loader in the native role
+#   to handle account creation and SSH key provisioning.
+# =====================================================================
+
+- name: "Initialize user account via native loader {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "user_loader/main"
+  vars:
+    user_name: "{{ ansible_user_name | default('ansible', true) }}"
+    user_authorized_keys: "{{ ansible_user_authorized_keys | default([], true) }}"
+    user_sudo: true

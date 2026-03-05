@@ -1,0 +1,45 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/debian_deb822.yml
+#
+# Purpose:
+#   Configuration of standardized Debian repositories using the
+#   modern deb822 format. Ensures compliance and reliability by
+#   applying a structured source file.
+#
+# Simple Usage:
+#   - include_tasks: "debian_deb822.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "debian_deb822.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Configuration: Apply a standardized multi-stanza deb822 source file
+# for Debian. This overwrites potentially inconsistent system-generated
+# configurations (e.g., from 'apt modernize-sources').
+# ---------------------------------------------------------------------
+- name: "Apply standardized Debian deb822 sources {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/etc/apt/sources.list.d/debian.sources"
+    mode: "0644"
+    owner: "root"
+    group: "root"
+    content: |
+      # Standard Debian Repositories (Main, Updates, Backports)
+      Types: deb
+      URIs: http://deb.debian.org/debian
+      Suites: {{ os_codename }} {{ os_codename }}-updates {{ os_codename }}-backports
+      Components: main contrib non-free non-free-firmware
+      Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+      # Debian Security Updates
+      Types: deb
+      URIs: http://security.debian.org/debian-security
+      Suites: {{ os_codename }}-security
+      Components: main contrib non-free non-free-firmware
+      Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+  become: "{{ become_enabled }}"

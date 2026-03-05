@@ -1,0 +1,28 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/main.yml
+#
+# Purpose:
+#   Entry point for system repository initialization.
+#   Delegates execution to the OS-specific loader to handle
+#   repository configurations (EPEL, CRB, etc.) based on the distribution.
+#
+# Simple Usage:
+#   - import_tasks: "Repositories/main.yml"
+#
+# Comprehensive Usage:
+#   - import_tasks: "Repositories/main.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to select the appropriate repository configuration
+# tasks (debian/redhat/alpine) based on the target OS.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "repositories"

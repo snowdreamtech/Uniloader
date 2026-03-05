@@ -1,0 +1,132 @@
+---
+# ------------------------------------------------------------
+# Install Docker Engine on openSUSE-based systems (Leap 15.5+ / Tumbleweed)
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# Validate OS compatibility
+# ------------------------------------------------------------
+
+- ansible.builtin.assert:
+    that:
+      - os_family == "suse"
+    fail_msg: "This task file only supports openSUSE systems."
+    success_msg: "OS family validated."
+
+- ansible.builtin.assert:
+    that:
+      - os_distribution in ["opensuse leap", "opensuse tumbleweed"]
+    fail_msg: "This task file only supports openSUSE Leap or Tumbleweed."
+    success_msg: "Distribution validated."
+
+- ansible.builtin.assert:
+    that:
+      - (os_distribution == "opensuse leap" and os_version_full is version('15.5', '>='))
+      - (os_distribution == "opensuse tumbleweed")
+    fail_msg: "Docker Engine requires openSUSE Leap 15.5+ or Tumbleweed."
+    success_msg: "OS version validated."
+
+- ansible.builtin.assert:
+    that:
+      - os_architecture in ["x86_64", "amd64", "arm64", "aarch64", "s390x", "ppc64le"]
+    fail_msg: "Docker Engine requires a supported architecture: amd64, arm64, s390x, or ppc64le. Current architecture: {{ os_architecture | default('unknown', true) }}"
+    success_msg: "CPU architecture validated."
+
+# ------------------------------------------------------------
+# Remove old Docker versions
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_packages:
+      - docker
+      - docker-compose
+      - docker-doc
+      - containerd
+      - runc
+    app_desc: "legacy Docker packages"
+    app_state: "absent"
+
+# ------------------------------------------------------------
+# Install required dependencies
+# ------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "docker"
+    app_delivery_mode: native
+    app_packages:
+      - curl
+      - ca-certificates
+      - gpg2
+    app_desc: "required packages"
+    app_state: present
+
+# ------------------------------------------------------------
+# Configure Docker repository
+# ------------------------------------------------------------
+
+- name: "Add Docker repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >
+    {% if is_restricted_network is defined and is_restricted_network %}
+      zypper ar -f https://mirrors.aliyun.com/docker-ce/linux/opensuse/docker-ce.repo
+    {% else %}
+      zypper ar -f https://download.docker.com/linux/opensuse/docker-ce.repo
+    {% endif %}
+  args:
+    creates: /etc/zypp/repos.d/docker-ce.repo
+  register: add_repo_result
+  become: "{{ become_enabled }}"
+  changed_when: add_repo_result.rc == 0
+
+# ------------------------------------------------------------
+# Install Docker Engine
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: native
+    app_name: "docker"
+    app_packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    app_desc: "Docker Engine packages"
+    app_state: present
+
+# ------------------------------------------------------------
+# Manage Docker as a non-root user
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "group_loader/main"
+  vars:
+    group_name: "docker"
+    group_members:
+      - "{{ ansible_user_name }}"
+
+# ---------------------------------------------------------------------
+# Connection: Reset connection to pick up the new docker group membership.
+# ---------------------------------------------------------------------
+- name: "Reset connection to apply docker group changes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.meta: reset_connection
+
+# ------------------------------------------------------------
+# Ensure Docker service is enabled and running
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "docker"
+    service_desc: "Docker Daemon"
+    service_state: "started"
+    service_enabled: true

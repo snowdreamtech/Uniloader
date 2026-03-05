@@ -1,0 +1,28 @@
+---
+# =====================================================================
+# roles/init/tasks/fastfetch/main.yml
+#
+# Purpose:
+#   Entry point for Fastfetch tool installation and configuration.
+#   Delegates to the OS-specific loader to handle package installation
+#   details across different distributions.
+#
+# Simple Usage:
+#   - import_tasks: "Fastfetch/main.yml"
+#
+# Comprehensive Usage:
+#   - import_tasks: "Fastfetch/main.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to select the appropriate Fastfetch installation
+# tasks (debian/redhat/alpine) based on the target OS.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "fastfetch"

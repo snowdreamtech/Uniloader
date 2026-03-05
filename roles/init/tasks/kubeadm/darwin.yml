@@ -1,0 +1,30 @@
+---
+# =====================================================================
+# roles/init/tasks/kubeadm/darwin.yml
+#
+# Purpose:
+#   macOS Specialized Kubernetes CLI Handling.
+#   Installs 'kubectl' on Darwin to allow remote cluster management,
+#   while skipping node-specific operations (kubeadm).
+# =====================================================================
+
+- name: "Install Kubernetes CLI (kubectl) on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "kubectl"
+    app_delivery_mode: "native"
+    # Map to specialized port names if using MacPorts
+    app_packages:
+      [
+        "{{ 'kubectl-1.35' if (os_pkg_mgr | default('', true) == 'macports') else 'kubectl' }}",
+      ]
+    app_desc: "Kubernetes cluster CLI"
+    app_state: "present"
+
+- name: "Status: Kubeadm node operations on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      Kubectl has been installed for remote management.
+      Note: 'kubeadm' (cluster node setup) is not natively supported on macOS.
+      To run a local cluster, consider: 'colima kubernetes start', 'kind', or 'minikube'.

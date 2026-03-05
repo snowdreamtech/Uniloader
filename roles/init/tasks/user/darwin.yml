@@ -1,0 +1,36 @@
+---
+# =====================================================================
+# roles/init/tasks/user/darwin.yml
+#
+# Purpose:
+#   macOS Specialized User Initialization.
+#   Ensures the management user account is properly configured on
+#   Darwin systems, handling directory permissions and SSH setup.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the OS family is Darwin.
+# ---------------------------------------------------------------------
+- name: "Validate OS family for User initialization {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family == 'darwin'
+    fail_msg: "This loader only supports macOS (Darwin)."
+
+# ---------------------------------------------------------------------
+# Initialization: Delegate to native user_loader with macOS defaults.
+# ---------------------------------------------------------------------
+- name: "Initialize management user for macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "user_loader/main"
+  vars:
+    # Standardize on ansible_user_name for consistency with Linux implementations
+    user_name: "{{ ansible_user_name | default('ansible', true) }}"
+    user_authorized_keys: "{{ ansible_user_authorized_keys | default([], true) }}"
+    # macOS uses 'admin' or 'wheel' for sudo access.
+    user_sudo: true
+    user_groups: ["admin", "wheel"]
+    user_shell: "/bin/zsh"
+    # Pass password through to the loader, defaulting to omit
+    user_password: "{{ ansible_user_password | default(omit) }}"

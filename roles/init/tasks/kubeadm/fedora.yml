@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/kubeadm/fedora.yml
+#
+# Purpose:
+#   Install Kubeadm on Fedora (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/common/init/vars/OpenSSH/alpine.yml
+#
+# Purpose:
+#   OpenSSH distribution-specific variables for Alpine Linux.
+#   Defines the PAM-enabled server package and service parameters
+#   required for secure authentication on Alpine.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# OpenSSH Package Management
+# ---------------------------------------------------------------------
+openssh_packages:
+  - "openssh"
+  - "openssh-server-pam"
+
+# ---------------------------------------------------------------------
+# SSH Service Configuration Overrides
+# ---------------------------------------------------------------------
+sshd_overrides:
+  service_name: "sshd"
+  config_path: "/etc/ssh/sshd_config.d/99-hardening.conf"
+  use_pam: "yes"
+  print_last_log: "no"

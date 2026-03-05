@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/common/init/vars/OpenSSH/redhat.yml
+#
+# Purpose:
+#   OpenSSH distribution-specific variables for RedHat-based systems.
+#   Defines the standard server/client packages and service parameters
+#   for the Enterprise Linux family.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# OpenSSH Package Management
+# ---------------------------------------------------------------------
+openssh_packages:
+  - "openssh-server"
+  - "openssh-clients"
+
+# ---------------------------------------------------------------------
+# SSH Service Configuration Overrides
+# ---------------------------------------------------------------------
+sshd_overrides:
+  service_name: "sshd"
+  config_path: "/etc/ssh/sshd_config.d/99-hardening.conf"
+  use_pam: "yes"
+  print_last_log: "yes"

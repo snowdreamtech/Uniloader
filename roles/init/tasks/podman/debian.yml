@@ -1,0 +1,49 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/debian.yml
+#
+# Purpose:
+#   Install and configure Podman on Debian-based systems.
+#   Uses native repositories as recommended by Debian upstream.
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "debian.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Podman {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'debian'
+    fail_msg: "This loader only supports Debian-based systems."
+
+# ---------------------------------------------------------------------
+# Installation: Core Packages
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "podman"
+    app_delivery_mode: "native"
+    app_desc: "Podman container engine packages"
+    app_state: "present"
+    app_packages:
+      - podman
+      - buildah
+      - skopeo
+      - slirp4netns
+      - dbus-user-session
+      - fuse-overlayfs
+      - uidmap
+
+# ---------------------------------------------------------------------
+# Configuration: Registries
+# ---------------------------------------------------------------------
+- name: "Ensure registries.conf.d exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/etc/containers/registries.conf.d"
+    state: directory
+    mode: "0755"
+  become: "{{ become_enabled }}"

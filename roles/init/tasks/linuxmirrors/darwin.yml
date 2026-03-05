@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/init/tasks/linuxmirrors/darwin.yml
+#
+# Purpose:
+#   macOS Specialized Handling for LinuxMirrors.
+#   Since LinuxMirrors is designed for Linux package manager optimization,
+#   it is skipped on Darwin.
+# =====================================================================
+
+- name: "Skip LinuxMirror optimization on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "LinuxMirror optimization is not applicable to macOS (Darwin). Skipping..."
+  when: os_family == 'darwin'

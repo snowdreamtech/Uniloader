@@ -1,0 +1,32 @@
+---
+# =====================================================================
+# roles/init/tasks/user/alpine.yml
+#
+# Purpose:
+#   Initializes the primary management user on Alpine Linux.
+#   Ensures the 'ansible' user is provisioned with the correct shell
+#   and sudo privileges using the standardized user_loader.
+#
+# Simple Usage:
+#   - include_tasks: "alpine.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "alpine.yml"
+#     vars:
+#       ansible_user_name: "deploy"
+#       ansible_user_password: "$6$..."
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Provisioning: Create the management user account with sudo access.
+# ---------------------------------------------------------------------
+- name: "Create management user account {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "user_loader/main"
+  vars:
+    user_name: "{{ ansible_user_name | default('ansible', true) }}"
+    user_password: "{{ ansible_user_password | default(omit) }}"
+    user_shell: "/bin/sh"
+    user_sudo: true

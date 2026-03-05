@@ -1,0 +1,86 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/mirrors_global.yml
+#
+# Purpose:
+#   Default global mirrors (Official/Standard).
+# =====================================================================
+
+mirror_info_defaults:
+  region: "global"
+
+  macports:
+    rsync: "rsync://rsync.macports.org/macports/release/tarballs/ports.tar"
+    distfiles: "https://distfiles.macports.org"
+    binhost: "https://packages.macports.org"
+
+  homebrew:
+    brew_git: "https://github.com/Homebrew/brew.git"
+    core_git: "https://github.com/Homebrew/homebrew-core.git"
+    cask_git: "https://github.com/Homebrew/homebrew-cask.git"
+    bottles: "https://ghcr.io/v2/homebrew/bottles"
+
+  apt:
+    debian_url: "http://deb.debian.org/debian"
+    debian_security_url: "http://security.debian.org/debian-security"
+    ubuntu_url: "http://archive.ubuntu.com/ubuntu"
+
+  yum:
+    centos_url: "http://mirror.centos.org"
+    centos_vault_url: "http://vault.centos.org"
+    rocky_url: "http://dl.rockylinux.org/pub/rocky"
+    alma_url: "http://repo.almalinux.org/almalinux"
+    oracle_url: "https://yum.oracle.com/repo/OracleLinux"
+    epel_url: "https://dl.fedoraproject.org/pub/epel"
+
+  alpine:
+    url: "https://dl-cdn.alpinelinux.org"
+
+  docker:
+    registry_mirrors: []
+
+  pip:
+    index_url: "https://pypi.org/simple"
+
+  npm:
+    registry: "https://registry.npmjs.org"
+
+  yarn:
+    registry: "https://registry.yarnpkg.com"
+
+  pnpm:
+    registry: "https://registry.npmjs.org"
+
+  cargo:
+    replace_with: null
+    registries: {}
+
+  go:
+    proxy: "https://proxy.golang.org,direct"
+    sumdb: "sum.golang.org"
+
+  ruby:
+    registry: "https://rubygems.org/"
+
+  rustup:
+    dist_server: "https://static.rust-lang.org/rustup"
+    update_root: "https://static.rust-lang.org/rustup/rustup"
+
+  flutter:
+    storage_base_url: "https://storage.googleapis.com/flutter_infra_release"
+    pub_hosted_url: "https://pub.dartlang.org"
+
+  node_mirror: "https://nodejs.org/dist/"
+
+  conda:
+    channels:
+      - "defaults"
+
+  ghcup:
+    mirror: "https://www.haskell.org/ghcup"
+
+  maven:
+    mirror_url: "https://repo.maven.apache.org/maven2"
+
+  gradle:
+    mirror_url: "https://services.gradle.org/distributions"

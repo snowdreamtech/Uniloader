@@ -1,0 +1,31 @@
+---
+# =====================================================================
+# roles/init/tasks/openssh/main.yml
+#
+# Purpose:
+#   Entry point for OpenSSH server configuration.
+#   Delegates execution to the OS-specific loader and ensures that
+#   SSH configuration variables are correctly merged.
+#
+# Simple Usage:
+#   - import_tasks: "OpenSSH/main.yml"
+#
+# Comprehensive Usage:
+#   - import_tasks: "OpenSSH/main.yml"
+#     vars:
+#       sshd_port: 2222
+#       sshd_permit_root_login: "no"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to select the appropriate OpenSSH configuration
+# tasks (debian/redhat/alpine) based on the target OS.
+# Automatically merges variables with the 'sshd' prefix.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "openssh"
+    module_var_prefix: "sshd"

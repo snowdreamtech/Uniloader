@@ -1,0 +1,34 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/debian.yml
+# =====================================================================
+
+- name: "Check for deb822 source file {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/etc/apt/sources.list.d/{{ os_distribution }}.sources"
+  register: deb822_file
+  when: mirror_enable_linux | bool
+
+- name: "Configure APT mirrors (deb822) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "{{ os_distribution }}.sources.j2"
+    dest: "/etc/apt/sources.list.d/{{ os_distribution }}.sources"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - mirror_enable_linux | bool
+    - deb822_file.stat.exists
+
+- name: "Configure APT mirrors (legacy sources.list) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "apt_sources.list.j2"
+    dest: "/etc/apt/sources.list"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - mirror_enable_linux | bool
+    - not deb822_file.stat.exists

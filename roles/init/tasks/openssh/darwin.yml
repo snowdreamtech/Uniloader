@@ -1,0 +1,122 @@
+---
+# =====================================================================
+# roles/init/tasks/openssh/darwin.yml
+#
+# Purpose:
+#   macOS Specialized OpenSSH Configuration.
+#   macOS comes with OpenSSH pre-installed. This loader focuses on:
+#     - Enabling Remote Login (SSH Service)
+#     - Managing SSH keys and authorized_keys
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the host is a Darwin system.
+# ---------------------------------------------------------------------
+- name: "Validate OS family for OpenSSH {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family == 'darwin'
+    fail_msg: "This loader only supports macOS (Darwin)."
+
+# ---------------------------------------------------------------------
+# Service: Enable 'Remote Login'
+# ---------------------------------------------------------------------
+- name: "Enable Remote Login (SSH) on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "systemsetup -setremotelogin on"
+  register: ssh_service_enable
+  become: "{{ become_enabled }}"
+  changed_when:
+    - "'setremotelogin: On' not in ssh_service_enable.stdout"
+    - "'already On' not in ssh_service_enable.stdout"
+  failed_when:
+    - ssh_service_enable.rc != 0
+    - "'denied' not in ssh_service_enable.stderr | lower" # Handle TCC denials gracefully in some environments
+
+# ---------------------------------------------------------------------
+# User Identity: Configure local SSH identity.
+# ---------------------------------------------------------------------
+- name: "Ensure user SSH directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.ssh"
+    state: directory
+    mode: "0700"
+    owner: "{{ ansible_user_name | default('root', true) }}"
+    group: "{{ ansible_user_name | default('wheel', true) }}"
+  become: "{{ become_enabled }}"
+
+- name: "Generate user SSH keypairs {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.crypto.openssh_keypair:
+    path: "{{ ansible_user_home }}/.ssh/id_{{ item.type }}"
+    type: "{{ item.type }}"
+    size: "{{ item.size | default(omit) }}"
+    mode: "0600"
+    owner: "{{ ansible_user_name | default('root', true) }}"
+    group: "{{ ansible_user_name | default('wheel', true) }}"
+  loop:
+    - { type: "ed25519" }
+    - { type: "ecdsa", size: 521 }
+    - { type: "rsa", size: 4096 }
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Access Control: Provision controller public keys.
+# ---------------------------------------------------------------------
+- name: "Load controller public keys {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    controller_public_keys:
+      - "{{ lookup('ansible.builtin.file', '~/.ssh/id_ed25519.pub', errors='ignore') }}"
+      - "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub', errors='ignore') }}"
+      - "{{ lookup('ansible.builtin.file', '~/.ssh/id_ecdsa.pub', errors='ignore') }}"
+
+- name: "Add controller keys to authorized_keys {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.authorized_key:
+    user: "{{ ansible_user_name }}"
+    key: "{{ item }}"
+    state: "present"
+    exclusive: false
+  loop: "{{ controller_public_keys | reject('equalto', '') | list }}"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Hardening: Deploy tuned sshd configuration based on security policy.
+# ---------------------------------------------------------------------
+- name: "Ensure Include directive exists in sshd_config {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.lineinfile:
+    path: "/etc/ssh/sshd_config"
+    line: "Include /etc/ssh/sshd_config.d/*.conf"
+    insertbefore: "^[ \t]*Match"
+    state: present
+  become: "{{ become_enabled }}"
+  notify: "Restart sshd safely"
+
+- name: "Ensure SSH config directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ (sshd.config_path | default('/etc/ssh/sshd_config.d/99-hardening.conf', true)) | dirname }}"
+    state: "directory"
+    owner: "root"
+    group: "wheel"
+    mode: "0755"
+  become: "{{ become_enabled }}"
+
+- name: "Deploy hardened sshd_config {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "99-hardening.conf.j2"
+    dest: "{{ sshd.config_path | default('/etc/ssh/sshd_config.d/99-hardening.conf', true) }}"
+    owner: "root"
+    group: "wheel"
+    mode: "0600"
+    validate: "{{ sshd.validate_command | default(omit) }}"
+  become: "{{ become_enabled }}"
+  notify: "Restart sshd safely"
+
+# ---------------------------------------------------------------------
+# Service: Ensure the SSH daemon is active and responding.
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Service check: Ensure the SSH daemon is active.
+# Note: On macOS, systemsetup -setremotelogin handles most of the logic.
+# ---------------------------------------------------------------------
+- name: "Ensure Remote Login is enabled {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "systemsetup -setremotelogin on"
+  become: "{{ become_enabled }}"
+  changed_when: false

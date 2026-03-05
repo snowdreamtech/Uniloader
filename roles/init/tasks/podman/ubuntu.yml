@@ -1,0 +1,35 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/ubuntu.yml
+#
+# Purpose:
+#   Install and configure Podman on Ubuntu systems.
+#   Uses native repositories (available since Ubuntu 20.10).
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "ubuntu.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS for Podman {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_distribution | default('', true) == 'ubuntu'
+    fail_msg: "This loader only supports Ubuntu."
+
+# ---------------------------------------------------------------------
+# Installation: Core Packages
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "podman"
+    app_delivery_mode: "native"
+    app_desc: "Podman container engine packages"
+    app_state: "present"
+    app_packages:
+      - podman
+      - buildah
+      - skopeo

@@ -1,0 +1,101 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/mirrors_cn.yml
+#
+# Purpose:
+#   Mirror definitions for Mainland China (CN).
+# =====================================================================
+
+mirror_info_defaults:
+  region: "cn"
+
+  # ---------------------------------------------------------------------
+  # System Package Managers
+  # ---------------------------------------------------------------------
+  macports:
+    rsync: "rsync://mirrors.tuna.tsinghua.edu.cn/macports/release/tarballs/ports.tar"
+    distfiles: "https://mirrors.tuna.tsinghua.edu.cn/macports/distfiles"
+    binhost: "https://mirrors.tuna.tsinghua.edu.cn/macports/packages"
+
+  homebrew:
+    brew_git: "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git"
+    core_git: "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git"
+    cask_git: "https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-cask.git"
+    bottles: "https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles"
+
+  apt:
+    debian_url: "https://mirrors.tuna.tsinghua.edu.cn/debian"
+    debian_security_url: "https://mirrors.tuna.tsinghua.edu.cn/debian-security"
+    ubuntu_url: "https://mirrors.tuna.tsinghua.edu.cn/ubuntu"
+
+  yum:
+    centos_url: "https://mirrors.tuna.tsinghua.edu.cn/centos"
+    centos_vault_url: "https://mirrors.tuna.tsinghua.edu.cn/centos-vault"
+    rocky_url: "https://mirrors.aliyun.com/rockylinux"
+    alma_url: "https://mirrors.aliyun.com/almalinux"
+    oracle_url: "https://mirrors.aliyun.com/oracle"
+    epel_url: "https://mirrors.tuna.tsinghua.edu.cn/epel"
+
+  alpine:
+    url: "https://mirrors.tuna.tsinghua.edu.cn"
+
+  # ---------------------------------------------------------------------
+  # Containers
+  # ---------------------------------------------------------------------
+  docker:
+    registry_mirrors:
+      - "https://docker.mirrors.sjtug.sjtu.edu.cn"
+      - "https://mirror.baidubce.com"
+      - "https://docker.m.daocloud.io"
+
+  # ---------------------------------------------------------------------
+  # Languages & Ecosystems
+  # ---------------------------------------------------------------------
+  pip:
+    index_url: "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+  npm:
+    registry: "https://registry.npmmirror.com"
+
+  yarn:
+    registry: "https://registry.npmmirror.com"
+
+  pnpm:
+    registry: "https://registry.npmmirror.com"
+
+  cargo:
+    replace_with: "tuna"
+    registries:
+      tuna: "https://mirrors.tuna.tsinghua.edu.cn/git/crates.io-index"
+
+  go:
+    proxy: "https://goproxy.cn,direct"
+    sumdb: "sum.golang.google.cn"
+
+  ruby:
+    registry: "https://mirrors.tuna.tsinghua.edu.cn/rubygems/"
+
+  rustup:
+    dist_server: "https://mirrors.tuna.tsinghua.edu.cn/rustup"
+    update_root: "https://mirrors.tuna.tsinghua.edu.cn/rustup/rustup"
+
+  flutter:
+    storage_base_url: "https://mirrors.tuna.tsinghua.edu.cn/flutter"
+    pub_hosted_url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub"
+
+  node_mirror: "https://mirrors.tuna.tsinghua.edu.cn/nodejs-release/"
+
+  conda:
+    channels:
+      - "https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/"
+      - "https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/"
+      - "https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/"
+
+  ghcup:
+    mirror: "https://mirrors.tuna.tsinghua.edu.cn/ghcup"
+
+  maven:
+    mirror_url: "https://maven.aliyun.com/repository/public"
+
+  gradle:
+    mirror_url: "https://mirrors.cloud.tencent.com/gradle/"

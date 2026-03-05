@@ -1,0 +1,29 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/main.yml
+#
+# Purpose:
+#   Entry point for mirror configuration.
+#   Orchestrates region detection and component-specific configuration.
+# =====================================================================
+
+- name: "Detect region and load mirror variables {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: detect_region.yml
+
+- name: "Configure OS mirrors via os_loader {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "mirror"
+    module_var_prefix: "mirror_info"
+
+- name: "Configure Docker mirrors {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: docker.yml
+  when:
+    - mirror_enable_docker | bool
+
+- name: "Configure Programming Languages mirrors {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: languages.yml
+  when:
+    - mirror_enable_languages | bool

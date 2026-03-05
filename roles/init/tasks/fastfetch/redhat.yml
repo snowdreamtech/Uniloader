@@ -1,0 +1,187 @@
+---
+# =====================================================================
+# roles/init/tasks/fastfetch/redhat.yml
+#
+# Purpose:
+#   RedHat-specific installation and configuration of Fastfetch.
+#   Implements specialized repository detection and GitHub-based
+#   fallback installation.
+#
+# Simple Usage:
+#   - include_tasks: "redhat.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "redhat.yml"
+#     vars:
+#       fastfetch_packages: ["fastfetch"]
+#       become_enabled: true
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Check Repository Availability
+# ---------------------------------------------------------------------
+
+# WHY: We query the package manager first to determine if a native
+# package exists. This allows us to prefer stable repository versions
+# over manual binary management.
+- name: "Check if fastfetch exists in RedHat repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  become: "{{ become_enabled }}"
+  block:
+    - name: "Check fastfetch availability in DNF/YUM {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.command: "{{ 'dnf' if os_pkg_mgr == 'dnf' else 'yum' }} info fastfetch"
+      register: fastfetch_rh_search
+      failed_when: false
+      changed_when: false
+      check_mode: false
+
+    # WHY: Persist detection result as a boolean fact for use in
+    # conditional installation branches.
+    - name: "Set fastfetch availability fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.set_fact:
+        fastfetch_available: "{{ fastfetch_rh_search.rc == 0 }}"
+
+# ---------------------------------------------------------------------
+# Installation: Native Repository Branch
+# ---------------------------------------------------------------------
+
+# WHY: If found in repository, we use the standard 'app' role to
+# manage the installation, ensuring consistency across the platform.
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "fastfetch"
+    app_delivery_mode: "native"
+    app_packages: "{{ fastfetch_packages | default(['fastfetch'], true) }}"
+    app_desc: "Fastfetch"
+    app_state: "present"
+  when: fastfetch_available | default(false, true)
+
+# ---------------------------------------------------------------------
+# Installation: GitHub Fallback Branch
+# ---------------------------------------------------------------------
+
+# WHY: When repositories (especially on older RHEL/CentOS versions)
+# lack Fastfetch, we pull the latest optimized RPM from GitHub.
+
+- name: "Query Fastfetch latest release metadata {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/fastfetch-cli/fastfetch/releases/latest"
+    return_content: true
+    status_code: 200
+    headers:
+      Accept: "application/vnd.github+json"
+  register: fastfetch_latest_api
+  changed_when: false
+  when: not (fastfetch_available | default(false, true))
+
+# WHY: Map Ansible architecture names to asset naming conventions
+# used in Fastfetch release files.
+- name: "Detect Linux architecture {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    fastfetch_linux_arch: >-
+      {{
+        'aarch64'
+        if ansible_architecture in ['arm64', 'aarch64']
+        else 'amd64'
+      }}
+  when: not (fastfetch_available | default(false, true))
+
+# WHY: Select the correct .rpm package asset based on the detected
+# system architecture.
+- name: "Extract Fastfetch RedHat asset URL {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    fastfetch_latest_url: >-
+      {{
+        fastfetch_latest_api.json.assets
+        | selectattr('name', 'match', 'fastfetch-linux-' ~ fastfetch_linux_arch ~ '\\.rpm$')
+        | map(attribute='browser_download_url')
+        | first
+      }}
+  when: not (fastfetch_available | default(false, true))
+
+- name: "Fail if no matching RedHat asset found {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "No matching RedHat Fastfetch asset found for arch={{ fastfetch_linux_arch }}"
+  when:
+    - not (fastfetch_available | default(false, true))
+    - fastfetch_latest_url is not defined or (fastfetch_latest_url | length == 0)
+
+# WHY: Download the asset to a temporary path for installation.
+- name: "Download Fastfetch latest RedHat release {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ fastfetch_latest_url }}"
+    dest: "/tmp/fastfetch.rpm"
+    mode: "0644"
+  when: not (fastfetch_available | default(false, true))
+
+# WHY: Use the native package module to install the downloaded RPM file.
+- name: "Install Fastfetch via package local rpm {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "/tmp/fastfetch.rpm"
+    state: "present"
+  become: "{{ become_enabled }}"
+  when: not (fastfetch_available | default(false, true))
+
+# WHY: Remove temporary files to keep the system clean as per Lean principles.
+- name: "Clean up Fastfetch temporary rpm file {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/tmp/fastfetch.rpm"
+    state: "absent"
+  when: not (fastfetch_available | default(false, true))
+
+# ---------------------------------------------------------------------
+# Configuration: SSH MOTD Integration
+# ---------------------------------------------------------------------
+
+# WHY: RedHat systems often lack a native update-motd.d framework.
+# We create this directory to store our MOTD scripts.
+- name: "Ensure directory /etc/update-motd.d/ exists (RedHat) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/etc/update-motd.d"
+    state: "directory"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  become: "{{ become_enabled }}"
+
+# WHY: We use pam_exec to trigger high-quality MOTD generation upon
+# login, providing immediate system feedback to the administrator.
+- name: "Enable dynamic MOTD via pam_exec (RedHat) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.lineinfile:
+    path: "/etc/pam.d/sshd"
+    insertafter: "^session\\s+optional\\s+pam_motd\\.so"
+    regexp: "^session\\s+optional\\s+pam_exec\\.so"
+    line: "session    optional     pam_exec.so stdout /usr/local/bin/update-motd-wrapper"
+  become: "{{ become_enabled }}"
+
+# WHY: This wrapper script executes all scripts in update-motd.d,
+# simulating the behavior found in Debian/Ubuntu.
+- name: "Install update-motd wrapper (RedHat) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/usr/local/bin/update-motd-wrapper"
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      for script in /etc/update-motd.d/*; do
+          [ -x "$script" ] && "$script"
+      done
+  become: "{{ become_enabled }}"
+
+# WHY: Extend dynamic MOTD support to local TTY logins for consistency.
+- name: "Enable dynamic MOTD for local login (RedHat) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.lineinfile:
+    path: "/etc/pam.d/login"
+    insertbefore: "^session\\s+include\\s+system-auth"
+    regexp: "^session\\s+optional\\s+pam_motd\\.so\\s+motd=/etc/update-motd\\.d"
+    line: "session    optional     pam_motd.so motd=/etc/update-motd.d"
+  become: "{{ become_enabled }}"
+
+# WHY: Deploy the execution hook into our custom update-motd.d framework.
+- name: "Deploy 20-fastfetch script to /etc/update-motd.d/ (RedHat) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    src: "20-fastfetch"
+    dest: "/etc/update-motd.d/20-fastfetch"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  become: "{{ become_enabled }}"

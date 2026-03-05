@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/almalinux.yml
+#
+# Purpose:
+#   Install Podman on AlmaLinux (delegates to redhat.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "redhat.yml"

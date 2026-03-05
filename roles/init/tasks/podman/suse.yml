@@ -1,0 +1,40 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/suse.yml
+#
+# Purpose:
+#   Install Podman on SUSE-based systems (openSUSE/SLES).
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "suse.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Podman {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'suse'
+    fail_msg: "This loader only supports SUSE-based systems."
+
+# ---------------------------------------------------------------------
+# Installation: Podman Packages via App Role
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "podman"
+    app_delivery_mode: "native"
+    app_desc: "Podman container engine packages"
+    app_state: "present"
+    app_packages:
+      - podman
+      - podman-cni-config
+      - buildah
+      - skopeo
+      # OpenSUSE usually packages 'podman' with all necessary dependencies
+# ---------------------------------------------------------------------
+# Service: Podman managed by socket/systemd is optional but standard
+# ---------------------------------------------------------------------
+# Podman is daemonless so no service enable needed unless utilizing API socket

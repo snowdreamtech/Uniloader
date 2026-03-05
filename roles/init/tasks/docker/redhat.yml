@@ -1,0 +1,138 @@
+---
+# =====================================================================
+# roles/init/tasks/docker/redhat.yml
+#
+# Purpose:
+#   Installation and configuration of the Docker Engine on
+#   RedHat-based distributions (RHEL/CentOS/Rocky/Alma 8+).
+#   Handles architecture detection, repository provisioning, package
+#   lifecycle, and user group management.
+#
+# Simple Usage:
+#   - ansible.builtin.include_tasks: "redhat.yml"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_tasks: "redhat.yml"
+#     vars:
+#       become_enabled: true
+#       is_restricted_network: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the host environment is compatible with the
+# Docker installation requirements for RedHat.
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Docker {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'redhat'
+    fail_msg: "This task file only supports RedHat-based systems."
+
+- name: "Validate RedHat version for Docker {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_version_major | default(0, true) | int >= 8
+    fail_msg: "Docker Engine requires RHEL/CentOS/Rocky/Alma version 8 or higher."
+
+- name: "Validate CPU architecture for Docker {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_architecture | default('', true) in ["x86_64", "amd64", "arm64", "aarch64", "armhf", "s390x", "ppc64le", "ppc64el"]
+    fail_msg: "Docker Engine requires a supported architecture: amd64, arm64, armhf, s390x, or ppc64le. Current architecture: {{ os_architecture | default('unknown', true) }}"
+
+# ---------------------------------------------------------------------
+# Preparation: Remove legacy Docker packages to avoid conflicts
+# with the modern Docker Engine (Docker CE).
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_packages:
+      - "docker"
+      - "docker-client"
+      - "docker-client-latest"
+      - "docker-common"
+      - "docker-latest"
+      - "docker-latest-logrotate"
+      - "docker-logrotate"
+      - "docker-engine"
+    app_desc: "legacy Docker packages"
+    app_state: "absent"
+
+# ---------------------------------------------------------------------
+# Dependencies: Install the prerequisite tools required for
+# secure repository management on DNF/YUM systems.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_packages:
+      - "dnf-plugins-core"
+      - "device-mapper-persistent-data"
+      - "lvm2"
+    app_desc: "required RPM packages"
+    app_state: "present"
+
+# ---------------------------------------------------------------------
+# Repository: Configure the official Docker DNF/YUM repository.
+# Supports mirrors for restricted network environments.
+# ---------------------------------------------------------------------
+- name: "Add Docker CE repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >
+    dnf config-manager --add-repo {{ 'https://mirrors.aliyun.com/docker-ce/linux/rhel/docker-ce.repo' if is_restricted_network | default(false, true) else 'https://download.docker.com/linux/rhel/docker-ce.repo' }}
+  args:
+    creates: "/etc/yum.repos.d/docker-ce.repo"
+  register: add_repo_result
+  become: "{{ become_enabled }}"
+  changed_when: "add_repo_result.rc == 0"
+
+# ---------------------------------------------------------------------
+# Execution: Install the main Docker Engine components.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_desc: "Docker Engine packages"
+    package_name:
+      - "docker-ce"
+      - "docker-ce-cli"
+      - "containerd.io"
+      - "docker-buildx-plugin"
+      - "docker-compose-plugin"
+
+# ---------------------------------------------------------------------
+# Permissions: Ensure account privileges for Docker interaction
+# without requiring sudo for the primary user.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "group_loader/main"
+  vars:
+    group_name: "docker"
+    group_members:
+      - "{{ ansible_user_name }}"
+
+# ---------------------------------------------------------------------
+# Connection: Reset connection to pick up the new docker group membership.
+# ---------------------------------------------------------------------
+- name: "Reset connection to apply docker group changes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.meta: reset_connection
+
+# ---------------------------------------------------------------------
+# Persistence: Enable and start the Docker daemon to ensure
+# availability across reboots.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "docker"
+    service_desc: "Docker Daemon"
+    service_state: "started"
+    service_enabled: true

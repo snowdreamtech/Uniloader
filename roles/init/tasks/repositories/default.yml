@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/init/tasks/repositories/default.yml
+#
+# Purpose:
+#   Generic repository initialization fallback.
+#   Currently acts as a placeholder for platforms like macOS where
+#   traditional Linux repositories (EPEL/CRB) are not applicable.
+# =====================================================================
+
+- name: "Skip Linux-specific repositories on non-supported OS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "System repositories (EPEL/CRB/etc.) are skipped on macOS/Darwin."
+  when: os_family == 'darwin'

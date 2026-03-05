@@ -1,0 +1,79 @@
+---
+# =====================================================================
+# roles/init/tasks/kubeadm/redhat.yml
+#
+# Purpose:
+#   Install Kubeadm on RHEL-based systems.
+#   Uses pkgs.k8s.io repositories and handles SELinux.
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "redhat.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Kubeadm {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'redhat'
+    fail_msg: "This loader only supports RedHat-based systems."
+
+# ---------------------------------------------------------------------
+# Configuration: SELinux Permissive
+# ---------------------------------------------------------------------
+- name: "Put SELinux in permissive mode {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: setenforce 0
+  become: "{{ become_enabled }}"
+  failed_when: false
+  changed_when: false
+
+- name: "Persist SELinux permissive mode {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.lineinfile:
+    path: /etc/selinux/config
+    regexp: "^SELINUX="
+    line: "SELINUX=permissive"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Repository: Setup pkgs.k8s.io
+# ---------------------------------------------------------------------
+- name: "Add Kubernetes repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: /etc/yum.repos.d/kubernetes.repo
+    content: |
+      [kubernetes]
+      name=Kubernetes
+      baseurl=https://pkgs.k8s.io/core:/stable:/{{ k8s_version | default('v1.30', true) }}/rpm/
+      enabled=1
+      gpgcheck=1
+      gpgkey=https://pkgs.k8s.io/core:/stable:/{{ k8s_version | default('v1.30', true) }}/rpm/repodata/repomd.xml.key
+    mode: "0644"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Installation: Kubeadm packages
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "kubeadm"
+    app_delivery_mode: "native"
+    app_desc: "Kubeadm core packages"
+    app_state: "present"
+    app_packages:
+      - kubelet
+      - kubeadm
+      - kubectl
+
+# ---------------------------------------------------------------------
+# Service: Enable Kubelet
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "kubelet"
+    service_desc: "Kubelet Service"
+    service_state: "started"
+    service_enabled: true

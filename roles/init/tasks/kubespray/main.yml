@@ -1,0 +1,17 @@
+---
+# =====================================================================
+# roles/init/tasks/kubespray/main.yml
+#
+# Purpose:
+#   Entry point for Kubespray controller setup.
+#   Delegates to OS-specific loader.
+#
+# Usage:
+#   - import_tasks: "Kubespray/main.yml"
+# =====================================================================
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "kubespray"

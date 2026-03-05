@@ -1,0 +1,65 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/redhat.yml
+# =====================================================================
+
+- name: "Detect RHEL package manager {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    rhel_pkg_mgr: >-
+      {% if os_version_major >= 8 %}
+        dnf
+      {% else %}
+        yum
+      {% endif %}
+  when: mirror_enable_linux | bool
+
+- name: "Configure YUM/DNF mirrors (EL 7) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "yum_repos.d/CentOS-Base.repo.j2"
+    dest: "/etc/yum.repos.d/CentOS-Base.repo"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - mirror_enable_linux | bool
+    - os_distribution == 'centos'
+    - os_version_major == 7
+
+- name: "Configure YUM/DNF mirrors (EL 8/9) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "yum_repos.d/el-base.repo.j2"
+    dest: "/etc/yum.repos.d/{{ os_distribution | capitalize }}.repo" # e.g. Rocky.repo
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - mirror_enable_linux | bool
+    - os_distribution in ['rocky', 'almalinux', 'centos', 'redhat']
+    - os_version_major >= 8
+
+- name: "Configure YUM/DNF mirrors (Oracle Linux) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "yum_repos.d/oracle.repo.j2"
+    dest: "/etc/yum.repos.d/oracle-linux-ol{{ os_version_major }}.repo"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - mirror_enable_linux | bool
+    - os_distribution == 'oraclelinux'
+
+- name: "Configure EPEL mirror {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+
+  ansible.builtin.template:
+    src: "yum_repos.d/epel.repo.j2"
+    dest: "/etc/yum.repos.d/epel.repo"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - mirror_enable_linux | bool
+    - os_family == 'redhat'

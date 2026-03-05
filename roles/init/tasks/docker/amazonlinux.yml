@@ -1,0 +1,112 @@
+---
+# ------------------------------------------------------------
+# Install Docker Engine on Amazon Linux 2023
+# ------------------------------------------------------------
+
+# ------------------------------------------------------------
+# Validate OS compatibility
+# ------------------------------------------------------------
+
+- ansible.builtin.assert:
+    that:
+      - os_distribution == "amazon"
+      - os_version_major == 2023
+    fail_msg: "Docker Engine requires Amazon Linux 2023."
+    success_msg: "Amazon Linux version validated."
+
+- ansible.builtin.assert:
+    that:
+      - os_architecture in ["x86_64", "amd64", "arm64", "aarch64"]
+    fail_msg: "Docker Engine requires amd64 or arm64 on Amazon Linux. Current architecture: {{ os_architecture | default('unknown', true) }}"
+    success_msg: "CPU architecture validated."
+
+# ------------------------------------------------------------
+# Remove old Docker versions
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_packages:
+      - docker
+      - docker-cli
+      - containerd
+      - runc
+    app_desc: "legacy Docker packages"
+    app_state: "absent"
+
+# ------------------------------------------------------------
+# Install required dependencies
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "docker"
+    app_delivery_mode: native
+    app_packages:
+      - amazon-linux-extras
+      - curl
+      - ca-certificates
+    app_desc: "required packages"
+    app_state: present
+
+# ------------------------------------------------------------
+# Enable Docker repository
+# ------------------------------------------------------------
+
+- name: "Enable Docker repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "amazon-linux-extras enable docker"
+  args:
+    creates: /etc/yum.repos.d/docker.repo
+  register: enable_repo_result
+  become: "{{ become_enabled }}"
+  changed_when: enable_repo_result.rc == 0
+
+# ------------------------------------------------------------
+# Install Docker Engine
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: native
+    app_name: "docker"
+    app_packages:
+      - docker
+      - containerd
+    app_desc: "Required system packages for Docker Engine"
+    app_state: present
+
+# ------------------------------------------------------------
+# Manage Docker as a non-root user
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "group_loader/main"
+  vars:
+    group_name: "docker"
+    group_members:
+      - "{{ ansible_user_name }}"
+
+# ------------------------------------------------------------
+# Connection: Reset connection to pick up the new docker group membership
+# ------------------------------------------------------------
+- name: "Reset connection to apply docker group changes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.meta: reset_connection
+
+# ------------------------------------------------------------
+# Ensure Docker service is enabled and running
+# ------------------------------------------------------------
+
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "docker"
+    service_desc: "Docker Daemon"
+    service_state: "started"
+    service_enabled: true

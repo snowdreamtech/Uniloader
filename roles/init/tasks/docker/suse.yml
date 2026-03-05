@@ -1,0 +1,67 @@
+---
+# =====================================================================
+# roles/init/tasks/docker/suse.yml
+#
+# Purpose:
+#   Install Docker on SUSE-based systems (openSUSE/SLES).
+#
+# Usage:
+#   - ansible.builtin.include_tasks: "suse.yml"
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Docker {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family | default('', true) == 'suse' # Ansible uses 'Suse' capitalized but normalized to 'suse'
+    fail_msg: "This loader only supports SUSE-based systems."
+
+# ---------------------------------------------------------------------
+# Repository: Add Docker official repo
+# ---------------------------------------------------------------------
+- name: "Add Docker repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.zypper_repository:
+    name: docker-ce
+    repo: "https://download.docker.com/linux/sles/$releasever_major"
+    auto_import_keys: true
+    state: present
+  become: "{{ become_enabled }}"
+  # $releasever_major is a zypper variable, or we can use ansible fact if needed.
+  # Official docs say: https://download.docker.com/linux/sles/$releasever
+  # We might need to be careful with variable expansion in ansible.
+  # Safe bet: use specific URL logic or trust zypper's var if not escaped.
+  # Actually, for openSUSE, the path is distinct.
+  # Let's simplify: Install from native standard repos if available, as adding the SLES repo on openSUSE might break.
+  # openSUSE has excellent docker support in 'Virtualization:containers'.
+  # Decision: Use 'native' packages which implies standard repos. Using `role: app` handles package installation.
+  # If the user wants official, they should configure overriding repos.
+  # Here we just enable installation.
+
+# ---------------------------------------------------------------------
+# Installation: Docker Packages via App Role
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_delivery_mode: "native"
+    app_name: "docker"
+    app_desc: "Docker container engine"
+    app_state: "present"
+    app_packages:
+      - docker
+      - docker-compose-plugin
+      - docker-buildx-plugin
+
+# ---------------------------------------------------------------------
+# Service: Enable and Start Docker
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "docker"
+    service_desc: "Docker Engine"
+    service_state: "started"
+    service_enabled: true

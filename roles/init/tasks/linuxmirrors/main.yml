@@ -1,0 +1,29 @@
+---
+# =====================================================================
+# roles/init/tasks/linuxmirrors/main.yml
+#
+# Purpose:
+#   Entry point for Linux mirror optimization.
+#   Delegates execution to the OS-specific loader to handle
+#   mirror replacement (e.g., switching to TUNA or Aliyun) based on
+#   the target distribution.
+#
+# Simple Usage:
+#   - import_tasks: "LinuxMirrors/main.yml"
+#
+# Comprehensive Usage:
+#   - import_tasks: "LinuxMirrors/main.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to select the appropriate mirror configuration
+# tasks (debian/redhat/alpine) based on the target OS.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "linuxmirrors"

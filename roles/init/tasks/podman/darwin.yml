@@ -1,0 +1,80 @@
+---
+# =====================================================================
+# roles/init/tasks/podman/darwin.yml
+#
+# Purpose:
+#   macOS Specialized Podman Detection and Installation.
+#   Identifies 'podman' binary and handles installation via Homebrew
+#   or MacPorts, and manages the Podman machine lifecycle.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the OS family is Darwin.
+# ---------------------------------------------------------------------
+- name: "Validate OS family for Podman {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - os_family == 'darwin'
+    fail_msg: "This loader only supports macOS (Darwin)."
+
+# ---------------------------------------------------------------------
+# Detection: Check for Podman binary.
+# ---------------------------------------------------------------------
+- name: "Detect podman binary presence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "PATH={{ os_paths }} command -v podman 2>/dev/null || true"
+  register: detect_podman_binary
+  changed_when: false
+  failed_when: false
+
+- name: "Set fact: podman_installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    podman_installed: "{{ detect_podman_binary.rc == 0 }}"
+
+# ---------------------------------------------------------------------
+# Installation: Deploy Podman via app role.
+# ---------------------------------------------------------------------
+- name: "Install Podman on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "podman"
+    app_delivery_mode: "native"
+    app_packages: ["podman"]
+    app_desc: "Podman Engine and CLI"
+    app_state: "present"
+  when: not (podman_installed | bool)
+
+# ---------------------------------------------------------------------
+# Machine Management: Manage Podman VM for macOS.
+# ---------------------------------------------------------------------
+- name: "Check Podman machine status {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "podman machine inspect"
+  register: podman_machine_status
+  changed_when: false
+  failed_when: false
+  when: podman_installed | bool or not (podman_installed | bool) # Re-check after potential install
+
+- name: "Initialize Podman machine if missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "podman machine init"
+  when:
+    - podman_machine_status.rc != 0
+    - not ansible_check_mode
+  changed_when: true
+
+- name: "Ensure Podman machine is started {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "podman machine start"
+  register: podman_start_result
+  when:
+    - not ansible_check_mode
+  changed_when: "'Machine already running' not in podman_start_result.stderr | default('')"
+  failed_when:
+    - podman_start_result.rc != 0
+    - "'Machine already running' not in podman_start_result.stderr | default('')"
+
+# ---------------------------------------------------------------------
+# Audit: Provide status summary.
+# ---------------------------------------------------------------------
+- name: "Podman Status Summary {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Podman is installed and the virtual machine is initialized and running on macOS."
+  when: not ansible_check_mode

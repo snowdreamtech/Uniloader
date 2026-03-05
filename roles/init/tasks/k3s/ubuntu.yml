@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/init/tasks/k3s/ubuntu.yml
+#
+# Purpose:
+#   Install K3s on Ubuntu (delegates to debian.yml).
+# =====================================================================
+
+- ansible.builtin.import_tasks: "debian.yml"

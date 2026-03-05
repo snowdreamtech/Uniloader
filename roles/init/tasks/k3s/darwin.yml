@@ -1,0 +1,15 @@
+---
+# =====================================================================
+# roles/init/tasks/k3s/darwin.yml
+#
+# Purpose:
+#   macOS Specialized K3s Handling.
+#   K3s is Linux-specific and does not run natively on Darwin.
+# =====================================================================
+
+- name: "Skip K3s installation on macOS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      K3s is a Linux-only Kubernetes distribution and does not support macOS natively.
+      To run K3s on macOS, consider using 'colima', 'lima', or a virtual machine (via Multipass).
+  when: os_family == 'darwin'

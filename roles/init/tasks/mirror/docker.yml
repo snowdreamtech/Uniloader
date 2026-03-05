@@ -1,0 +1,38 @@
+---
+# =====================================================================
+# roles/init/tasks/mirror/docker.yml
+#
+# Purpose:
+#   Configure Docker Registry mirrors.
+# =====================================================================
+
+- name: "Check if Docker is installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "which docker"
+  register: docker_check
+  changed_when: false
+  failed_when: false
+  when: ansible_system == 'Linux'
+
+- name: "Ensure Docker configuration directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/etc/docker"
+    state: directory
+    mode: "0755"
+  become: "{{ become_enabled }}"
+  when:
+    - ansible_system == 'Linux'
+    - docker_check.rc | default(1) == 0
+
+- name: "Configure Docker daemon.json {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "/etc/docker/daemon.json"
+    content: |
+      {
+        "registry-mirrors": {{ mirror_info.docker.registry_mirrors | to_json }}
+      }
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when:
+    - ansible_system == 'Linux'
+    - docker_check.rc | default(1) == 0
+    - (mirror_info.docker.registry_mirrors | default([], true)) | length > 0

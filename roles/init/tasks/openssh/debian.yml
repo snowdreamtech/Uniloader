@@ -1,0 +1,138 @@
+---
+# =====================================================================
+# roles/init/tasks/openssh/debian.yml
+#
+# Purpose:
+#   OpenSSH server configuration and hardening for Debian-based systems.
+#   Handles host key generation, user key provisioning, and deployment
+#   of hardened configuration templates using the common app API.
+#
+# Simple Usage:
+#   - include_tasks: "debian.yml"
+#
+# Comprehensive Usage:
+#   - include_tasks: "debian.yml"
+#     vars:
+#       become_enabled: true
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Installation: Deploy OpenSSH server and client packages.
+# ---------------------------------------------------------------------
+- name: "Install OpenSSH packages {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "openssh"
+    app_delivery_mode: "native"
+    app_packages: "{{ openssh_packages | default(['openssh-server', 'openssh-client'], true) }}"
+    app_desc: "OpenSSH Server and Client"
+    app_state: "present"
+
+# ---------------------------------------------------------------------
+# Host Keys: Ensure standard host keys exist with correct permissions.
+# ---------------------------------------------------------------------
+- name: "Generate host keys {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "ssh-keygen -t {{ item.type }} -f {{ item.path }} -N ''"
+  args:
+    creates: "{{ item.path }}"
+  loop:
+    - { type: "rsa", path: "/etc/ssh/ssh_host_rsa_key" }
+    - { type: "ecdsa", path: "/etc/ssh/ssh_host_ecdsa_key" }
+    - { type: "ed25519", path: "/etc/ssh/ssh_host_ed25519_key" }
+  become: "{{ become_enabled }}"
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# User Identity: Configure local SSH identity for the ansible user.
+# ---------------------------------------------------------------------
+- name: "Set SSH directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    ssh_dir: "{{ ansible_user_home }}/.ssh"
+  tags: ["always"]
+
+- name: "Ensure user SSH directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ssh_dir }}"
+    state: "directory"
+    owner: "{{ ansible_user_name | default('root', true) }}"
+    group: "{{ ansible_user_name | default('root', true) }}"
+    mode: "0700"
+  become: "{{ become_enabled }}"
+
+- name: "Generate user SSH keypairs {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.crypto.openssh_keypair:
+    path: "{{ ssh_dir }}/id_{{ item.type }}"
+    type: "{{ item.type }}"
+    size: "{{ item.size | default(omit) }}"
+    owner: "{{ ansible_user_name | default('root', true) }}"
+    group: "{{ ansible_user_name | default('root', true) }}"
+    mode: "0600"
+  loop:
+    - { type: "ed25519" }
+    - { type: "ecdsa", size: 521 }
+    - { type: "rsa", size: 4096 }
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Access Control: Provision controller public keys for passwordless access.
+# ---------------------------------------------------------------------
+- name: "Load controller public keys {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    controller_public_keys:
+      - "{{ lookup('ansible.builtin.file', '~/.ssh/id_ed25519.pub', errors='ignore') }}"
+      - "{{ lookup('ansible.builtin.file', '~/.ssh/id_rsa.pub', errors='ignore') }}"
+      - "{{ lookup('ansible.builtin.file', '~/.ssh/id_ecdsa.pub', errors='ignore') }}"
+  tags: ["always"]
+
+- name: "Add controller keys to authorized_keys {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.authorized_key:
+    user: "{{ ansible_user_name | default('root', true) }}"
+    key: "{{ item }}"
+    state: "present"
+    exclusive: false
+  loop: "{{ controller_public_keys | reject('equalto', '') | list }}"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Hardening: Deploy tuned sshd configuration based on security policy.
+# ---------------------------------------------------------------------
+- name: "Ensure SSH config directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ (sshd.config_path | default('/etc/ssh/sshd_config.d/99-hardening.conf', true)) | dirname }}"
+    state: "directory"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  become: "{{ become_enabled }}"
+
+- name: "Deploy hardened sshd_config {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "99-hardening.conf.j2"
+    dest: "{{ sshd.config_path | default('/etc/ssh/sshd_config.d/99-hardening.conf', true) }}"
+    owner: "root"
+    group: "root"
+    mode: "0600"
+    validate: "{{ sshd.validate_command | default(omit) }}"
+  become: "{{ become_enabled }}"
+  notify: "Restart sshd safely"
+
+# ---------------------------------------------------------------------
+# Service: Ensure the SSH daemon is active and responding.
+# ---------------------------------------------------------------------
+- name: "Manage SSH service (Native) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.service:
+    name: "{{ sshd.service_name | default('sshd', true) }}"
+    state: "started"
+    enabled: true
+  when:
+    - not (is_container | default(false, true))
+  become: "{{ become_enabled }}"
+
+- name: "Manage SSH service (Container) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "/usr/sbin/sshd"
+  changed_when: false
+  when:
+    - is_container | default(false, true)
+  become: "{{ become_enabled }}"
