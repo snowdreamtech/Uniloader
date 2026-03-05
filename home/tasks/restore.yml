@@ -54,7 +54,7 @@
   loop_control:
     label: "{{ item.item.ansible_facts._resolved_file.path }}"
   register: directory_restore_gpg_files
-  when: 
+  when:
     - (home_restore_gpg | bool)
     - (home_files is defined)
     - item.stat.exists
@@ -66,22 +66,23 @@
 - name: Set home_gpg_files from home_files (Recursive)
   ansible.builtin.set_fact:
     home_gpg_files:
-      files: "{{ 
-        (
-          home_restore_gpg_item_stats.results 
-          | selectattr('stat.exists', 'equalto', true) 
-          | map(attribute='stat') 
-          | list
-        ) 
-        + 
-        (
-          directory_restore_gpg_files.results 
-          | selectattr('files', 'defined') 
-          | map(attribute='files') 
-          | flatten 
-          | list
-        )
-      }}"
+      files: >-
+        {{
+          (
+            home_restore_gpg_item_stats.results
+            | selectattr('stat.exists', 'equalto', true)
+            | map(attribute='stat')
+            | list
+          )
+          +
+          (
+            directory_restore_gpg_files.results
+            | selectattr('files', 'defined')
+            | map(attribute='files')
+            | flatten
+            | list
+          )
+        }}
   when: (home_restore_gpg | bool) and (home_files is defined)
   delegate_to: localhost
   tags: ["always"]
@@ -98,12 +99,12 @@
   ansible.builtin.file:
     path: "{{ home_dest_path }}/{{ (gpg_item.path | relpath(home_src_path) | regex_replace('\\.gpg$', '')) | dirname }}"
     state: directory
-    mode: '0700'
+    mode: "0700"
   loop: "{{ home_gpg_files.files | default([]) }}"
   loop_control:
     loop_var: gpg_item
     label: "{{ gpg_item.path | relpath(home_src_path) }}"
-  when: 
+  when:
     - gpg_item.path | relpath(home_src_path) != ".gitkeep.gpg"
     - (gpg_item.path | relpath(home_src_path) | dirname) != "."
 
@@ -111,13 +112,13 @@
   ansible.builtin.copy:
     content: "{{ lookup('pipe', 'gpg --quiet --batch --yes -d ' + gpg_item.path | quote + ' | base64') | b64decode }}"
     dest: "{{ home_dest_path }}/{{ gpg_item.path | relpath(home_src_path) | regex_replace('\\.gpg$', '') }}"
-    mode: '0600'
+    mode: "0600"
   loop: "{{ home_gpg_files.files | default([]) }}"
   loop_control:
     loop_var: gpg_item
     label: "{{ gpg_item.path | relpath(home_src_path) }}"
   no_log: true
-  when: 
+  when:
     - gpg_item.path | relpath(home_src_path) != ".gitkeep.gpg"
 
 - name: Define restore exclusion list
@@ -199,7 +200,7 @@
   loop_control:
     label: "{{ item.item.ansible_facts._resolved_file.path }}"
   register: directory_restore_raw_files
-  when: 
+  when:
     - (home_restore_plaintext | bool)
     - (home_files is defined)
     - item.stat.exists
@@ -211,11 +212,12 @@
 - name: Set home_raw_files from home_files (Recursive)
   ansible.builtin.set_fact:
     home_raw_files:
-      files: "{{ 
-        (home_restore_raw_stats.results | selectattr('stat.exists', 'equalto', true) | selectattr('stat.isdir', 'equalto', false) | map(attribute='item.ansible_facts._resolved_file') | list) 
-        + 
-        (directory_restore_raw_files.results | selectattr('files', 'defined') | map(attribute='files') | flatten | list) 
-      }}"
+      files: >-
+        {{
+          (home_restore_raw_stats.results | selectattr('stat.exists', 'equalto', true) | selectattr('stat.isdir', 'equalto', false) | map(attribute='item.ansible_facts._resolved_file') | list)
+          +
+          (directory_restore_raw_files.results | selectattr('files', 'defined') | map(attribute='files') | flatten | list)
+        }}
   when: (home_restore_plaintext | bool) and (home_files is defined)
   delegate_to: localhost
   tags: ["always"]
@@ -232,19 +234,19 @@
   ansible.builtin.file:
     path: "{{ home_dest_path }}/{{ (raw_item.path | relpath(home_src_path)) | dirname }}"
     state: directory
-    mode: '0700'
+    mode: "0700"
   loop: "{{ home_raw_files.files | default([]) }}"
   loop_control:
     loop_var: raw_item
     label: "{{ raw_item.path | relpath(home_src_path) }}"
-  when: 
+  when:
     - (raw_item.path | relpath(home_src_path) | dirname) != "."
 
 - name: Restore unencrypted files to remote
   ansible.builtin.copy:
     src: "{{ raw_item.path }}"
     dest: "{{ home_dest_path }}/{{ raw_item.path | relpath(home_src_path) }}"
-    mode: '0600'
+    mode: "0600"
   loop: "{{ home_raw_files.files | default([]) }}"
   loop_control:
     loop_var: raw_item
@@ -254,18 +256,18 @@
   ansible.builtin.script:
     cmd: "{{ role_path }}/files/{{ script_item.script }} {{ (home_dest_path == '~') | ternary('', script_item.dest) }}"
   loop:
-    - { script: 'fix-ssh-permissions.sh', dest: "{{ home_dest_path }}/.ssh" }
-    - { script: 'fix-gpg-permissions.sh', dest: "{{ home_dest_path }}/.gnupg" }
-    - { script: 'fix-default-permissions.sh', dest: "{{ home_dest_path }}" }
+    - { script: "fix-ssh-permissions.sh", dest: "{{ home_dest_path }}/.ssh" }
+    - { script: "fix-gpg-permissions.sh", dest: "{{ home_dest_path }}/.gnupg" }
+    - { script: "fix-default-permissions.sh", dest: "{{ home_dest_path }}" }
   loop_control:
     loop_var: script_item
-  when: 
+  when:
     - home_action == 'restore'
 
 - name: "Install pinentry-wrapper to /usr/local/bin"
   ansible.builtin.copy:
     src: "{{ role_path }}/files/pinentry-wrapper"
     dest: "/usr/local/bin/pinentry-wrapper"
-    mode: '0755'
+    mode: "0755"
   become: "{{ become_enabled }}"
   when: home_action == 'restore'

@@ -6,29 +6,29 @@ home_dest_path: "~"
 home_action: "restore" # restore, decrypt, encrypt
 
 # Restore options
-home_restore_gpg: true        # Restore GPG encrypted files
+home_restore_gpg: true # Restore GPG encrypted files
 home_restore_plaintext: false # Restore unencrypted files
 
 # Fine-grained 'find' options
 # Restore
-home_restore_recurse: yes
+home_restore_recurse: true
 home_restore_hidden: true
 
 # Encrypt
-home_encrypt_recurse: yes
+home_encrypt_recurse: true
 home_encrypt_hidden: true
 
 # Decrypt
-home_decrypt_recurse: yes
+home_decrypt_recurse: true
 home_decrypt_hidden: true
 
 # Safety options
-home_keep_encrypted: false    # Keep .gpg files after successful decryption
-home_keep_plaintext: false    # Keep plaintext files after successful encryption
+home_keep_encrypted: false # Keep .gpg files after successful decryption
+home_keep_plaintext: false # Keep plaintext files after successful encryption
+
 
 # Specific files to operate on (optional)
 # If defined, only these files (relative to home_src_path) will be processed.
 # home_files:
 #   - ".ssh/config"
 #   - ".zshrc"
-

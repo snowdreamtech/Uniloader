@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 #
 # pinentry-wrapper
 #
@@ -32,7 +32,7 @@ detect_pinentry() {
         if [ -z "$CANDIDATE" ]; then
             CANDIDATE=$(has_file "/Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac")
         fi
-        
+
         # Check for Homebrew pinentry-mac (Apple Silicon & Intel)
         if [ -z "$CANDIDATE" ]; then
             CANDIDATE=$(has_file "/opt/homebrew/bin/pinentry-mac")
@@ -45,7 +45,7 @@ detect_pinentry() {
         if [ -z "$CANDIDATE" ] && has_cmd "pinentry-mac"; then
             CANDIDATE="pinentry-mac"
         fi
-        
+
         # Check for pinentry-touchid
         if [ -z "$CANDIDATE" ] && has_cmd "pinentry-touchid"; then
             CANDIDATE="pinentry-touchid"
@@ -58,7 +58,7 @@ detect_pinentry() {
         if [ -z "$CANDIDATE" ] && has_cmd "pinentry.exe"; then
             CANDIDATE="pinentry.exe"
         fi
-        
+
         # Check standard Gpg4win paths
         if [ -z "$CANDIDATE" ]; then
             CANDIDATE=$(has_file "/c/Program Files (x86)/GnuPG/bin/pinentry.exe")

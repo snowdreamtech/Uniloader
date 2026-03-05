@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/bin/sh
 set -eu
 
 # Purpose: Fix permissions for specific files in the home directory based on explicitly defined lists.
@@ -42,7 +42,7 @@ apply_permissions() {
         if [ -z "$file" ]; then continue; fi
 
         filepath="$TARGET_DIR/$file"
-        
+
         # Only process if it is a regular file
         if [ -f "$filepath" ]; then
             chmod "$perm" "$filepath"

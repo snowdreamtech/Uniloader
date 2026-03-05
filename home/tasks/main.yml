@@ -1,5 +1,25 @@
 ---
+# =====================================================================
 # roles/home/tasks/main.yml
+#
+# Purpose:
+#   Main dispatcher for the home role. Validates the required action
+#   and routes to the appropriate task file (restore, decrypt, encrypt).
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: "home"
+#     vars:
+#       home_action: "restore"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: "home"
+#     vars:
+#       home_action: "restore" # or 'decrypt', 'encrypt'
+#       home_gpg_passphrase: "YOUR_PASSPHRASE" # Optional, if GPG is locked
+#
+# =====================================================================
 
 # ---------------------------------------------------------------------
 # Validation: Ensure home_action is valid

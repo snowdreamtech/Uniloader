@@ -3,25 +3,25 @@
 
 - name: Define VS Code User directory relative path (macOS)
   ansible.builtin.set_fact:
-    vscode_user_rel_path: "Library/Application Support/Code/User"
+    home_vscode_user_rel_path: "Library/Application Support/Code/User"
   when: ansible_os_family == 'Darwin'
   tags: ["always"]
 
 - name: Define VS Code User directory relative path (Linux)
   ansible.builtin.set_fact:
-    vscode_user_rel_path: ".config/Code/User"
+    home_vscode_user_rel_path: ".config/Code/User"
   when: ansible_system == 'Linux'
   tags: ["always"]
 
 - name: Define VS Code User directory relative path (Windows)
   ansible.builtin.set_fact:
-    vscode_user_rel_path: "AppData/Roaming/Code/User"
+    home_vscode_user_rel_path: "AppData/Roaming/Code/User"
   when: ansible_os_family == 'Windows'
   tags: ["always"]
 
 - name: Define VS Code config items to sync
   ansible.builtin.set_fact:
-    vscode_config_items:
+    home_vscode_config_items:
       - "settings.json"
       - "keybindings.json"
       - "snippets"
@@ -30,23 +30,23 @@
 - name: Check which VS Code config items exist in source
   ansible.builtin.stat:
     path: "{{ home_src_path }}/.vscode/{{ vscode_item }}"
-  loop: "{{ vscode_config_items }}"
+  loop: "{{ home_vscode_config_items }}"
   loop_control:
     loop_var: vscode_item
-  register: vscode_source_stats
+  register: home_vscode_source_stats
   delegate_to: localhost
   run_once: true
   tags: ["always"]
 
 - name: Ensure specific VS Code User directories exist
   ansible.builtin.file:
-    path: "{{ home_dest_path }}/{{ vscode_user_rel_path }}/{{ vscode_item.vscode_item | dirname }}"
+    path: "{{ home_dest_path }}/{{ home_vscode_user_rel_path }}/{{ vscode_item.vscode_item | dirname }}"
     state: directory
     mode: '0755'
-  loop: "{{ vscode_source_stats.results }}"
+  loop: "{{ home_vscode_source_stats.results }}"
   loop_control:
     loop_var: vscode_item
-  when: 
+  when:
     - ansible_os_family != 'Windows'
     - vscode_item.vscode_item | dirname != "."
   tags: ["always"]
@@ -54,25 +54,25 @@
 - name: Sync VS Code configuration files
   ansible.builtin.copy:
     src: "{{ home_src_path }}/.vscode/{{ vscode_item.vscode_item }}"
-    dest: "{{ home_dest_path }}/{{ vscode_user_rel_path }}/{{ vscode_item.vscode_item }}"
+    dest: "{{ home_dest_path }}/{{ home_vscode_user_rel_path }}/{{ vscode_item.vscode_item }}"
     mode: '0644'
-  loop: "{{ vscode_source_stats.results }}"
+  loop: "{{ home_vscode_source_stats.results }}"
   loop_control:
     loop_var: vscode_item
-  when: 
+  when:
     - vscode_item.stat.exists
     - vscode_item.stat.isdir is defined and not vscode_item.stat.isdir # Only files, directories handled recursively if needed or by copy module (copy handles recursive dirs by default)
   tags: ["always"]
-  
+
 - name: Sync VS Code configuration directories (recursive)
   ansible.builtin.copy:
     src: "{{ home_src_path }}/.vscode/{{ vscode_item.vscode_item }}/"
-    dest: "{{ home_dest_path }}/{{ vscode_user_rel_path }}/{{ vscode_item.vscode_item }}"
+    dest: "{{ home_dest_path }}/{{ home_vscode_user_rel_path }}/{{ vscode_item.vscode_item }}"
     mode: '0644'
-  loop: "{{ vscode_source_stats.results }}"
+  loop: "{{ home_vscode_source_stats.results }}"
   loop_control:
     loop_var: vscode_item
-  when: 
+  when:
     - vscode_item.stat.exists
     - vscode_item.stat.isdir is defined and vscode_item.stat.isdir
   tags: ["always"]

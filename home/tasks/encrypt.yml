@@ -23,7 +23,7 @@
 # =====================================================================
 - name: Define encryption exclusion list
   ansible.builtin.set_fact:
-    encrypt_excludes:
+    home_encrypt_excludes:
       - "*.gpg"
       - ".git"
       - ".gitignore"
@@ -59,8 +59,8 @@
     file_type: file
     recurse: "{{ home_encrypt_recurse }}"
     hidden: "{{ home_encrypt_hidden }}"
-    excludes: "{{ encrypt_excludes }}"
-  register: found_raw_files
+    excludes: "{{ home_encrypt_excludes }}"
+  register: home_found_raw_files
   delegate_to: localhost
   vars:
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
@@ -73,7 +73,7 @@
     _resolved_file:
       path: "{{ home_src_path }}/{{ item }}"
   loop: "{{ home_files }}"
-  register: resolved_home_files
+  register: home_resolved_home_files
   when: home_files is defined
   delegate_to: localhost
   tags: ["always"]
@@ -82,8 +82,8 @@
 - name: Check if specific files exist for encryption
   ansible.builtin.stat:
     path: "{{ item.ansible_facts._resolved_file.path }}"
-  loop: "{{ resolved_home_files.results }}"
-  register: home_files_stats
+  loop: "{{ home_resolved_home_files.results }}"
+  register: home_home_files_stats
   when: home_files is defined
   delegate_to: localhost
   tags: ["always"]
@@ -92,8 +92,8 @@
 - name: Fail if specific files are missing
   ansible.builtin.fail:
     msg: "File not found: {{ item.item.ansible_facts._resolved_file.path }}"
-  loop: "{{ home_files_stats.results }}"
-  when: 
+  loop: "{{ home_home_files_stats.results }}"
+  when:
     - home_files is defined
     - not item.stat.exists
   delegate_to: localhost
@@ -106,12 +106,12 @@
     file_type: file
     recurse: true
     hidden: true
-    excludes: "{{ encrypt_excludes }}"
-  loop: "{{ home_files_stats.results }}"
+    excludes: "{{ home_encrypt_excludes }}"
+  loop: "{{ home_home_files_stats.results }}"
   loop_control:
     label: "{{ item.item.ansible_facts._resolved_file.path }}"
-  register: directory_files
-  when: 
+  register: home_directory_files
+  when:
     - home_files is defined
     - item.stat.exists
     - item.stat.isdir
@@ -119,14 +119,15 @@
   tags: ["always"]
   run_once: true
 
-- name: Set remote_raw_files from home_files (Recursive)
+- name: Set home_remote_raw_files from home_files (Recursive)
   ansible.builtin.set_fact:
-    remote_raw_files:
-      files: "{{ 
-        (home_files_stats.results | selectattr('stat.exists', 'equalto', true) | selectattr('stat.isdir', 'equalto', false) | map(attribute='item.ansible_facts._resolved_file') | list) 
-        + 
-        (directory_files.results | selectattr('files', 'defined') | map(attribute='files') | flatten | list) 
-      }}"
+    home_remote_raw_files:
+      files: >-
+        {{
+          (home_home_files_stats.results | selectattr('stat.exists', 'equalto', true) | selectattr('stat.isdir', 'equalto', false) | map(attribute='item.ansible_facts._resolved_file') | list)
+          +
+          (home_directory_files.results | selectattr('files', 'defined') | map(attribute='files') | flatten | list)
+        }}
   when: home_files is defined
   delegate_to: localhost
   tags: ["always"]
@@ -134,26 +135,25 @@
 
 - name: Update match count for recursive files
   ansible.builtin.set_fact:
-    remote_raw_files:
-      files: "{{ remote_raw_files.files }}"
-      matched: "{{ remote_raw_files.files | length }}"
+    home_remote_raw_files:
+      files: "{{ home_remote_raw_files.files }}"
+      matched: "{{ home_remote_raw_files.files | length }}"
   when: home_files is defined
   delegate_to: localhost
   tags: ["always"]
   run_once: true
 
-- name: Set remote_raw_files from find result
+- name: Set home_remote_raw_files from find result
   ansible.builtin.set_fact:
-    remote_raw_files: "{{ found_raw_files }}"
+    home_remote_raw_files: "{{ home_found_raw_files }}"
   when: home_files is not defined
   delegate_to: localhost
   tags: ["always"]
   run_once: true
 
-
 - name: Report files to be encrypted
   ansible.builtin.debug:
-    msg: "Found {{ remote_raw_files.matched }} unencrypted files to encrypt in {{ home_src_path }}"
+    msg: "Found {{ home_remote_raw_files.matched }} unencrypted files to encrypt in {{ home_src_path }}"
   delegate_to: localhost
   vars:
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
@@ -161,7 +161,7 @@
 
 - name: List files to be encrypted
   ansible.builtin.debug:
-    msg: "{{ remote_raw_files.files | map(attribute='path') | list }}"
+    msg: "{{ home_remote_raw_files.files | map(attribute='path') | list }}"
   no_log: true
   delegate_to: localhost
   vars:
@@ -177,14 +177,16 @@
       echo "ERROR: Encrypted file is empty or does not exist"
       exit 1
     fi
-  loop: "{{ remote_raw_files.files }}"
+  loop: "{{ home_remote_raw_files.files }}"
   loop_control:
     loop_var: encrypt_item
     label: "{{ encrypt_item.path }}"
-  register: encrypt_results
+  register: home_home_encrypt_results
+  environment:
+    PATH: "{{ os_paths }}"
   no_log: true
-  failed_when: encrypt_results.rc != 0
-  changed_when: encrypt_results.rc == 0
+  failed_when: home_encrypt_results.rc != 0
+  changed_when: home_encrypt_results.rc == 0
   when: not ansible_check_mode
   delegate_to: localhost
   vars:
@@ -194,12 +196,12 @@
 - name: Verify all encrypted files exist and are non-empty
   ansible.builtin.stat:
     path: "{{ encrypt_item.path }}.gpg"
-  loop: "{{ remote_raw_files.files }}"
+  loop: "{{ home_remote_raw_files.files }}"
   loop_control:
     loop_var: encrypt_item
     label: "{{ encrypt_item.path }}.gpg"
-  register: encrypted_files_stat
-  failed_when: not encrypted_files_stat.stat.exists or encrypted_files_stat.stat.size == 0
+  register: home_encrypted_files_stat
+  failed_when: not home_encrypted_files_stat.stat.exists or home_encrypted_files_stat.stat.size == 0
   when: not ansible_check_mode
   delegate_to: localhost
   vars:
@@ -209,7 +211,7 @@
 
 - name: Count verified encrypted files
   ansible.builtin.set_fact:
-    encrypted_count: "{{ encrypted_files_stat.results | selectattr('stat.exists', 'equalto', true) | list | length }}"
+    home_encrypted_count: "{{ home_encrypted_files_stat.results | selectattr('stat.exists', 'equalto', true) | list | length }}"
   when: not ansible_check_mode
   delegate_to: localhost
   vars:
@@ -220,9 +222,9 @@
 - name: Validate encryption completeness
   ansible.builtin.assert:
     that:
-      - encrypted_count | int == remote_raw_files.matched | int
-    fail_msg: "Encryption count mismatch: expected {{ remote_raw_files.matched }}, got {{ encrypted_count }}"
-    success_msg: "All {{ encrypted_count }} files successfully encrypted and verified"
+      - home_encrypted_count | int == home_remote_raw_files.matched | int
+    fail_msg: "Encryption count mismatch: expected {{ home_remote_raw_files.matched }}, got {{ home_encrypted_count }}"
+    success_msg: "All {{ home_encrypted_count }} files successfully encrypted and verified"
   when: not ansible_check_mode
   delegate_to: localhost
   vars:
@@ -234,11 +236,11 @@
   ansible.builtin.file:
     path: "{{ encrypt_item.path }}"
     state: absent
-  loop: "{{ remote_raw_files.files }}"
+  loop: "{{ home_remote_raw_files.files }}"
   loop_control:
     loop_var: encrypt_item
     label: "{{ encrypt_item.path }}"
-  when: not (home_keep_plaintext | default(false)) and not ansible_check_mode
+  when: not (home_keep_plaintext | default(false) | bool) and not ansible_check_mode
   delegate_to: localhost
   vars:
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
@@ -250,8 +252,8 @@
     file_type: file
     recurse: "{{ home_encrypt_recurse }}"
     hidden: "{{ home_encrypt_hidden }}"
-    excludes: "{{ encrypt_excludes }}"
-  register: remaining_unencrypted
+    excludes: "{{ home_encrypt_excludes }}"
+  register: home_remaining_unencrypted
   delegate_to: localhost
   vars:
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
@@ -261,8 +263,8 @@
 
 - name: Assert encryption success (Global)
   ansible.builtin.assert:
-    that: remaining_unencrypted.matched == 0
-    fail_msg: "Encryption incomplete! Found {{ remaining_unencrypted.matched }} unencrypted files: {{ remaining_unencrypted.files | map(attribute='path') | list }}"
+    that: home_remaining_unencrypted.matched == 0
+    fail_msg: "Encryption incomplete! Found {{ home_remaining_unencrypted.matched }} unencrypted files: {{ home_remaining_unencrypted.files | map(attribute='path') | list }}"
   delegate_to: localhost
   vars:
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
@@ -273,25 +275,25 @@
 - name: Check if specific plaintext files remain
   ansible.builtin.stat:
     path: "{{ item.path }}"
-  loop: "{{ remote_raw_files.files }}"
-  register: remaining_specific_stats
+  loop: "{{ home_remote_raw_files.files }}"
+  register: home_remaining_specific_stats
   delegate_to: localhost
   tags: ["always"]
   run_once: true
-  when: 
+  when:
     - home_files is defined
-    - not (home_keep_plaintext | default(false))
+    - not (home_keep_plaintext | default(false) | bool)
 
 - name: Assert specific plaintext files are removed
   ansible.builtin.assert:
     that: not item.stat.exists
     fail_msg: "Plaintext file still exists: {{ item.item.path }}"
-  loop: "{{ remaining_specific_stats.results | default([]) }}"
+  loop: "{{ home_remaining_specific_stats.results | default([]) }}"
   loop_control:
     label: "{{ item.item.path }}"
   delegate_to: localhost
   tags: ["always"]
   run_once: true
-  when: 
+  when:
     - home_files is defined
-    - not (home_keep_plaintext | default(false))
+    - not (home_keep_plaintext | default(false) | bool)
