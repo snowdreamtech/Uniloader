@@ -1,0 +1,20 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/detect.yml
+# =====================================================================
+
+- name: "Init auto_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    auto_scenarios: []
+  tags: ["always"]
+
+- name: "Auto-detect scenarios from scenario_map {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    auto_scenarios: "{{ auto_scenarios + [(scenario_map | default({}, true))[item]] }}"
+  loop: "{{ (scenario_map | default({}, true)).keys() | list }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - hostvars[inventory_hostname][item] | default(false, true) | bool
+    - (scenario_map | default({}, true))[item] not in (orchestrator_skip_scenarios | default([], true))
+  tags: ["always"]

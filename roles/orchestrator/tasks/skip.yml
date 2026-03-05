@@ -1,0 +1,25 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/skip.yml
+# =====================================================================
+
+- name: "Init skipped list {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    skipped_scenarios: "{{ orchestrator_skip_scenarios | default([], true) }}"
+  tags: ["always"]
+
+- name: "Apply skip to auto_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    auto_scenarios: "{{ auto_scenarios | default([], true) | difference(skipped_scenarios) }}"
+  when: auto_scenarios is defined
+  tags: ["always"]
+
+- name: "Apply skip to forced_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    forced_scenarios: "{{ forced_scenarios | default([], true) | difference(skipped_scenarios) }}"
+  when: forced_scenarios is defined
+  tags: ["always"]
+
+- name: "Audit Log: Skipped Scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[ORCHESTRATOR] Skipping scenarios: {{ skipped_scenarios }}"

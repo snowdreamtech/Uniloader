@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/load.yml
+# =====================================================================
+
+- ansible.builtin.include_role:
+    name: "scenarios/{{ item }}" # noqa: role-name[path]
+  loop: "{{ orchestrator_final_scenarios }}"
+  loop_control:
+    label: "{{ item }}"

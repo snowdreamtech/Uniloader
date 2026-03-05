@@ -1,0 +1,46 @@
+---
+# =====================================================================
+# roles/orchestrator/defaults/main.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Mode Control | 模式控制
+# ---------------------------------------------------------------------
+
+# If true, auto-detection (detect.yml) is skipped.
+# 如果为 true，则跳过自动场景检测 (detect.yml)。
+orchestrator_manual_mode: false
+
+# If true, detailed audit logs will be emitted to the console.
+# 如果为 true，将向控制台输出详细的审计日志。
+orchestrator_debug_enabled: true
+
+# ---------------------------------------------------------------------
+# Scenario Overrides | 场景覆盖
+# ---------------------------------------------------------------------
+
+# List of scenarios to force-load regardless of detectors.
+# 强制加载的场景列表，无视探测器结果。
+orchestrator_force_scenarios: []
+
+# List of scenarios to explicitly skip.
+# 明确要求跳过的场景列表。
+orchestrator_skip_scenarios: []
+
+# ---------------------------------------------------------------------
+# Metadata Models | 元数据模型
+# ---------------------------------------------------------------------
+
+# Mapping of boolean tags (facts) to scenario names.
+# 布尔标签 (facts) 到场景名称的映射。
+scenario_map: {}
+
+# Full scenario definitions including priority, requires, and when.
+# 完整的场景定义，包括优先级、依赖和执行条件。
+scenario_definitions: {}
+
+# ---------------------------------------------------------------------
+# Internal State (DO NOT OVERRIDE) | 内部状态 (请勿覆盖)
+# ---------------------------------------------------------------------
+orchestrator_audit_trail: []
+orchestrator_final_scenarios: []

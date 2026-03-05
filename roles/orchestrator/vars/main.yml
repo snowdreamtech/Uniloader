@@ -1,0 +1,39 @@
+---
+# =====================================================================
+# roles/orchestrator/vars/main.yml
+# =====================================================================
+
+# Map boolean tags (facts) to scenario names.
+# Map boolean tags (facts) to scenario names.
+scenario_map:
+  is_desktop: "desktop"
+  is_server: "server"
+  is_develop: "develop"
+  is_deploy: "deploy"
+
+# Scenario metadata: priority, dependencies, and conditions.
+scenario_definitions:
+  foundation:
+    priority: 0
+    requires: []
+    when: []
+  server:
+    priority: 10
+    requires: []
+    when: []
+  desktop:
+    priority: 11
+    requires: []
+    when: []
+  develop:
+    priority: 12
+    requires: []
+    when: []
+  deploy:
+    priority: 13
+    requires: []
+    when: []
+  helloworld:
+    priority: 100
+    requires: []
+    when: []

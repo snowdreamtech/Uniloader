@@ -1,0 +1,48 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/main.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Reset Orchestrator State
+# ---------------------------------------------------------------------
+- name: "Orchestrator: Load variable schema {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_vars:
+    file: "../vars/orchestrator_schema.yml"
+  tags: ["always"]
+
+- ansible.builtin.set_fact:
+    "{{ item }}": null
+  loop: "{{ orchestrator_api_vars }}"
+  loop_control:
+    label: "reset {{ item }} (null)"
+  tags: ["always"]
+
+- ansible.builtin.include_role:
+    name: scenarios/foundation # noqa: role-name[path]
+
+# - ansible.builtin.include_tasks: generate_scenario_map.yml
+
+# - ansible.builtin.include_tasks: generate_scenario_definitions.yml
+
+- ansible.builtin.include_tasks: detect.yml
+  when: not orchestrator_manual_mode | default(false, true) | bool
+
+- ansible.builtin.include_tasks: force.yml
+
+- ansible.builtin.include_tasks: skip.yml
+
+- ansible.builtin.include_tasks: validate.yml
+
+- ansible.builtin.include_tasks: resolve.yml
+
+- name: "Audit Log: Orchestrator Events {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[ORCHESTRATOR] {{ trail_item }}"
+  loop: "{{ orchestrator_audit_trail | default([], true) }}"
+  loop_control:
+    label: "Log: {{ trail_item }}"
+    loop_var: trail_item
+  when: orchestrator_debug_enabled | default(false, true) | bool
+
+- ansible.builtin.include_tasks: load.yml

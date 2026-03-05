@@ -1,0 +1,101 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/generate_scenario_definitions.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Prepare: Initialize scenario_definitions
+# ---------------------------------------------------------------------
+- name: "Init auto-generated scenario_definitions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_definitions: "{{ scenario_definitions | default({}, true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configure: Add base scenario
+# ---------------------------------------------------------------------
+- name: "Add base scenario {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_definitions: >-
+      {{
+        scenario_definitions | combine({
+          'base': {
+            'priority': 10,
+            'requires': [],
+            'when': []
+          }
+        })
+      }}
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configure: Add virtualization scenarios
+# ---------------------------------------------------------------------
+- name: "Add virtualization scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_definitions: >-
+      {{
+        scenario_definitions | combine({
+          'vm': {
+            'priority': 20,
+            'requires': ['base'],
+            'when': ['is_vm']
+          },
+          'baremetal': {
+            'priority': 20,
+            'requires': ['base'],
+            'when': ['is_baremetal']
+          },
+          'container': {
+            'priority': 20,
+            'requires': ['base'],
+            'when': ['is_container']
+          }
+        })
+      }}
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configure: Add cloud scenario
+# ---------------------------------------------------------------------
+- name: "Add cloud scenario {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_definitions: >-
+      {{
+        scenario_definitions | combine({
+          'cloud': {
+            'priority': 30,
+            'requires': ['base'],
+            'when': ['is_cloud']
+          }
+        })
+      }}
+  tags: ["always"]
+  when:
+    - enable_cloud_scenarios | default(true, true) | bool
+
+# ---------------------------------------------------------------------
+# Configure: Add hardware-specific scenarios
+# ---------------------------------------------------------------------
+- name: "Add raspberry_pi scenario {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_definitions: >-
+      {{
+        scenario_definitions | combine({
+          'raspberry_pi': {
+            'priority': 40,
+            'requires': ['base'],
+            'when': ['is_pi']
+          }
+        })
+      }}
+  when:
+    - enable_hardware_scenarios | default(true, true) | bool
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Verify: Print generated scenario_definitions
+# ---------------------------------------------------------------------
+- name: "Audit Log: Generated Scenario Definitions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[GEN_DEFS] {{ scenario_definitions }}"

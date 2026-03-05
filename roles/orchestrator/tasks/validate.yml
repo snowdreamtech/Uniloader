@@ -1,0 +1,194 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/validate.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validate: Collect scenario names
+# WHY: All validation steps depend on knowing the full scenario list.
+# ---------------------------------------------------------------------
+- name: "Collect defined scenario names {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    defined_scenarios: "{{ (scenario_definitions | default({}, true)).keys() | list }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validate: scenario_map → scenario_definitions consistency
+# WHY: Prevent scenario_map from pointing to undefined scenarios.
+# ---------------------------------------------------------------------
+- name: "Audit Log: Validation Warning {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[VALIDATE] Warning: scenario_map contains undefined scenarios (will use defaults): {{ (scenario_map | default({}, true)).values() | list | difference(defined_scenarios) }}"
+  when:
+    - (scenario_map | default({}, true)).values() | list | difference(defined_scenarios) | length > 0
+
+# ---------------------------------------------------------------------
+# Validate: requires targets exist
+# WHY: Prevent dependency resolution failures in resolve.yml.
+# ---------------------------------------------------------------------
+- name: "Audit Log: Scenario Dependency Warning {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[VALIDATE] Warning: Scenario '{{ item }}' requires undefined scenarios: {{ scenario_definitions[item].requires | difference(defined_scenarios) }}"
+  loop: "{{ defined_scenarios | default([], true) }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - (scenario_definitions[item].requires | default([], true)) | difference(defined_scenarios | default([], true)) | length > 0
+
+# ---------------------------------------------------------------------
+# Validate v4.1: Detect circular dependencies
+# WHY: A→B→A will cause infinite loops in resolve.yml.
+# ---------------------------------------------------------------------
+- name: "Init circular dependency list {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    circular_dependencies: []
+  tags: ["always"]
+
+- name: "Detect circular dependencies {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    circular_dependencies: "{{ (circular_dependencies | default([], true)) + [item] }}"
+  loop: "{{ defined_scenarios | default([], true) }}"
+  loop_control:
+    label: "{{ item }}"
+  when: >
+    (scenario_definitions[item].requires | default([], true)) | intersect(
+      (scenario_definitions | default({}, true)).keys() | list
+    ) | select('equalto', item) | list | length > 0
+  tags: ["always"]
+
+- name: "Assert no circular dependencies {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that: circular_dependencies | default([], true) | length == 0
+    fail_msg: >
+      Circular dependencies detected:
+      {{ circular_dependencies }}
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validate v4.2: Priority conflicts
+# WHY: Two scenarios with identical priority may cause unstable ordering.
+# ---------------------------------------------------------------------
+- name: "Build priority map (Initialization) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    priority_map: {}
+    duplicate_priorities: false
+  tags: ["always"]
+
+- name: "Build priority map {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    priority_map: >-
+      {{
+        priority_map | default({}, true) |
+        combine({ item: scenario_definitions[item].priority | default(100, true) })
+      }}
+  loop: "{{ defined_scenarios | default([], true) }}"
+  loop_control:
+    label: "{{ item }}"
+  tags: ["always"]
+
+- name: "Detect duplicate priorities {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    duplicate_priorities: >-
+      {{
+        (priority_map | default({}, true)).values() |
+        select('equalto', item) |
+        list |
+        length > 1
+      }}
+  loop: "{{ (priority_map | default({}, true)).values() | list }}"
+  loop_control:
+    label: "{{ item }}"
+  tags: ["always"]
+
+# NOTE: We do not assert here; duplicate priorities are allowed but warned.
+- name: "Audit Log: Priority Conflict Warning {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[VALIDATE] Warning: duplicate priorities detected in scenario_definitions"
+  when:
+    - duplicate_priorities | default(false, true) | bool
+
+# ---------------------------------------------------------------------
+# Validate v4.3: when conditions reference valid boolean variables
+# WHY: Prevent referencing undefined facts/tags.
+# ---------------------------------------------------------------------
+- name: "Init invalid_when_conditions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    invalid_when_conditions: []
+  tags: ["always"]
+
+- name: "Detect invalid when conditions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    invalid_when_conditions: "{{ (invalid_when_conditions | default([], true)) + [ item ~ ': ' ~ (missing_vars | join(', ')) ] }}"
+  loop: "{{ defined_scenarios | default([], true) }}"
+  loop_control:
+    label: "{{ item }}"
+  vars:
+    cond_list: "{{ scenario_definitions[item].when | default([], true) }}"
+    # We consider a variable 'valid' if it exists in hostvars,
+    # OR if it is a known tag in scenario_map,
+    # OR if it is explicitly listed in node_tags.
+    valid_vars: >-
+      {{
+        hostvars[inventory_hostname].keys() | list +
+        scenario_map.keys() | list +
+        (node_tags | default([], true))
+      }}
+    missing_vars: "{{ cond_list | difference(valid_vars) }}"
+  when: (missing_vars | default([], true) | length) > 0
+  tags: ["always"]
+
+- name: "Assert valid when conditions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that: invalid_when_conditions | default([], true) | length == 0
+    fail_msg: >
+      Invalid when conditions detected:
+      {{ invalid_when_conditions }}
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validate v4.5: Generate JSON schema for scenario_definitions
+# WHY: Provide a machine-readable schema for CI/CD and tooling.
+# ---------------------------------------------------------------------
+- name: "Generate scenario_definitions JSON schema {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_schema: |
+      {
+        "type": "object",
+        "patternProperties": {
+          "^[a-zA-Z0-9_]+$": {
+            "type": "object",
+            "properties": {
+              "priority": { "type": "number" },
+              "requires": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "when": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Validate v4.6: Build validate_report (human-readable)
+# WHY: Provide a clear summary for debugging and CI logs.
+# ---------------------------------------------------------------------
+- name: "Build validate_report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    validate_report:
+      scenario_count: "{{ defined_scenarios | length }}"
+      scenarios: "{{ defined_scenarios }}"
+      priority_map: "{{ priority_map | default({}, true) }}"
+      circular_dependencies: "{{ circular_dependencies | default([], true) }}"
+      invalid_when_conditions: "{{ invalid_when_conditions | default([], true) }}"
+      schema: "{{ scenario_schema }}"
+  tags: ["always"]
+
+- name: "Audit Log: Validation Report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[VALIDATE] {{ validate_report }}"

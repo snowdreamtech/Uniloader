@@ -1,0 +1,114 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/inspect.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Prepare: Set default inspect format
+# WHY: Ensure consistent output format for CI/CD and debugging.
+# ---------------------------------------------------------------------
+- name: "Set default inspect format {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    inspect_format: "{{ inspect_format | default('yaml', true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Prepare: Set default sections to print
+# WHY: Allow selective inspection (auto, force, skip, validate, resolve, final).
+# ---------------------------------------------------------------------
+- name: "Set default inspect sections {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    inspect_sections: "{{ inspect_sections | default(['auto', 'force', 'skip', 'validate', 'resolve', 'final'], true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Prepare: Build auto_report
+# WHY: Show auto-detection results and their source tags.
+# ---------------------------------------------------------------------
+- name: "Build auto_report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    auto_report:
+      auto_scenarios: "{{ auto_scenarios | default([], true) }}"
+      scenario_map: "{{ scenario_map | default({}, true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Prepare: Build force_report
+# WHY: Show forced scenarios explicitly.
+# ---------------------------------------------------------------------
+- name: "Build force_report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    force_report:
+      forced_scenarios: "{{ forced_scenarios | default([], true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Prepare: Build skip_report
+# WHY: Provide visibility into skip logic.
+# ---------------------------------------------------------------------
+- name: "Build skip_report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    skip_report:
+      skipped_scenarios: "{{ orchestrator_skip_scenarios | default([], true) }}"
+      auto_after_skip: "{{ auto_scenarios | default([], true) }}"
+      force_after_skip: "{{ forced_scenarios | default([], true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Prepare: Build validate_report (if validate.yml ran)
+# WHY: Include validation results in inspection output.
+# ---------------------------------------------------------------------
+- name: "Build validate_report (fallback if undefined) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    validate_report: "{{ validate_report | default({}, true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Prepare: Build resolve_report
+# WHY: Provide a structured summary of the resolution process.
+# ---------------------------------------------------------------------
+- name: "Build resolve_report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    resolve_report:
+      merged_scenarios: "{{ merged_scenarios | default([], true) }}"
+      resolved_scenarios: "{{ resolved_scenarios | default([], true) }}"
+      filtered_scenarios: "{{ filtered_scenarios | default([], true) }}"
+      scenario_objects: "{{ scenario_objects | default([], true) }}"
+      final_scenarios: "{{ final_scenarios | default([], true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Prepare: Build final_report (combined)
+# WHY: Provide a single unified inspection object.
+# ---------------------------------------------------------------------
+- name: "Build final auto_inspect report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    auto_inspect_report:
+      auto: "{{ auto_report }}"
+      force: "{{ force_report }}"
+      skip: "{{ skip_report }}"
+      validate: "{{ validate_report }}"
+      resolve: "{{ resolve_report }}"
+      final:
+        final_scenarios: "{{ final_scenarios | default([], true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Output: Print report in YAML
+# WHY: YAML is the default format for human-readable debugging.
+# ---------------------------------------------------------------------
+- name: "Audit Log: YAML Inspection Report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[INSPECT] {{ auto_inspect_report | to_nice_yaml(indent=2) }}"
+  when:
+    - inspect_format == 'yaml'
+
+# ---------------------------------------------------------------------
+# Output: Print report in JSON
+# WHY: JSON is useful for CI/CD and machine parsing.
+# ---------------------------------------------------------------------
+- name: "Audit Log: JSON Inspection Report {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[INSPECT] {{ auto_inspect_report | to_json }}"
+  when:
+    - inspect_format == 'json'

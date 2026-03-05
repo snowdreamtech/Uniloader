@@ -1,0 +1,62 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/generate_scenario_map.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Prepare: Initialize scenario_map
+# ---------------------------------------------------------------------
+- name: "Init auto-generated scenario_map {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_map: "{{ scenario_map | default({}, true) }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configure: Add virtualization tags
+# ---------------------------------------------------------------------
+- name: "Add virtualization tags {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_map: >-
+      {{
+        scenario_map | combine({
+          'is_vm': 'vm',
+          'is_baremetal': 'baremetal',
+          'is_container': 'container'
+        })
+      }}
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configure: Add cloud tag
+# ---------------------------------------------------------------------
+- name: "Add cloud tag {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_map: >-
+      {{
+        scenario_map | combine({
+          'is_cloud': 'cloud'
+        })
+      }}
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configure: Add hardware tags
+# ---------------------------------------------------------------------
+- name: "Add hardware tags {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_map: >-
+      {{
+        scenario_map | combine({
+          'is_pi': 'raspberry_pi'
+        })
+      }}
+  when:
+    - include_hardware_tags | default(true, true) | bool
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Verify: Print generated scenario_map
+# ---------------------------------------------------------------------
+- name: "Audit Log: Generated Scenario Map {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[GEN_MAP] {{ scenario_map }}"

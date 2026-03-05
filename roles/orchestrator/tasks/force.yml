@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/force.yml
+# =====================================================================
+
+- name: "Init forced_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    forced_scenarios: "{{ orchestrator_force_scenarios | default([], true) }}"
+  tags: ["always"]

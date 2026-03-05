@@ -1,0 +1,144 @@
+---
+# =====================================================================
+# roles/orchestrator/tasks/resolve.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Step 1: Merge auto + forced
+# ---------------------------------------------------------------------
+- name: "Log start of resolution {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    orchestrator_audit_trail: "{{ (orchestrator_audit_trail | default([], true)) + ['Resolution started'] }}"
+  tags: ["always"]
+
+- name: "Merge auto and forced scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    merged_scenarios: >-
+      {{ (auto_scenarios | default([], true)) + (forced_scenarios | default([], true)) }}
+  tags: ["always"]
+
+- name: "Deduplicate merged_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    merged_scenarios: "{{ merged_scenarios | unique }}"
+  tags: ["always"]
+
+- name: "Audit: Merged source list {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    orchestrator_audit_trail: "{{ (orchestrator_audit_trail | default([], true)) + ['Initial list: ' ~ (merged_scenarios | join(', '))] }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Step 2: Expand dependencies
+# ---------------------------------------------------------------------
+- name: "Initialize resolved_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    resolved_scenarios: "{{ merged_scenarios | default([], true) }}"
+  tags: ["always"]
+
+- name: "Expand scenario dependencies {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    resolved_scenarios: >-
+      {{
+        resolved_scenarios + ( (scenario_definitions | default({}, true))[item].requires | default([], true) )
+        if ( (scenario_definitions | default({}, true))[item] is defined )
+        else resolved_scenarios
+      }}
+  loop: "{{ merged_scenarios | default([], true) }}"
+  loop_control:
+    label: "{{ item }}"
+  tags: ["always"]
+
+- name: "Final deduplication of resolved_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    resolved_scenarios: "{{ resolved_scenarios | default([], true) | unique }}"
+  tags: ["always"]
+
+- name: "Audit: Expanded dependencies {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    orchestrator_audit_trail: "{{ (orchestrator_audit_trail | default([], true)) + ['Expanded deps: ' ~ (resolved_scenarios | default([], true) | join(', '))] }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Step 4: Filter by per-scenario conditions (when)
+# ---------------------------------------------------------------------
+- name: "Init filtered_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    filtered_scenarios: []
+  tags: ["always"]
+
+- name: "Filter scenarios based on when conditions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    filtered_scenarios: "{{ filtered_scenarios | default([], true) + [item] }}"
+  loop: "{{ resolved_scenarios | default([], true) }}"
+  loop_control:
+    label: "{{ item }}"
+  vars:
+    scenario_def: "{{ (scenario_definitions | default({}, true))[item] | default({}, true) }}"
+    scenario_when: "{{ scenario_def.when | default([], true) }}"
+    # We consider a scenario_when valid if:
+    # 1. It is empty (no conditions)
+    # 2. OR All conditions evaluate to true.
+    #    Since conditions can be tags (not in hostvars yet) or facts, we check:
+    #    - hostvars keys
+    #    - node_tags list
+    conditions_ok: >-
+      {{
+        (scenario_when | length == 0)
+        or
+        (
+          scenario_when
+          | map('extract', hostvars[inventory_hostname], default=false)
+          | select
+          | list
+          | length
+          == scenario_when | length
+        )
+        or
+        (
+          scenario_when
+          | intersect(node_tags | default([], true))
+          | length
+          | int == scenario_when | length
+        )
+      }}
+  when:
+    - (conditions_ok | default(false, true)) | bool
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Step 5: Build scenario_objects with priority
+# ---------------------------------------------------------------------
+- name: "Init scenario_objects {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_objects: []
+  tags: ["always"]
+
+- name: "Attach priority to scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_objects: >-
+      {{ (scenario_objects | default([], true)) + [ {
+          'name': item,
+          'priority': ( (scenario_definitions | default({}, true))[item].priority | default(100, true) )
+        } ] }}
+  loop: "{{ filtered_scenarios | default([], true) }}"
+  loop_control:
+    label: "{{ item }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Step 6: Sort and Finalize
+# ---------------------------------------------------------------------
+- name: "Sort scenarios by priority {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    scenario_objects: "{{ scenario_objects | default([], true) | sort(attribute='priority') }}"
+  tags: ["always"]
+
+- name: "Extract final_scenarios {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    orchestrator_final_scenarios: "{{ scenario_objects | default([], true) | map(attribute='name') | list }}"
+  tags: ["always"]
+
+- name: "Audit: Final execution order {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    orchestrator_audit_trail: "{{ (orchestrator_audit_trail | default([], true)) + ['Final order: ' ~ (orchestrator_final_scenarios | default([], true) | join(' -> '))] }}"
+  tags: ["always"]

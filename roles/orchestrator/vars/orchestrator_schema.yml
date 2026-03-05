@@ -1,0 +1,34 @@
+---
+# =====================================================================
+# roles/orchestrator/vars/orchestrator_schema.yml
+# =====================================================================
+
+orchestrator_api_vars:
+  # Internal Discovery Facts
+  - auto_scenarios
+  - forced_scenarios
+  - skipped_scenarios
+  - final_scenarios
+  - orchestrator_final_scenarios
+  - resolved_scenarios
+  - scenario_objects
+  - scenario_schema
+
+  # Reporting Facts
+  - validate_report
+  - resolve_report
+  - skip_report
+  - auto_report
+  - force_report
+  - auto_inspect_report
+  - orchestrator_audit_trail
+
+  # Logic & Validation Temp Facts
+  - circular_dependencies
+  - invalid_when_conditions
+  - duplicate_priorities
+  - missing_vars
+  - filtered_scenarios
+  - merged_scenarios
+  - priority_map
+  - scenario_count

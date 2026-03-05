@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: "snowdreamtech"
+  description: "Advanced scenario orchestrator for Uniloader, handles dependency resolution and execution flow."
+  company: "snowdreamtech"
+  license: "MIT"
+  min_ansible_version: "2.10"
+  platforms:
+    - name: "EL"
+      versions: ["8", "9"]
+    - name: "Debian"
+      versions: ["bullseye", "bookworm"]
+    - name: "Ubuntu"
+      versions: ["focal", "jammy", "noble"]
+    - name: "Alpine"
+      versions: ["all"]
+  galaxy_tags:
+    - "orchestrator"
+    - "deployment"
+    - "automation"
+    - "scenarios"
+
+dependencies: []

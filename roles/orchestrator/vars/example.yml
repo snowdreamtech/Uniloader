@@ -1,0 +1,42 @@
+---
+# =====================================================================
+# roles/orchestrator/vars/example.yml
+# =====================================================================
+
+# Map boolean tags (facts) to scenario names.
+# 将布尔标签（facts）映射到场景名称。
+# Map boolean tags (facts) to scenario names.
+# 将布尔标签（facts）映射到场景名称。
+scenario_map:
+  is_web_node: "web"
+  is_db_node: "database"
+  is_pi: "raspberry_pi"
+
+# Scenario metadata: priority, dependencies, and conditions.
+# 场景元数据：优先级、依赖和条件 when（使用布尔标签）。
+scenario_definitions:
+  base:
+    priority: 10
+    requires: []
+    when: []
+
+  web:
+    priority: 50
+    requires:
+      - base
+    when:
+      - is_web_node
+
+  database:
+    priority: 60
+    requires:
+      - base
+    when:
+      - is_db_node
+
+  raspberry_pi:
+    priority: 40
+    requires:
+      - base
+    when:
+      - is_pi
