@@ -54,13 +54,13 @@
 
 # WHY: Remove bootstrap flag when force override is requested (raw).
 - name: "Force override: remove bootstrap flag {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: "rm -f {{ bootstrap_flag_path }}"
+  ansible.builtin.raw: 'rm -f "{{ bootstrap_flag_path }}"'
   when: force | default(false, true) | bool
   become: "{{ become_enabled | default(true) }}"
 
 # WHY: Remove python venv when force override is requested (raw).
 - name: "Force override: remove python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: "rm -rf {{ python_venv_path }}"
+  ansible.builtin.raw: 'rm -rf "{{ python_venv_path }}"'
   when: force | default(false, true) | bool
   become: "{{ become_enabled | default(true) }}"
 
@@ -70,7 +70,7 @@
 
 # WHY: Check bootstrap flag existence using raw module (no python required).
 - name: "Check bootstrap flag {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: "test -f {{ bootstrap_flag_path }} && printf 'FOUND' || printf 'MISSING'"
+  ansible.builtin.raw: 'test -f "{{ bootstrap_flag_path }}" && printf ''FOUND'' || printf ''MISSING'''
   register: bootstrap_flag_raw
   changed_when: false
   become: "{{ become_enabled | default(true) }}"
@@ -78,7 +78,7 @@
 
 # WHY: Check python venv existence using raw module (no python required).
 - name: "Check python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: "test -d {{ python_venv_path }} && printf 'FOUND' || printf 'MISSING'"
+  ansible.builtin.raw: 'test -d "{{ python_venv_path }}" && printf ''FOUND'' || printf ''MISSING'''
   register: python_venv_flag_raw
   changed_when: false
   become: "{{ become_enabled | default(true) }}"
@@ -107,7 +107,7 @@
 
 # WHY: Mark bootstrap as completed (raw).
 - name: "Mark bootstrap as done {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: "touch {{ bootstrap_flag_path }}"
+  ansible.builtin.raw: 'touch "{{ bootstrap_flag_path }}"'
   when:
     - not bootstrap_flag_exists | bool
   become: "{{ become_enabled | default(true) }}"

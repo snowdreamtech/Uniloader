@@ -67,7 +67,7 @@
 # environment exists (raw).
 # ---------------------------------------------------------------------
 - name: "Ensure venv parent directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: "mkdir -p {{ python_venv_path | dirname }} && chmod 0755 {{ python_venv_path | dirname }}"
+  ansible.builtin.raw: 'mkdir -p "{{ python_venv_path | dirname }}" && chmod 0755 "{{ python_venv_path | dirname }}"'
   become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
@@ -76,7 +76,7 @@
 # This task is idempotent and only runs if the 'activate' script is missing.
 # ---------------------------------------------------------------------
 - name: "Create python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: "test -f {{ python_venv_path }}/bin/activate || {{ ansible_python_interpreter }} -m venv {{ python_venv_path }}"
+  ansible.builtin.raw: 'test -f "{{ python_venv_path }}/bin/activate" || "{{ ansible_python_interpreter }}" -m venv "{{ python_venv_path }}"'
   become: "{{ become_enabled | default(true) }}"
   changed_when: false
 

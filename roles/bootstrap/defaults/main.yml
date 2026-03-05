@@ -7,9 +7,11 @@
 # =====================================================================
 
 # ---------------------------------------------------------------------
-# Execution: Default privilege escalation setting.
+# Execution: Default privilege escalation and versioning.
 # ---------------------------------------------------------------------
 become_enabled: true
+os_fingerprint: ""
+ansible_core_version: ""
 
 # ---------------------------------------------------------------------
 # Path: OS-specific search paths.
