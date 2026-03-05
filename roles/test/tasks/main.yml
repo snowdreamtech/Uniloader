@@ -1,0 +1,5 @@
+---
+# tasks file for test role
+- name: Print Hello World
+  ansible.builtin.debug:
+    msg: "Hello World From {{ project_name }}"
