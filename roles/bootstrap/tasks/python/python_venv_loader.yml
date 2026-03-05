@@ -96,12 +96,13 @@
 # installation via a mirror.
 # ---------------------------------------------------------------------
 - name: "Write pip.conf into venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: |
-    cat << 'EOF' > "{{ python_venv_path }}/pip.conf"
-    [global]
-    index-url = {{ pip_index_url }}
-    trusted-host = {{ pip_trusted_host }}
-    EOF
+  ansible.builtin.copy:
+    dest: "{{ python_venv_path }}/pip.conf"
+    content: |
+      [global]
+      index-url = {{ pip_index_url }}
+      trusted-host = {{ pip_trusted_host }}
+    mode: "0644"
   changed_when: false
   when:
     - pip_index_url is defined

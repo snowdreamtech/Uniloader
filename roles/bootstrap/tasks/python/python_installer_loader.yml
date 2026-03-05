@@ -123,7 +123,7 @@
         ;;
 
       zypper)
-        zypper --non-interactive install python3 python3-pip
+        zypper --non-interactive install python311 python311-pip || zypper --non-interactive install python3 python3-pip
         ;;
 
       xbps)
@@ -187,7 +187,12 @@
     echo "[PYTHON_INSTALLER_LOADER] Validating Python..."
 
     # Validate python
-    if PATH="{{ os_paths }}" command -v python3 >/dev/null 2>&1; then
+    # Detect modern python first
+    if PATH="{{ os_paths }}" command -v python3.11 >/dev/null 2>&1; then
+      PY=python3.11
+    elif PATH="{{ os_paths }}" command -v python3.10 >/dev/null 2>&1; then
+      PY=python3.10
+    elif PATH="{{ os_paths }}" command -v python3 >/dev/null 2>&1; then
       PY=python3
     elif PATH="{{ os_paths }}" command -v python >/dev/null 2>&1; then
       PY=python
