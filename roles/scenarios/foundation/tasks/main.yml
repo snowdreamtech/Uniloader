@@ -1,0 +1,17 @@
+---
+# =====================================================================
+# roles/scenarios/foundation/tasks/main.yml
+# =====================================================================
+
+- ansible.builtin.include_role:
+  name: "bootstrap"
+  # vars:
+  #   force: true
+
+- ansible.builtin.include_role:
+  name: "context"
+# - ansible.builtin.include_role:
+#     name: "init"
+
+# - ansible.builtin.include_role:
+#     name: "base"

@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/scenarios/develop/vars/darwin.yml
+# =====================================================================
+
+develop_apps_overrides:
+  app_packages:
+    - "vscode"
+    - "antigravity"
+    - "antigravity_tools"
+    - "cc_switch"
+    - "proxifier"
+  # - "windterm"
+  # - "wechat"

@@ -1,0 +1,19 @@
+---
+# =====================================================================
+# roles/scenarios/desktop/vars/darwin.yml
+# =====================================================================
+
+desktop_apps_overrides:
+  app_packages:
+    - "vim"
+  # - "mas:836500024" # 微信 Wechat
+  # - "mas:451108668" # 腾讯QQ QQ
+  # - "mas:1443749478" # WPS Office - AI智能办公助手
+  # - "cask:google-chrome" # Google Chrome
+  # - "cask:microsoft-edge" # Microsoft Edge
+  # - "cask:firefox" # Firefox (Homebrew Cask)
+  # - "cask:firefox-developer-edition" # Firefox Developer Edition (Homebrew Cask)
+  # - "dmg:https://dl.google.com/chrome/mac/stable/GGRO/googlechrome.dmg" # Chrome (Universal DMG)
+  # - "pkg:https://go.microsoft.com/fwlink/?linkid=2093504" # Microsoft Edge (Universal PKG)
+  # - "dmg:https://download.mozilla.org/?product=firefox-latest-ssl&os=osx&lang=en-US" # Firefox (Universal DMG)
+  # - "dmg:https://download.mozilla.org/?product=firefox-devedition-latest-ssl&os=osx&lang=en-US" # Firefox Developer Edition (Universal DMG)

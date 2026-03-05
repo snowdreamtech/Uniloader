@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/scenarios/deploy/tasks/main.yml
+# =====================================================================
+
+- ansible.builtin.include_role:
+  name: native
+  tasks_from: os_loader
+  vars:
+  module_name: "deploy"
+  module_var_prefix: "deploy"
+  module_var_prefixes: ["deploy_apps"]

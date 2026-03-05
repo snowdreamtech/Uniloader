@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/scenarios/server/vars/default.yml
+# =====================================================================
+
+server_apps_defaults:
+  app_name: "server_apps"
+  app_desc: "server apps"
+  app_state: "present"
+  app_delivery_mode: "native"
+  app_packages:
+    - "vim"

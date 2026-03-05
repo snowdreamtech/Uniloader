@@ -1,0 +1,13 @@
+---
+# =====================================================================
+# roles/scenarios/desktop/tasks/default.yml
+# =====================================================================
+
+- ansible.builtin.include_role:
+  name: "app"
+  vars:
+  app_name: "{{ desktop_apps.app_name }}"
+  app_packages: "{{ desktop_apps.app_packages }}"
+  app_delivery_mode: "{{ desktop_apps.app_delivery_mode }}"
+  app_state: "{{ desktop_apps.app_state }}"
+  app_desc: "{{ desktop_apps.app_desc }}"

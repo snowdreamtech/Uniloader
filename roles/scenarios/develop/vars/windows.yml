@@ -1,0 +1,18 @@
+---
+# =====================================================================
+# roles/scenarios/develop/vars/windows.yml
+# =====================================================================
+
+develop_apps_defaults:
+  app_name: "develop_apps"
+  app_desc: "develop apps"
+  app_state: "present"
+  app_delivery_mode: "native"
+  app_packages:
+    - "vscode"
+    - "antigravity"
+    - "antigravity-tools"
+    - "cc-switch"
+    - "proxifier"
+  # - "windterm"
+  # - "wechat"

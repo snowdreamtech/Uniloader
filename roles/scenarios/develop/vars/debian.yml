@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/scenarios/develop/vars/debian.yml
+# =====================================================================
+
+develop_apps_overrides:
+  app_packages:
+    - "vscode"
+    - "antigravity"
+    - "antigravity_tools"
+    - "cc_switch"
+    # - "windterm"
+    # - "wechat"
+    - "vscode_server"

@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/scenarios/desktop/vars/default.yml
+# =====================================================================
+
+desktop_apps_defaults:
+  app_name: "desktop_apps"
+  app_desc: "desktop apps"
+  app_state: "present"
+  app_delivery_mode: "native"
+  app_packages:
+    - "vim"

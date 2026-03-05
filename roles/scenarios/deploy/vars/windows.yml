@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/scenarios/deploy/vars/windows.yml
+# =====================================================================
+
+deploy_apps_defaults:
+  app_name: "deploy_apps"
+  app_desc: "deploy apps"
+  app_state: "present"
+  app_delivery_mode: "native"
+  app_packages: []

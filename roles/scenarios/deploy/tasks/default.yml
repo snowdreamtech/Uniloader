@@ -1,0 +1,20 @@
+---
+# =====================================================================
+# roles/scenarios/deploy/tasks/default.yml
+# =====================================================================
+
+- ansible.builtin.include_role:
+    name: "home"
+  vars:
+    home_action: restore
+
+- ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "{{ deploy_app_item }}"
+    app_delivery_mode: "{{ deploy_apps.app_delivery_mode | default('native') }}"
+    app_state: "{{ deploy_apps.app_state | default('present') }}"
+    app_desc: "{{ deploy_app_item }}"
+  loop: "{{ deploy_apps.app_packages | default([], true) }}"
+  loop_control:
+    loop_var: deploy_app_item

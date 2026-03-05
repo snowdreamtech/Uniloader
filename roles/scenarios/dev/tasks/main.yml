@@ -1,0 +1,77 @@
+---
+# =====================================================================
+# roles/scenarios/dev/tasks/main.yml
+# =====================================================================
+
+- name: "Step2: Scenario: Deploy 'nvm' as a Native APP"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "nvm"
+    app_version: "0.40.3"
+    app_delivery_mode: "native"
+    # app_delivery_mode: "container"
+
+- name: "Step3: Scenario: Deploy 'redis' as a Native APP"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "redis"
+    app_version: "latest"
+    app_delivery_mode: "native"
+    app_service_enabled: true
+    app_service_restart_policy: "always"
+    app_service_stop_timeout: 15
+    # app_state: "absent"
+    # app_delivery_mode: "container"
+
+- name: "Step4: Scenario: Deploy 'nginx' as a Native APP"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "nginx"
+    app_version: "latest"
+    app_delivery_mode: "native"
+    app_service_enabled: true
+    app_service_restart_policy: "always"
+    app_service_stop_timeout: 15
+    app_state: "absent"
+    # app_delivery_mode: "container"
+
+- name: "Step1: Scenario: Deploy 'helloworld' as a Container Service"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "helloworld"
+    # app_delivery_mode: "native"
+    app_delivery_mode: "container"
+    app_image: "hello-world:latest"
+    app_state: "started"
+    app_restart_policy: "no"
+
+- name: "Step5: Scenario: Deploy 'mongodb' as Container Service"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "mongodb"
+    app_delivery_mode: "container"
+    app_image: "mongodb/mongodb-community-server:8.0-ubuntu2204"
+    # app_state: "absent"
+    app_state: "started"
+    app_ports:
+      - "27017:27017"
+    app_env:
+      MONGODB_INITDB_ROOT_USERNAME: "{{ ansible_user_name }}"
+      MONGODB_INITDB_ROOT_PASSWORD: "{{ ansible_user_password }}"
+    app_volumes:
+      - "{{ docker_volume_paths.mongodb }}:/data/db"
+
+- name: "Step6: Scenario: Deploy 'pnpm' as a Native APP"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "pnpm"
+    app_version: "latest"
+    app_delivery_mode: "native"
+    # app_state: "absent"
+    # app_delivery_mode: "container"

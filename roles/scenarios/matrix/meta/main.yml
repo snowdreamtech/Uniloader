@@ -1,0 +1,23 @@
+---
+# =====================================================================
+# roles/scenarios/matrix/meta/main.yml
+#
+# Purpose:
+#   Role dependencies and metadata.
+# =====================================================================
+
+galaxy_info:
+  author: Native AI Team
+  description: "Comprehensive Matrix Scenario for Tag-Based App Deployment"
+  company: "Snowdream Tech"
+  license: "Apache-2.0"
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Generic
+      versions:
+        - all
+  galaxy_tags:
+    - scenario
+    - matrix
+
+dependencies: []

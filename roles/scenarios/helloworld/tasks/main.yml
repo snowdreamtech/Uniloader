@@ -1,0 +1,15 @@
+---
+# =====================================================================
+# roles/scenarios/helloworld/tasks/main.yml
+# =====================================================================
+
+- name: "Step1: Scenario: Deploy 'helloworld' as a Container Service"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "helloworld"
+    # app_delivery_mode: "native"
+    app_delivery_mode: "container"
+    app_image: "hello-world:latest"
+    app_state: "started"
+    app_restart_policy: "no"

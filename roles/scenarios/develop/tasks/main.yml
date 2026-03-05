@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/scenarios/develop/tasks/main.yml
+# =====================================================================
+
+- ansible.builtin.include_role:
+  name: native
+  tasks_from: os_loader
+  vars:
+  module_name: "develop"
+  module_var_prefix: "develop"
+  module_var_prefixes: ["develop_apps"]

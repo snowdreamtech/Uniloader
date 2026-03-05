@@ -1,0 +1,127 @@
+---
+# =====================================================================
+# roles/scenarios/matrix/tasks/main.yml
+# =====================================================================
+
+- name: "Matrix: Deploy Git (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "git"
+    app_delivery_mode: "native"
+  when:
+    - is_git_node | default(false, true) | bool or is_dev | default(false, true) | bool
+
+- name: "Matrix: Deploy Zsh (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "zsh"
+    app_delivery_mode: "native"
+  when:
+    - is_zsh_node | default(false, true) | bool or is_dev | default(false, true) | bool
+
+- name: "Matrix: Deploy Curl (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "curl"
+    app_delivery_mode: "native"
+  when:
+    - is_curl_node | default(false, true) | bool or is_dev | default(false, true) | bool
+
+# ---------------------------------------------------------------------
+# Databases (Tag: db -> is_db_node)
+# ---------------------------------------------------------------------
+
+- name: "Matrix: Deploy Redis (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "redis"
+    app_delivery_mode: "native"
+    # Specific configuration for databases
+    app_service_enabled: true
+    app_service_restart_policy: "always"
+  when:
+    - is_redis | default(false, true) | bool or is_db_node | default(false, true) | bool
+
+- name: "Matrix: Deploy MongoDB (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "mongodb"
+    app_delivery_mode: "native"
+    app_service_enabled: true
+    app_service_restart_policy: "always"
+  when:
+    - is_mongodb | default(false, true) | bool or is_db_node | default(false, true) | bool
+
+# ---------------------------------------------------------------------
+# Web Servers (Tag: web -> is_web_node)
+# ---------------------------------------------------------------------
+
+- name: "Matrix: Deploy Nginx (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "nginx"
+    app_delivery_mode: "native"
+    app_service_enabled: true
+    app_service_restart_policy: "always"
+  when:
+    - is_nginx_node | default(false, true) | bool or is_web_node | default(false, true) | bool
+
+# ---------------------------------------------------------------------
+# Development Languages (Tag: dev)
+# ---------------------------------------------------------------------
+
+- name: "Matrix: Deploy Python (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "python"
+    app_delivery_mode: "native"
+  when:
+    - is_python_node | default(false, true) | bool or is_dev | default(false, true) | bool
+
+- name: "Matrix: Deploy Node.js (via nvm) (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "nvm"
+    app_delivery_mode: "native"
+  when:
+    - is_node_node | default(false, true) | bool or is_nvm_node | default(false, true) | bool or is_dev | default(false, true) | bool
+
+- name: "Matrix: Deploy Go (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "go"
+    app_delivery_mode: "native"
+  when:
+    - is_go_node | default(false, true) | bool or is_dev | default(false, true) | bool
+
+# ---------------------------------------------------------------------
+# Productivity Tools (Tag: productivity -> is_productivity_node?)
+# Note: 'productivity' tag not standard, mapping to 'is_dev' or specific tags
+# ---------------------------------------------------------------------
+
+- name: "Matrix: Deploy VSCode (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "vscode"
+    app_delivery_mode: "native"
+  when:
+    - is_vscode_node | default(false, true) | bool or is_dev | default(false, true) | bool
+
+- name: "Matrix: Deploy pnpm (Conditional)"
+  ansible.builtin.include_role:
+    name: "app"
+  vars:
+    app_name: "pnpm"
+    app_delivery_mode: "native"
+  when:
+    - is_pnpm_node | default(false, true) | bool or is_dev | default(false, true) | bool
