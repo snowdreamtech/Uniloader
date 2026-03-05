@@ -74,7 +74,7 @@ function Get-ActualUidGid {
             }
         }
     } catch {
-        # Continue to next method
+        $null = $_ # Continue to next method
     }
 
     # Try --entrypoint /bin/sh
@@ -89,7 +89,7 @@ function Get-ActualUidGid {
             }
         }
     } catch {
-        # Failed
+        $null = $_ # Failed
     }
 
     return $null

@@ -98,7 +98,7 @@ function Get-PatternEntry {
 # -------------------------------------------------------------
 # Pattern Match Entry (Optional - for version series)
 # -------------------------------------------------------------
-  - regex: "^$base:[0-9]+\\.?[0-9]*"
+  - regex: "^${base}:[0-9]+\\.?[0-9]*"
     uid: "$UID"
     gid: "$GID"
     description: "$base official images"
@@ -110,7 +110,7 @@ function Get-PatternEntry {
 # -------------------------------------------------------------
 # Pattern Match Entry (Optional - for version series)
 # -------------------------------------------------------------
-  - regex: "^$base:[0-9]+"
+  - regex: "^${base}:[0-9]+"
     uid: "$UID"
     gid: "$GID"
     description: "$base official images"
@@ -152,22 +152,29 @@ Compatibility:
 # =====================================================================
 
 function Main {
+    param(
+        [string]$ImageName,
+        [string]$TargetUID,
+        [string]$TargetGID,
+        [string]$SourceUrl
+    )
+
     # Validate UID is numeric
-    if (-not (Test-Numeric $UID)) {
-        Write-ColorOutput "UID must be numeric: $UID" -Level Error
+    if (-not (Test-Numeric $TargetUID)) {
+        Write-ColorOutput "UID must be numeric: $TargetUID" -Level Error
         exit 1
     }
 
     # Validate GID is numeric
-    if (-not (Test-Numeric $GID)) {
-        Write-ColorOutput "GID must be numeric: $GID" -Level Error
+    if (-not (Test-Numeric $TargetGID)) {
+        Write-ColorOutput "GID must be numeric: $TargetGID" -Level Error
         exit 1
     }
 
     # Auto-detect source if not provided
-    if ([string]::IsNullOrEmpty($Source)) {
-        $Source = Get-SourceUrl -Image $Image
-        Write-ColorOutput "Auto-detected source: $Source" -Level Warning
+    if ([string]::IsNullOrEmpty($SourceUrl)) {
+        $SourceUrl = Get-SourceUrl -Image $ImageName
+        Write-ColorOutput "Auto-detected source: $SourceUrl" -Level Warning
     }
 
     # Generate exact match entry
@@ -175,10 +182,10 @@ function Main {
     Write-Host "# -------------------------------------------------------------"
     Write-Host "# Exact Match Entry (Recommended)"
     Write-Host "# -------------------------------------------------------------"
-    Write-Host "  `"$Image`": { uid: `"$UID`", gid: `"$GID`", source: `"$Source`" }"
+    Write-Host "  `"$ImageName`": { uid: `"$TargetUID`", gid: `"$TargetGID`", source: `"$SourceUrl`" }"
 
     # Generate pattern match suggestion if applicable
-    $patternEntry = Get-PatternEntry -Image $Image -UID $UID -GID $GID
+    $patternEntry = Get-PatternEntry -Image $ImageName -UID $TargetUID -GID $TargetGID
     if ($patternEntry) {
         Write-Host $patternEntry
     }
@@ -196,4 +203,4 @@ function Main {
     exit 0
 }
 
-Main
+Main -ImageName $Image -TargetUID $UID -TargetGID $GID -SourceUrl $Source

@@ -130,7 +130,7 @@ function Get-ImageUidGid {
             }
         }
     } catch {
-        # Silently continue to next method
+        $null = $_ # Silently continue to next method
     }
 
     # Method 2: Try --entrypoint /bin/sh
@@ -150,7 +150,7 @@ function Get-ImageUidGid {
                 }
             }
         } catch {
-            # Silently continue
+            $null = $_ # Silently continue
         }
     }
 
@@ -173,7 +173,7 @@ function Get-ImageUidGid {
                 }
             }
         } catch {
-            # Silently continue
+            $null = $_ # Silently continue
         }
     }
 
@@ -233,8 +233,12 @@ Compatibility:
 # =====================================================================
 
 function Main {
+    param(
+        [string[]]$ImagesList
+    )
+
     # Check arguments
-    if (-not $Images -or $Images.Count -eq 0) {
+    if (-not $ImagesList -or $ImagesList.Count -eq 0) {
         Show-Usage
         exit 1
     }
@@ -287,4 +291,4 @@ function Main {
 }
 
 # Run main function
-Main
+Main -ImagesList $Images
