@@ -68,7 +68,7 @@ This document provides a comprehensive mapping between `ansible_os_family` and `
 | **Solus**                       | `Solus`                               | `eopkg`                | Independent desktop distro            |
 | **OpenWrt**                     | `OpenWrt`                             | `opkg`                 | Embedded/Network Devices              |
 | **Linux**                       | `Talos`                               | `talosctl`             | API-driven Kubernetes OS              |
-| **Darwin**                      | `MacOSX`                              | `brew` (ext)           | Apple macOS                           |
+| **Darwin**                      | `MacOSX`                              | `brew` / `port` (ext)  | Apple macOS                           |
 | **FreeBSD**                     | `FreeBSD`                             | `pkg`                  | FreeBSD                               |
 | **OpenBSD**                     | `OpenBSD`                             | `pkg_add`              | OpenBSD                               |
 | **NetBSD**                      | `NetBSD`                              | `pkgin`                | NetBSD                                |
