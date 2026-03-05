@@ -49,22 +49,8 @@
   tags: ["always"]
 
 # =====================================================================
-#  SET PATHS
+#  OVERRIDE LOGIC (FORCE)
 # =====================================================================
-
-# WHY: Determine bootstrap flag path for POSIX systems.
-# Unified /opt path strategy (aligns with Docker volumes at /opt/data)
-# macOS/Linux → /opt (FHS standard for optional software)
-- name: "Set bootstrap flag path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.set_fact:
-    bootstrap_flag_path: "/opt/.ansible_bootstrap_done"
-  tags: ["always"]
-
-# WHY: Determine Python venv path for POSIX systems.
-- name: "Set python venv path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.set_fact:
-    python_venv_path: "/opt/venv/ansible"
-  tags: ["always"]
 
 # WHY: Remove bootstrap flag when force override is requested (raw).
 - name: "Force override: remove bootstrap flag {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
