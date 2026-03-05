@@ -312,12 +312,7 @@ detect_image_uid_gid() {
 # =====================================================================
 
 get_current_date_utc() {
-  # Try GNU date first (Linux)
-  if date -u +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null; then
-    return 0
-  fi
-
-  # Try BSD date (macOS)
+  # Try GNU/BSD date (Linux/macOS)
   if date -u +"%Y-%m-%d %H:%M:%S UTC" 2>/dev/null; then
     return 0
   fi

@@ -220,10 +220,13 @@ main() {
 
     total=$((total + 1))
 
-    if validate_image "$image" "$uid" "$gid"; then
+    ret=0
+    validate_image "$image" "$uid" "$gid" || ret=$?
+
+    if [ "$ret" -eq 0 ]; then
       passed=$((passed + 1))
     else
-      case $? in
+      case $ret in
       1) failed=$((failed + 1)) ;;
       2) skipped=$((skipped + 1)) ;;
       esac
@@ -238,7 +241,13 @@ main() {
   printf "================================================================\n"
   printf "Total entries:  %d\n" "$total"
   print_success "Passed:         $passed"
-  print_error "Failed:         $failed"
+
+  if [ "$failed" -gt 0 ]; then
+    print_error "Failed:         $failed"
+  else
+    print_success "Failed:         $failed"
+  fi
+
   print_warning "Skipped:        $skipped"
   printf "================================================================\n"
 
