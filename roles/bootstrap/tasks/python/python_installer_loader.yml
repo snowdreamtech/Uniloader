@@ -226,10 +226,17 @@
 
     $PY --version || true
 
-    # Ensure /usr/bin/python exists
-    if [ ! -e /usr/bin/python ]; then
-      echo "[PYTHON_INSTALLER_LOADER] Creating /usr/bin/python symlink"
-      ln -s "$(PATH="{{ os_paths }}" command -v python3)" /usr/bin/python || true
+    # Ensure standard symlinks exist
+    PY_BIN_PATH=$(PATH="{{ os_paths }}" command -v "$PY")
+    if [ -n "$PY_BIN_PATH" ]; then
+      if [ ! -e /usr/bin/python3 ]; then
+        echo "[PYTHON_INSTALLER_LOADER] Creating /usr/bin/python3 symlink to $PY_BIN_PATH"
+        ln -sf "$PY_BIN_PATH" /usr/bin/python3 || true
+      fi
+      if [ ! -e /usr/bin/python ]; then
+        echo "[PYTHON_INSTALLER_LOADER] Creating /usr/bin/python symlink to $PY_BIN_PATH"
+        ln -sf "$PY_BIN_PATH" /usr/bin/python || true
+      fi
     fi
 
     # Validate pip
