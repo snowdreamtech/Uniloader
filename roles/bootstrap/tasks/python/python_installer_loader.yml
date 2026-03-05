@@ -195,10 +195,26 @@
 
     # Validate python
     # Detect modern python first
-    if PATH="{{ os_paths }}" command -v python3.11 >/dev/null 2>&1; then
+    if PATH="{{ os_paths }}" command -v python3.14 >/dev/null 2>&1; then
+      PY=python3.14
+    elif PATH="{{ os_paths }}" command -v python3.13 >/dev/null 2>&1; then
+      PY=python3.13
+    elif PATH="{{ os_paths }}" command -v python3.12 >/dev/null 2>&1; then
+      PY=python3.12
+    elif PATH="{{ os_paths }}" command -v python3.11 >/dev/null 2>&1; then
       PY=python3.11
     elif PATH="{{ os_paths }}" command -v python3.10 >/dev/null 2>&1; then
       PY=python3.10
+    elif PATH="{{ os_paths }}" command -v python3.9 >/dev/null 2>&1; then
+      PY=python3.9
+    elif PATH="{{ os_paths }}" command -v python3.8 >/dev/null 2>&1; then
+      PY=python3.8
+    elif PATH="{{ os_paths }}" command -v python3.7 >/dev/null 2>&1; then
+      PY=python3.7
+    elif PATH="{{ os_paths }}" command -v python3.6 >/dev/null 2>&1; then
+      PY=python3.6
+    elif PATH="{{ os_paths }}" command -v python3.5 >/dev/null 2>&1; then
+      PY=python3.5
     elif PATH="{{ os_paths }}" command -v python3 >/dev/null 2>&1; then
       PY=python3
     elif PATH="{{ os_paths }}" command -v python >/dev/null 2>&1; then
