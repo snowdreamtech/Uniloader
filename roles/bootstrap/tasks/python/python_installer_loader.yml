@@ -189,6 +189,8 @@
         ;;
 
       prt-get)
+        # CRUX ports tree must be initialized before prt-get can find packages.
+        ports -u || true
         prt-get depinst python3
         # Ensure pip and venv via ensurepip as CRUX ports are minimal
         python3 -m ensurepip --default-pip || true
