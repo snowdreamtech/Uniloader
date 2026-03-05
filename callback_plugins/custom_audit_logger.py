@@ -1,7 +1,9 @@
 import json
 import time
 from datetime import datetime
+
 from ansible.plugins.callback import CallbackBase
+
 
 class CallbackModule(CallbackBase):
     """
@@ -12,8 +14,8 @@ class CallbackModule(CallbackBase):
     """
 
     CALLBACK_VERSION = 2.0
-    CALLBACK_TYPE = 'notification'
-    CALLBACK_NAME = 'custom_audit_logger'
+    CALLBACK_TYPE = "notification"
+    CALLBACK_NAME = "custom_audit_logger"
 
     def __init__(self):
         super(CallbackModule, self).__init__()
@@ -32,10 +34,10 @@ class CallbackModule(CallbackBase):
         if self.vm and self.play:
             try:
                 variables = self.vm.get_vars(play=self.play, host=host, task=task)
-                return variables.get('env', 'dev').lower()
+                return variables.get("env", "dev").lower()
             except Exception:
                 pass
-        return 'dev'
+        return "dev"
 
     def _log_event(self, task_name, host_obj, status, duration=0, msg="", task_obj=None):
         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -44,7 +46,7 @@ class CallbackModule(CallbackBase):
         # Dynamically determine the environment per host!
         env = self._get_host_env(host_obj, task_obj)
 
-        if env == 'prod':
+        if env == "prod":
             # PROD: Strict JSON Line format suitable for Fluentd/ELK/Datadog
             log_entry = {
                 "timestamp": datetime.now().isoformat(),
@@ -53,14 +55,17 @@ class CallbackModule(CallbackBase):
                 "task": task_name,
                 "status": status,
                 "duration_seconds": round(duration, 3),
-                "message": msg
+                "message": msg,
             }
             with open(self.prod_log_file, "a") as f:
                 f.write(json.dumps(log_entry) + "\n")
         else:
             # DEV / DEFAULT: Human-readable plaintext format
             msg_part = f" | {msg}" if msg else ""
-            log_line = f"[{time_str}] [{host_name}] [ENV:{env.upper()}] [{status}] ({round(duration, 3)}s) - {task_name}{msg_part}\n"
+            log_line = (
+                f"[{time_str}] [{host_name}] [ENV:{env.upper()}] "
+                f"[{status}] ({round(duration, 3)}s) - {task_name}{msg_part}\n"
+            )
 
             with open(self.dev_log_file, "a") as f:
                 f.write(log_line)
@@ -73,14 +78,14 @@ class CallbackModule(CallbackBase):
         start_time = self.task_start_times.get(task_uuid, time.time())
         duration = time.time() - start_time
 
-        status = "CHANGED" if result._result.get('changed', False) else "OK"
+        status = "CHANGED" if result._result.get("changed", False) else "OK"
 
         self._log_event(
             task_name=result._task.get_name(),
             host_obj=result._host,
             status=status,
             duration=duration,
-            task_obj=result._task
+            task_obj=result._task,
         )
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
@@ -88,7 +93,7 @@ class CallbackModule(CallbackBase):
         start_time = self.task_start_times.get(task_uuid, time.time())
         duration = time.time() - start_time
 
-        error_msg = result._result.get('msg', 'Unknown Error')
+        error_msg = result._result.get("msg", "Unknown Error")
         status = "IGNORED" if ignore_errors else "FAILED"
 
         self._log_event(
@@ -97,5 +102,5 @@ class CallbackModule(CallbackBase):
             status=status,
             duration=duration,
             msg=error_msg,
-            task_obj=result._task
+            task_obj=result._task,
         )
