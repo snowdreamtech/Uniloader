@@ -22,6 +22,15 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6.0.2
+        with:
+          # [Required] Access token with `workflow` scope.
+          token: ${{ secrets.WORKFLOW_SECRET }}
+
+      - name: Set env variables
+        run: |
+          echo "BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          echo "http_proxy=${http_proxy}" >> $GITHUB_ENV
+          echo "no_proxy=${no_proxy}" >> $GITHUB_ENV
 
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
