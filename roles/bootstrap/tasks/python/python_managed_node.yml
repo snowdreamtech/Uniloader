@@ -22,8 +22,8 @@
 # Only executed when bootstrap flag or venv is missing.
 # ---------------------------------------------------------------------
 - when: >
-    (bootstrap_flag.stat is not defined or not bootstrap_flag.stat.exists) or
-    (python_venv_flag.stat is not defined or not python_venv_flag.stat.exists)
+    (not bootstrap_flag_exists | bool) or
+    (not python_venv_exists | bool)
   block:
     # 1. First pass: try to detect existing Python without failing.
     - include_tasks: "python_detector_loader.yml"

@@ -66,23 +66,15 @@
     python_venv_path: "/opt/venv/ansible"
   tags: ["always"]
 
-# =====================================================================
-#  FORCE OVERRIDE (force=true)
-# =====================================================================
-
-# WHY: Remove bootstrap flag when force override is requested.
+# WHY: Remove bootstrap flag when force override is requested (raw).
 - name: "Force override: remove bootstrap flag {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.file:
-    path: "{{ bootstrap_flag_path }}"
-    state: absent
+  ansible.builtin.raw: "rm -f {{ bootstrap_flag_path }}"
   when: force | default(false, true) | bool
   become: "{{ become_enabled | default(true) }}"
 
-# WHY: Remove python venv when force override is requested.
+# WHY: Remove python venv when force override is requested (raw).
 - name: "Force override: remove python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.file:
-    path: "{{ python_venv_path }}"
-    state: absent
+  ansible.builtin.raw: "rm -rf {{ python_venv_path }}"
   when: force | default(false, true) | bool
   become: "{{ become_enabled | default(true) }}"
 
@@ -108,17 +100,6 @@
   become: "{{ become_enabled | default(true) }}"
   tags: ["always"]
 
-# # WHY: Log status for audit/debug.
-# - name: "DEBUG: bootstrap_flag"
-#   ansible.builtin.debug:
-#     msg: "{{ bootstrap_flag | to_nice_yaml(indent=2) }}"
-#   tags: ["always"]
-
-# - name: "DEBUG: python_venv_flag"
-#   ansible.builtin.debug:
-#     msg: "{{ python_venv_flag | to_nice_yaml(indent=2) }}"
-#   tags: ["always"]
-
 # WHY: Set results of raw probes into normalized facts.
 - name: "Set bootstrap probe results {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
@@ -140,11 +121,9 @@
 #  CREATE FLAG AFTER SUCCESSFUL BOOTSTRAP
 # =====================================================================
 
-# WHY: Mark bootstrap as completed.
+# WHY: Mark bootstrap as completed (raw).
 - name: "Mark bootstrap as done {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.file:
-    path: "{{ bootstrap_flag_path }}"
-    state: touch
+  ansible.builtin.raw: "touch {{ bootstrap_flag_path }}"
   when:
     - not bootstrap_flag_exists | bool
   become: "{{ become_enabled | default(true) }}"
