@@ -24,16 +24,31 @@ set -e
 # ---------------------------------------------------------------------
 # Guard: Ensure the script is being sourced, not executed directly.
 # ---------------------------------------------------------------------
-if [ "$0" = "$BASH_SOURCE" ] 2>/dev/null; then
-    echo "Usage: . scripts/setup_venv.sh"
-    exit 1
+if [ -n "$BASH_VERSION" ]; then
+    # shellcheck disable=SC3028,SC3054
+    if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+        echo "Usage: . scripts/setup_venv.sh"
+        exit 1
+    fi
 fi
 
 # ---------------------------------------------------------------------
 # Path Discovery: Determine project root based on script location.
 # ---------------------------------------------------------------------
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+# In CI environments (like GitHub Actions), sourcing a script overwrites $0 with
+# a temporary runner script path, breaking `dirname "$0"`.
+# We fallback to using the caller's $PROJECT_ROOT or $PWD as the root if applicable.
+if [ -z "$PROJECT_ROOT" ] || [ ! -f "$PROJECT_ROOT/requirements.txt" ]; then
+    if [ -f "requirements.txt" ] && [ -d "scripts" ]; then
+        PROJECT_ROOT="$PWD"
+    else
+        echo "Error: Cannot determine project root."
+        echo "Please source this script from the root of the repository."
+        echo "Example: . scripts/setup_venv.sh"
+        return 1 2>/dev/null || exit 1
+    fi
+fi
+
 VENV_DIR="$PROJECT_ROOT/.venv"
 
 # ---------------------------------------------------------------------
