@@ -25,7 +25,6 @@ DOCKER_MAPPINGS = {
     "ubuntu": "ubuntu:latest",
     "fedora": "fedora:latest",
     "archlinux": "archlinux:latest",
-    "crux": "crux:latest",
     "euleros": "euleros:latest",
     "mageia": "mageia:latest",
 }
@@ -36,7 +35,6 @@ os_list = [
     "amazonlinux",
     "archlinux",
     "centos",
-    "crux",
     "debian",
     "euleros",
     "fedora",

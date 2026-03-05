@@ -73,8 +73,6 @@
       PM="swinstall"
     elif PATH="{{ os_paths }}" command -v nix-env >/dev/null 2>&1; then
       PM="nix-env"
-    elif PATH="{{ os_paths }}" command -v prt-get >/dev/null 2>&1; then
-      PM="prt-get"
     else
       echo "[PYTHON_INSTALLER_LOADER] ERROR: Unsupported OS (no known package manager found)"
       exit 1
@@ -186,14 +184,6 @@
 
       nix-env)
         nix-env -iA nixpkgs.python3 nixpkgs.python3Packages.pip
-        ;;
-
-      prt-get)
-        # CRUX ports tree must be initialized before prt-get can find packages.
-        ports -u || true
-        prt-get depinst python3
-        # Ensure pip and venv via ensurepip as CRUX ports are minimal
-        python3 -m ensurepip --default-pip || true
         ;;
     esac
 
