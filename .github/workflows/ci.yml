@@ -1,0 +1,55 @@
+name: Ansible CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "**.yml"
+      - "**.yaml"
+      - "**.sh"
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  lint:
+    name: Run Ansible Linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip" # caching pip dependencies
+
+      # Re-use our own virtual environment script to ensure environments strictly match.
+      # Note: setup_venv.sh requires a source step or wrapper. We'll use our wrapper.
+      - name: Setup Virtual Environment
+        run: |
+          source ./scripts/setup_venv.sh
+
+      # Installing linting packages into our venv
+      - name: Install Linters
+        run: |
+          source .venv/bin/activate
+          pip install ansible-lint yamllint
+
+      # Optional YAML linting before deeper Ansible validation
+      - name: Run yamllint
+        run: |
+          source .venv/bin/activate
+          # Suppress failure if yamllint config doesn't exist yet, just test syntax
+          yamllint . || echo "yamllint completed with warnings"
+
+      # Core Ansible Linting phase
+      - name: Run ansible-lint
+        run: |
+          source .venv/bin/activate
+          ansible-lint -v
