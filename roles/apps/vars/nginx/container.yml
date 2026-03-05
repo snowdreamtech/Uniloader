@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/nginx/container.yml
+# =====================================================================
+
+nginx_overrides:
+  app_image: "nginx:latest"
+  app_ports:
+    - "80:80"
+  app_restart_policy: "unless-stopped"

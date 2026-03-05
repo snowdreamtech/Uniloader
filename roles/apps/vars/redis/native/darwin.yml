@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native/darwin.yml
+# =====================================================================
+
+redis_overrides:
+  # WHY: Both Homebrew and MacPorts use 'redis' as package name
+  app_packages: ["redis"]
+  app_service: "redis"
+  # WHY: macOS uses launchd for service management
+  app_init_system: "launchd"

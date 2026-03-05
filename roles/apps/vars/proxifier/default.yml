@@ -1,0 +1,37 @@
+---
+# =====================================================================
+# roles/apps/vars/proxifier/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for proxifier
+# ---------------------------------------------------------------------
+proxifier_defaults:
+  app_desc: "Proxifier - Advanced Proxy Client"
+  app_version: "latest"
+  app_homepage: "https://www.proxifier.com"
+  app_license: "Proprietary"
+  app_state: "present"
+
+# Global Proxifier settings
+proxifier_version: "latest"
+proxifier_download_retries: 5
+proxifier_download_delay: 10
+proxifier_force_install: false
+
+# OS-level package management
+proxifier_package_name: "Proxifier"
+
+# System Requirements
+# Reference: https://www.proxifier.com/download/
+proxifier_min_requirements:
+  macos_version: "12" # macOS 12 (Monterey) or later
+  windows_version: "6.1" # Windows 7 (NT 6.1) or later
+
+# Download URLs (Official)
+proxifier_urls:
+  macos_dmg: "https://www.proxifier.com/download/ProxifierMac.dmg"
+  windows_setup: "https://www.proxifier.com/download/ProxifierSetup.exe"
+
+# Installation paths
+proxifier_install_dir: "/Applications/Proxifier.app"

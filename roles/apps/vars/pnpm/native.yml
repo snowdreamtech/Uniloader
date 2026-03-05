@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/apps/vars/pnpm/native.yml
+# =====================================================================
+
+pnpm_overrides:
+  app_state: "present"
+  app_install_cmd: "curl -fsSL {{ github_proxy }}https://get.pnpm.io/install.sh | sh -"
+  app_install_creates: "{{ ansible_user_home }}/.local/share/pnpm/pnpm"

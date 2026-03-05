@@ -1,0 +1,32 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity/native/extensions.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Check 'antigravity' availability
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Native): Check if 'antigravity' command is available {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "antigravity --version"
+  register: _antigravity_cmd_check
+  changed_when: false
+  failed_when: false
+
+# ---------------------------------------------------------------------
+# Execution: Install extensions
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Native): Install extensions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "antigravity --install-extension {{ extension_item }} --force"
+  loop: "{{ antigravity_extensions }}"
+  loop_control:
+    loop_var: extension_item
+  changed_when: "'already installed' not in _antigravity_ext_result.stdout"
+  register: _antigravity_ext_result
+  when:
+    - _antigravity_cmd_check.rc == 0
+    - app_state | default('present', true) == 'present'
+    - antigravity_extensions is defined
+    - antigravity_extensions | length > 0
+  become: false # Extensions should be installed per user

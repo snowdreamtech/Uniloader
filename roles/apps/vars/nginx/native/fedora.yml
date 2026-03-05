@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/nginx/native/fedora.yml
+# =====================================================================
+
+nginx_overrides:
+  app_packages: ["nginx"]
+  app_service: "nginx"
+  # WHY: Fedora uses systemd for service management
+  app_init_system: "systemd"

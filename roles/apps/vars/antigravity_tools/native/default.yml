@@ -1,0 +1,35 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity_tools/native/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Minimum System Requirements
+# ---------------------------------------------------------------------
+# System Requirements:
+# RAM: 1GB recommended (minimum 256MB).
+# Persistence: Mount ~/.antigravity-tools to persist your data.
+# Architecture: Supports x86_64 and ARM64. See: Docker Deployment Guide (docker)
+#
+antigravity_tools_min_requirements:
+  cpu_cores: 1
+  ram_mb_min: 256
+  ram_mb_rec: 1024
+  disk_gb: 1
+  supported_arch: ["x86_64", "amd64", "aarch64", "arm64"]
+  supported_os:
+    - darwin
+    - debian
+    - ubuntu
+    - redhat
+    - centos
+    - rocky
+    - almalinux
+    - fedora
+    - archlinux
+    - windows
+
+# ---------------------------------------------------------------------
+# Persistence
+# ---------------------------------------------------------------------
+antigravity_tools_persistence_path: "~/.antigravity-tools"

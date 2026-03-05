@@ -1,0 +1,25 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/redhat.yml
+# =====================================================================
+
+mongodb_overrides:
+  # MongoDB official repository configuration
+  app_repo_name: "mongodb-org-{{ app_version | default('7.0') }}"
+  app_repo_baseurl: "https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/{{ app_version | default('7.0') }}/{{ os_architecture_oci | default('x86_64') }}/"
+  app_repo_gpgkey_url: "https://pgp.mongodb.com/server-{{ app_version | default('7.0') }}.asc"
+  app_repo_gpgcheck: true
+  app_repo_enabled: true
+
+  # Packages to install
+  app_packages:
+    - "mongodb-org"
+    - "mongodb-org-server"
+    - "mongodb-org-mongos"
+    - "mongodb-org-tools"
+
+  # Service name
+  app_service: "mongod"
+
+  # Config file path
+  app_config_file: "/etc/mongod.conf"

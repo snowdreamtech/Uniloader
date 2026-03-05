@@ -1,0 +1,84 @@
+---
+# =====================================================================
+# roles/apps/tasks/wechat/native/windows.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "wechat (Windows): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status (Registry Standard)
+# ---------------------------------------------------------------------
+
+- name: "wechat (Windows): Check if WeChat is installed (Registry) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_powershell:
+    script: |
+      $uninstallKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+
+      $app = $uninstallKeys | ForEach-Object {
+        if (Test-Path $_) {
+          Get-ChildItem -Path $_ -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -match '^WeChat' }
+        }
+      } | Select-Object -First 1
+
+      if ($app) {
+        $ansible.Result = @{ installed = $true; path = $app.InstallLocation; version = $app.DisplayVersion }
+      } else {
+        $ansible.Result = @{ installed = $false }
+      }
+  register: _wechat_reg_check
+
+- name: "wechat (Windows): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    wechat_is_installed: "{{ _wechat_reg_check.result.installed | default(false) }}"
+
+# ---------------------------------------------------------------------
+# Installation: EXE Download and Install
+# ---------------------------------------------------------------------
+
+- name: "wechat (Windows): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not wechat_is_installed or (wechat_force_install | default(false) | bool)
+  block:
+    - name: "wechat (Windows): Create temporary directory"
+      ansible.windows.win_tempfile:
+        state: directory
+        suffix: wechat
+      register: _wc_temp_dir
+
+    - name: "wechat (Windows): Download Installer"
+      ansible.windows.win_get_url:
+        url: "{{ wechat_win_url }}"
+        dest: "{{ _wc_temp_dir.path }}\\WeChatSetup.exe"
+      register: _exe_download
+      retries: "{{ wechat_download_retries | default(5) }}"
+      delay: "{{ wechat_download_delay | default(10) }}"
+
+    - name: "wechat (Windows): Install WeChat"
+      ansible.windows.win_package:
+        path: "{{ _exe_download.dest }}"
+        product_id: "WeChat" # May need adjustment, but win_package works with path too for exes
+        arguments: "/S"
+        state: present
+      register: _install_result
+
+  always:
+    - name: "wechat (Windows): Clean up"
+      ansible.windows.win_file:
+        path: "{{ _wc_temp_dir.path }}"
+        state: absent
+      when: _wc_temp_dir.path is defined
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+# Note: Uninstallation usually requires finding the UninstallString from registry.
+# For now, we skip auto-uninstallation logic unless explicitly known.

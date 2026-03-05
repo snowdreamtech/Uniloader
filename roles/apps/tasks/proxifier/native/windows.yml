@@ -1,0 +1,92 @@
+---
+# =====================================================================
+# roles/apps/tasks/proxifier/native/windows.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "proxifier (Windows): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "proxifier (Windows): Check if Proxifier is installed (Registry)"
+  ansible.windows.win_powershell:
+    script: |
+      $uninstallKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+
+      $proxifier = $uninstallKeys | ForEach-Object {
+        if (Test-Path $_) {
+          Get-ChildItem -Path $_ -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -match '^Proxifier' }
+        }
+      } | Select-Object -First 1
+
+      if ($proxifier) {
+        $ansible.Result = @{ installed = $true; path = $proxifier.InstallLocation; version = $proxifier.DisplayVersion }
+      } else {
+        $ansible.Result = @{ installed = $false }
+      }
+  register: _prox_reg_check
+
+- name: "proxifier (Windows): Set installation status fact"
+  ansible.builtin.set_fact:
+    proxifier_is_installed: "{{ _prox_reg_check.result.installed | default(false) }}"
+
+# ---------------------------------------------------------------------
+# Installation: EXE Silent Install
+# ---------------------------------------------------------------------
+
+- name: "proxifier (Windows): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not proxifier_is_installed or (proxifier_force_install | default(false) | bool)
+  block:
+    - name: "proxifier (Windows): Create temporary directory"
+      ansible.windows.win_tempfile:
+        state: directory
+        suffix: proxifier
+      register: _prox_temp_dir
+
+    - name: "proxifier (Windows): Download Setup EXE"
+      ansible.windows.win_get_url:
+        url: "{{ proxifier_urls.windows_setup }}"
+        dest: "{{ _prox_temp_dir.path }}\\ProxifierSetup.exe"
+      register: _exe_download
+      retries: "{{ proxifier_download_retries | default(5) }}"
+      delay: "{{ proxifier_download_delay | default(10) }}"
+
+    - name: "proxifier (Windows): Install Proxifier (Silent)"
+      ansible.windows.win_package:
+        path: "{{ _exe_download.dest }}"
+        product_id: "Proxifier" # Note: This might need precise UUID if MSI, but 'win_package' can guess for EXE if args provided
+        arguments: "/S" # Standard NSIS silent install argument
+        state: present
+      register: _install_result
+
+  always:
+    - name: "proxifier (Windows): Clean up"
+      ansible.windows.win_file:
+        path: "{{ _prox_temp_dir.path }}"
+        state: absent
+      when: _prox_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "proxifier (Windows): Remove Application"
+  ansible.windows.win_package:
+    path: "{{ _exe_download.dest | default('') }}" # Uninstall usually doesn't need path if product_id is known, or specialized uninstall command
+    product_id: "Proxifier"
+    state: absent
+  when:
+    - app_state | default('present', true) == 'absent'
+    - proxifier_is_installed

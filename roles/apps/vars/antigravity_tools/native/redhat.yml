@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity_tools/native/redhat.yml
+# =====================================================================
+
+# RPM package naming patterns
+antigravity_tools_redhat_package_x86_64: "Antigravity.Tools-{{ antigravity_tools_version }}-1.x86_64.rpm"
+antigravity_tools_redhat_package_aarch64: "Antigravity.Tools-{{ antigravity_tools_version }}-1.aarch64.rpm"
+
+# Select appropriate package based on architecture
+antigravity_tools_redhat_package: >-
+  {{
+    antigravity_tools_redhat_package_aarch64 if ansible_architecture in ['arm64', 'aarch64'] else
+    antigravity_tools_redhat_package_x86_64
+  }}
+
+# RPM download URL
+antigravity_tools_redhat_rpm_url: >-
+  {{
+    github_proxy +
+    antigravity_tools_github_url + '/releases/download/v' +
+    antigravity_tools_version + '/' + antigravity_tools_redhat_package
+  }}
+
+# Temporary download path
+antigravity_tools_redhat_download_path: "/tmp/{{ antigravity_tools_redhat_package }}"

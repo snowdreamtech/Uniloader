@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/nginx/native/alpine.yml
+# =====================================================================
+
+nginx_overrides:
+  app_packages: ["nginx"]
+  app_service: "nginx"
+  # WHY: Alpine uses OpenRC, service name matches package name
+  app_init_system: "openrc"

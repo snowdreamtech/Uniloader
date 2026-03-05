@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/native/archlinux.yml
+# =====================================================================
+
+valkey_overrides:
+  app_packages: ["valkey"]
+  app_service: "valkey"
+  # WHY: Arch Linux uses systemd for service management
+  app_init_system: "systemd"

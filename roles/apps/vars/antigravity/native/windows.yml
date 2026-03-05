@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity/native/windows.yml
+# =====================================================================
+
+# Winget package ID
+# WHY: Winget is the official Windows package manager
+antigravity_windows_winget_id: "Google.Antigravity"
+
+# Architecture mapping for Windows
+# WHY: Windows uses different arch naming in download URLs
+_antigravity_windows_arch_map:
+  amd64: "x64"
+  arm64: "arm64"
+
+antigravity_windows_arch: "{{ _antigravity_windows_arch_map[antigravity_arch] | default(antigravity_arch, true) }}"
+
+# Direct download URL
+# WHY: Official Google download mirror
+# Example: https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/1.15.8-5724687216017408/windows-x64/Antigravity.exe
+antigravity_windows_download_base: "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity"
+antigravity_windows_download_url: "{{ antigravity_windows_download_base }}/{{ antigravity_channel }}/{{ antigravity_version }}/windows-{{ antigravity_windows_arch }}/Antigravity.exe"
+
+# Installation path
+# WHY: Standard Windows installation location
+antigravity_windows_install_path: "C:\\Program Files\\Google\\Antigravity"

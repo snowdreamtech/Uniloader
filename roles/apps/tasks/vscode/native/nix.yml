@@ -1,0 +1,66 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/native/nix.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "vscode (Nix/Native): Check if vscode is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "nix-env -q vscode"
+  register: _vscode_nix_check
+  failed_when: false
+  changed_when: false
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin"
+
+- name: "vscode (Nix/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Visual Studio Code is already installed. Skipping installation steps."
+  when: _vscode_nix_check.rc == 0
+
+# ---------------------------------------------------------------------
+# 1. Installation
+# ---------------------------------------------------------------------
+
+# WHY: We use nix-env for user-level installation on non-NixOS or imperative management.
+# NIXPKGS_ALLOW_UNFREE=1 is required because VS Code is unfree software.
+- name: "vscode (Nix/Native): Install VS Code via nix-env {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "nix-env -iA nixpkgs.vscode"
+  environment:
+    NIXPKGS_ALLOW_UNFREE: "1"
+    PATH: "{{ ansible_env.PATH }}:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin"
+  when:
+    - _vscode_nix_check.rc != 0
+    - app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 2. Extension Management
+# ---------------------------------------------------------------------
+
+# WHY: Explicitly included here to ensure it runs regardless of how this file was loaded.
+- name: "vscode (Nix/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_extensions is defined
+    - vscode_extensions | length > 0
+# ---------------------------------------------------------------------
+# 3. Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "vscode (Nix/Native): Uninstall VS Code via nix-env {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "nix-env -e nixpkgs.vscode"
+  environment:
+    PATH: "{{ ansible_env.PATH }}:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin"
+  when:
+    - app_state | default('present', true) == 'absent'
+  ignore_errors: true
+
+- name: "vscode (Nix/Native): Remove extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.vscode"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'

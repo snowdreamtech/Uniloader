@@ -1,0 +1,244 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode_server/native/linux.yml
+# =====================================================================
+
+- name: "Vscode_server (Linux): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Commit ID Detection
+# ---------------------------------------------------------------------
+- name: "Vscode_server (Control Node): Auto-detect VS Code Commit ID"
+  ansible.builtin.command: "code --version"
+  delegate_to: localhost
+  register: _vscode_local_commit_id
+  changed_when: false
+  failed_when: false
+  check_mode: false # specific checking logic
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_commit_id | length == 0
+
+- name: "Vscode_server (Control Node): Find installed VS Code Server versions (Fallback)"
+  ansible.builtin.find:
+    paths: "{{ lookup('env', 'HOME') }}/.vscode-server/bin"
+    file_type: directory
+    recurse: false
+  delegate_to: localhost
+  register: _vscode_local_server_bins
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_commit_id | length == 0
+    - (_vscode_local_commit_id.rc | default(1) != 0 or _vscode_local_commit_id.stdout_lines | length < 2)
+
+- name: "Vscode_server (Linux): Set detected commit ID"
+  ansible.builtin.set_fact:
+    vscode_server_commit_id: >-
+      {%- if _vscode_local_commit_id.rc | default(1) == 0 and _vscode_local_commit_id.stdout_lines | length >= 2 -%}
+        {{ _vscode_local_commit_id.stdout_lines[1] | trim }}
+      {%- elif _vscode_local_server_bins.files | default([]) | length > 0 -%}
+        {{ (_vscode_local_server_bins.files | sort(attribute='mtime', reverse=true) | first).path | basename }}
+      {%- else -%}
+        {{ vscode_server_commit_id }}
+      {%- endif -%}
+  when:
+    - vscode_server_commit_id | length == 0
+
+- name: "Vscode_server (Linux): Enforce Commit ID"
+  ansible.builtin.fail:
+    msg: |
+      VS Code Commit ID is missing!
+
+      Auto-detection failed:
+      1. 'code --version' command failed or was not found.
+      2. No VS Code Server directories found in ~/.vscode-server/bin.
+
+      Please explicitly set 'vscode_server_commit_id' in your variables.
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_commit_id | length == 0
+
+# ---------------------------------------------------------------------
+# Check Installation
+# ---------------------------------------------------------------------
+
+# Update install dir based on (potentially new) commit ID
+- name: "Vscode_server (Linux): Update install directory path"
+  ansible.builtin.set_fact:
+    vscode_server_install_dir: "{{ ansible_user_home }}/.vscode-server/bin/{{ vscode_server_commit_id }}"
+
+- name: "Vscode_server (Linux): Check if already installed"
+  ansible.builtin.stat:
+    path: "{{ vscode_server_install_dir }}"
+  register: _vscode_server_installed_stat
+
+# ---------------------------------------------------------------------
+# Installation
+# ---------------------------------------------------------------------
+
+- name: "Vscode_server (Linux): Manage Installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not _vscode_server_installed_stat.stat.exists or (vscode_server_force_install | default(false) | bool)
+  block:
+    - name: "Vscode_server (Linux): Ensure base directory exists"
+      ansible.builtin.file:
+        path: "{{ vscode_server_install_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: "Vscode_server (Linux): Download Artifact (Target Node)"
+      ansible.builtin.get_url:
+        url: "{{ vscode_server_download_url }}"
+        dest: "{{ ansible_user_home }}/.vscode-server_tmp.tar.gz"
+        mode: "0644"
+      register: _server_download
+      until: _server_download is succeeded
+      retries: "{{ vscode_server_download_retries | default(5) }}"
+      delay: "{{ vscode_server_download_delay | default(10) }}"
+
+    - name: "Vscode_server (Linux): Extract Artifact"
+      ansible.builtin.unarchive:
+        src: "{{ ansible_user_home }}/.vscode-server_tmp.tar.gz"
+        dest: "{{ vscode_server_install_dir }}"
+        remote_src: true
+        extra_opts:
+          - --strip-components=1 # Remove the top-level folder (usually vscode-server-linux-x64)
+  always:
+    - name: "Vscode_server (Linux): Cleanup Temp Artifact"
+      ansible.builtin.file:
+        path: "{{ ansible_user_home }}/.vscode-server_tmp.tar.gz"
+        state: absent
+      ignore_errors: true
+
+# ---------------------------------------------------------------------
+# Cleanup Old Versions
+# ---------------------------------------------------------------------
+
+- name: "Vscode_server (Linux): Find old versions"
+  ansible.builtin.find:
+    paths: "{{ ansible_user_home }}/.vscode-server/bin"
+    file_type: directory
+    recurse: false
+  register: _vscode_server_bin_dirs
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+
+- name: "Vscode_server (Linux): Cleanup logs (data/logs)"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.vscode-server/data/logs"
+    state: absent
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+
+# ---------------------------------------------------------------------
+# Extension Cleanup (Native)
+# Logic: Group by "publisher.name", keep newest mtime, delete others.
+# ---------------------------------------------------------------------
+
+- name: "Vscode_server (Linux): Find all extension directories"
+  ansible.builtin.find:
+    paths: "{{ ansible_user_home }}/.vscode-server/extensions"
+    file_type: directory
+    recurse: false
+  register: _vscode_extensions
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+
+- name: "Vscode_server (Linux): Identify old extension versions to remove"
+  ansible.builtin.set_fact:
+    _vscode_extensions_to_remove: >-
+      {%- set results = [] -%}
+      {%- set grouped = {} -%}
+      {# 1. Group by base name (regex strip version suffix: -digits.*) #}
+      {%- for item in _vscode_extensions.files -%}
+        {%- set base_name = item.path | regex_replace('-[0-9]+\..*$', '') -%}
+        {%- if base_name not in grouped -%}
+          {%- set _ = grouped.update({base_name: []}) -%}
+        {%- endif -%}
+        {%- set _ = grouped[base_name].append(item) -%}
+      {%- endfor -%}
+      {# 2. For each group, sort by mtime desc, slice [1:] to get removal list #}
+      {%- for base, items in grouped.items() -%}
+        {%- set sorted_items = items | sort(attribute='mtime', reverse=true) -%}
+        {%- for old_item in sorted_items[1:] -%}
+          {%- set _ = results.append(old_item.path) -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ results }}
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+
+- name: "Vscode_server (Linux): Remove old extensions"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ _vscode_extensions_to_remove | default([], true) }}"
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+
+- name: "Vscode_server (Linux): Remove old versions"
+  ansible.builtin.file:
+    path: "{{ bin.path }}"
+    state: absent
+  loop: "{{ _vscode_server_bin_dirs.files | default([], true) }}"
+  loop_control:
+    loop_var: bin
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+    - bin.path | basename != vscode_server_commit_id
+
+# ---------------------------------------------------------------------
+# CLI Server Cleanup
+# Logic: Remove Stable-<OLD_COMMIT> dirs and lru.json
+# ---------------------------------------------------------------------
+
+- name: "Vscode_server (Linux): Find old CLI servers"
+  ansible.builtin.find:
+    paths: "{{ ansible_user_home }}/.vscode-server/cli/servers"
+    file_type: directory
+    patterns: "Stable-*"
+    recurse: false
+  register: _vscode_cli_servers
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+
+- name: "Vscode_server (Linux): Remove old CLI servers"
+  ansible.builtin.file:
+    path: "{{ server.path }}"
+    state: absent
+  loop: "{{ _vscode_cli_servers.files | default([], true) }}"
+  loop_control:
+    loop_var: server
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+    - server.path | basename != ('Stable-' ~ vscode_server_commit_id)
+
+- name: "Vscode_server (Linux): Remove CLI servers lru.json"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.vscode-server/cli/servers/lru.json"
+    state: absent
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_server_cleanup_old_versions | default(true) | bool
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "Vscode_server (Linux): Uninstall"
+  ansible.builtin.file:
+    path: "{{ vscode_server_install_dir }}"
+    state: absent
+  when:
+    - app_state | default('present', true) == 'absent'

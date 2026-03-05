@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/vars/helloworld/native.yml
+# =====================================================================
+
+helloworld_overrides:
+  # WHY: Most systems provide the 'hello' package
+  app_packages: ["hello"]

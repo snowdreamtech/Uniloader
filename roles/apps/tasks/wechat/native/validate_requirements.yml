@@ -1,0 +1,22 @@
+---
+# =====================================================================
+# roles/apps/tasks/wechat/native/validate_requirements.yml
+# =====================================================================
+
+- name: "wechat (Native): Validate Windows requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when: ansible_os_family == 'Windows'
+  block:
+    - name: "wechat (Native): Check Windows version"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution_version is version(wechat_win_min_version, '>=')
+        fail_msg: "WeChat requires Windows 7 or later. Detected: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+- name: "wechat (Native): Validate Linux requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when: ansible_system == 'Linux'
+  block:
+    - name: "wechat (Native): Check Linux architecture"
+      ansible.builtin.assert:
+        that:
+          - wechat_is_supported_linux_arch | bool
+        fail_msg: "WeChat Linux does not officially support architecture '{{ ansible_architecture }}'."

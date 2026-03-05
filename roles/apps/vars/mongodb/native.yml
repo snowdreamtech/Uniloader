@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native.yml
+# =====================================================================
+
+mongodb_overrides:
+  app_state: "started"
+  app_service_enabled: true

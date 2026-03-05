@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/tasks/qq/native/default.yml
+# =====================================================================
+
+- name: "qq (Default): Fail on unsupported OS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "QQ role does not support this OS: {{ ansible_os_family }}."

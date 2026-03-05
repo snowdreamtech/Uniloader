@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity_tools/native/debian.yml
+# =====================================================================
+
+# Debian package naming patterns
+antigravity_tools_debian_package_amd64: "Antigravity.Tools_{{ antigravity_tools_version }}_amd64.deb"
+antigravity_tools_debian_package_arm64: "Antigravity.Tools_{{ antigravity_tools_version }}_arm64.deb"
+
+# Select appropriate package based on architecture
+antigravity_tools_debian_package: >-
+  {{
+    antigravity_tools_debian_package_arm64 if ansible_architecture in ['arm64', 'aarch64'] else
+    antigravity_tools_debian_package_amd64
+  }}
+
+# DEB download URL
+antigravity_tools_debian_deb_url: >-
+  {{
+    github_proxy +
+    antigravity_tools_github_url + '/releases/download/v' +
+    antigravity_tools_version + '/' + antigravity_tools_debian_package
+  }}
+
+# Temporary download path
+antigravity_tools_debian_download_path: "/tmp/{{ antigravity_tools_debian_package }}"

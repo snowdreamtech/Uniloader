@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/default.yml
+# =====================================================================
+
+valkey_defaults:
+  app_desc: "Valkey High-Performance Key-Value Store (Redis Fork)"
+  app_version: "latest"
+  app_homepage: "https://valkey.io"
+  app_license: "BSD-3-Clause"
+  # WHY: Valkey is a drop-in replacement for Redis, forked from 7.2.4
+  app_compatibility: "Redis 7.2.4+ compatible"

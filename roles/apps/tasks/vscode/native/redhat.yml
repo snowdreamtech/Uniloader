@@ -1,0 +1,93 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/native/redhat.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "vscode (RedHat/Native): Check if code is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "rpm -q code"
+  register: _vscode_rpm_check
+  failed_when: false
+  changed_when: false
+
+- name: "vscode (RedHat/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Visual Studio Code is already installed. Skipping installation steps."
+  when: _vscode_rpm_check.rc == 0
+
+# ---------------------------------------------------------------------
+# 1. Repository Setup: Microsoft YUM Repo
+# ---------------------------------------------------------------------
+
+- name: "vscode (RedHat/Native): Setup repository for VS Code {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - _vscode_rpm_check.rc != 0
+    - app_state | default('present', true) == 'present'
+  block:
+    - name: "vscode (RedHat/Native): Add VS Code YUM repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.yum_repository:
+        name: "code"
+        description: "Visual Studio Code"
+        baseurl: "{{ vscode_rhel_repo_url }}"
+        enabled: true
+        gpgcheck: true
+        gpgkey: "{{ vscode_linux_repo_key_url }}"
+      become: "{{ become_enabled }}"
+
+    - name: "vscode (RedHat/Native): Install VS Code via yum/dnf {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.package:
+        name: "code"
+        state: "{{ 'present' if app_state | default('present', true) == 'present' else 'absent' }}"
+      become: "{{ become_enabled }}"
+  rescue:
+    # ---------------------------------------------------------------------
+    # Fallback: Direct .rpm installation
+    # ---------------------------------------------------------------------
+    - name: "vscode (RedHat/Native): Fallback to direct download installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      when: app_state | default('present', true) == 'present'
+      block:
+        - name: "vscode (RedHat/Native): Download .rpm package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.get_url:
+            url: "{{ vscode_linux_download_url }}"
+            dest: "/tmp/vscode.rpm"
+            mode: "0644"
+          become: "{{ become_enabled }}"
+
+        - name: "vscode (RedHat/Native): Install .rpm package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.yum:
+            name: "/tmp/vscode.rpm"
+            state: present
+            disable_gpg_check: true
+          become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# 2. Cleanup: Remove package if state is absent
+# ---------------------------------------------------------------------
+- name: "vscode (RedHat/Native): Remove VS Code package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "code"
+    state: absent
+  become: "{{ become_enabled }}"
+  when: app_state | default('present', true) == 'absent'
+
+- name: "vscode (RedHat/Native): Remove VS Code extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.vscode"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'
+
+# ---------------------------------------------------------------------
+# 3. Extension Management
+# ---------------------------------------------------------------------
+
+# WHY: Explicitly included here to ensure it runs regardless of how this file was loaded.
+- name: "vscode (RedHat/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_extensions is defined
+    - vscode_extensions | length > 0

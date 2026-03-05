@@ -1,0 +1,89 @@
+---
+# =====================================================================
+# roles/apps/tasks/proxifier/native/darwin.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "proxifier (Darwin): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "proxifier (Darwin): Check if Proxifier app exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "{{ proxifier_install_dir }}"
+  register: _proxifier_app_stat
+  check_mode: false
+
+- name: "proxifier (Darwin): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    proxifier_is_installed: "{{ _proxifier_app_stat.stat.exists | default(false) }}"
+
+# ---------------------------------------------------------------------
+# Installation: DMG Download and Install
+# ---------------------------------------------------------------------
+
+- name: "proxifier (Darwin): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not proxifier_is_installed or (proxifier_force_install | default(false) | bool)
+  block:
+    - name: "proxifier (Darwin): Create temporary directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: proxifier
+      register: _prox_temp_dir
+
+    - name: "proxifier (Darwin): Download DMG artifact"
+      ansible.builtin.get_url:
+        url: "{{ proxifier_urls.macos_dmg }}"
+        dest: "{{ _prox_temp_dir.path }}/ProxifierMac.dmg"
+        mode: "0644"
+      register: _dmg_download
+      until: _dmg_download is succeeded
+      retries: "{{ proxifier_download_retries | default(5) }}"
+      delay: "{{ proxifier_download_delay | default(10) }}"
+
+    - name: "proxifier (Darwin): Mount DMG"
+      ansible.builtin.command: "hdiutil attach '{{ _dmg_download.dest }}' -nobrowse -readonly"
+      register: _dmg_mount
+      changed_when: false
+
+    - name: "proxifier (Darwin): Get mount point"
+      ansible.builtin.shell: "df | grep 'Proxifier' | awk '{print $NF}' | head -n 1"
+      register: _dmg_mount_point
+      changed_when: false
+
+    - name: "proxifier (Darwin): Copy Application to /Applications"
+      ansible.builtin.command: "cp -R '{{ _dmg_mount_point.stdout }}/Proxifier.app' /Applications/"
+      become: true
+
+    - name: "proxifier (Darwin): Unmount DMG"
+      ansible.builtin.command: "hdiutil detach '{{ _dmg_mount_point.stdout }}'"
+      changed_when: false
+
+  always:
+    - name: "proxifier (Darwin): Clean up"
+      ansible.builtin.file:
+        path: "{{ _prox_temp_dir.path }}"
+        state: absent
+      when: _prox_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "proxifier (Darwin): Remove Application {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ proxifier_install_dir }}"
+    state: absent
+  become: true
+  when:
+    - app_state | default('present', true) == 'absent'
+    - proxifier_is_installed

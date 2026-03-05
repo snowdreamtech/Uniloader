@@ -1,0 +1,113 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/native/debian.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "vscode (Debian/Native): Check if code is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dpkg-query -W code"
+  register: _vscode_dpkg_check
+  failed_when: false
+  changed_when: false
+
+- name: "vscode (Debian/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Visual Studio Code is already installed. Skipping installation steps."
+  when: _vscode_dpkg_check.rc == 0
+
+# ---------------------------------------------------------------------
+# 1. Repository Setup: Microsoft GPG Key & List
+# ---------------------------------------------------------------------
+
+- name: "vscode (Debian/Native): Setup repository for VS Code {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - _vscode_dpkg_check.rc != 0
+    - app_state | default('present', true) == 'present'
+  block:
+    - name: "vscode (Debian/Native): Ensure keyrings directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.file:
+        path: "/etc/apt/keyrings"
+        state: directory
+        mode: "0755"
+      become: "{{ become_enabled }}"
+
+    - name: "vscode (Debian/Native): Download Microsoft GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.get_url:
+        url: "{{ vscode_linux_repo_key_url }}"
+        dest: "/tmp/microsoft.asc"
+        mode: "0644"
+      become: "{{ become_enabled }}"
+
+    - name: "vscode (Debian/Native): De-armor GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.shell: |
+        PATH={{ os_paths }}
+        set -euo pipefail
+        gpg --dearmor < /tmp/microsoft.asc > /etc/apt/keyrings/packages.microsoft.gpg
+      become: "{{ become_enabled }}"
+      changed_when: false
+
+    - name: "vscode (Debian/Native): Add VS Code repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.apt_repository:
+        repo: "{{ vscode_debian_repo_line }}"
+        state: present
+        filename: "vscode"
+      become: "{{ become_enabled }}"
+
+    - name: "vscode (Debian/Native): Install VS Code via apt {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.apt:
+        name: "code"
+        state: "{{ 'present' if app_state | default('present', true) == 'present' else 'absent' }}"
+        update_cache: true
+      become: "{{ become_enabled }}"
+  rescue:
+    # ---------------------------------------------------------------------
+    # Fallback: Direct .deb installation
+    # ---------------------------------------------------------------------
+    - name: "vscode (Debian/Native): Fallback to direct download installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      when: app_state | default('present', true) == 'present'
+      block:
+        - name: "vscode (Debian/Native): Download .deb package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.get_url:
+            url: "{{ vscode_linux_download_url }}"
+            dest: "/tmp/vscode.deb"
+            mode: "0644"
+          become: "{{ become_enabled }}"
+
+        - name: "vscode (Debian/Native): Install .deb package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.apt:
+            deb: "/tmp/vscode.deb"
+            state: present
+          become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# 2. Cleanup: Remove package if state is absent
+# ---------------------------------------------------------------------
+- name: "vscode (Debian/Native): Remove VS Code package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apt:
+    name: "code"
+    state: absent
+    purge: true
+  become: "{{ become_enabled }}"
+  when: app_state | default('present', true) == 'absent'
+
+- name: "vscode (Debian/Native): Remove VS Code extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.vscode"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'
+
+# ---------------------------------------------------------------------
+# 3. Extension Management
+# ---------------------------------------------------------------------
+
+# WHY: Explicitly included here to ensure it runs regardless of how this file was loaded.
+- name: "vscode (Debian/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_extensions is defined
+    - vscode_extensions | length > 0

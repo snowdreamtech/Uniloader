@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/nginx/native/gentoo.yml
+# =====================================================================
+
+nginx_overrides:
+  # WHY: Gentoo uses category/package naming convention
+  app_packages: ["www-servers/nginx"]
+  app_service: "nginx"
+  # WHY: Gentoo uses OpenRC by default
+  app_init_system: "openrc"

@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/vars/vscode/native/archlinux.yml
+# =====================================================================
+
+vscode_overrides:
+  # WHY: Arch uses visual-studio-code-bin from AUR
+  app_packages: ["visual-studio-code-bin"]

@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native/freebsd.yml
+# =====================================================================
+
+redis_overrides:
+  app_packages: ["redis"]
+  app_service: "redis"
+  # WHY: FreeBSD uses rc.d for service management
+  app_init_system: "bsd_rc"

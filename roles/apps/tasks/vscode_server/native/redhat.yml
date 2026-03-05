@@ -1,0 +1,7 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode_server/native/redhat.yml
+# =====================================================================
+
+- name: "Vscode_server (RedHat): Include Linux implementation"
+  ansible.builtin.include_tasks: "linux.yml"

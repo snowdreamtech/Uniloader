@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode_server/native/windows.yml
+# =====================================================================
+
+- name: "Vscode_server (Windows): Fail on unsupported OS"
+  ansible.builtin.fail:
+    msg: "VS Code Server does NOT support Windows."

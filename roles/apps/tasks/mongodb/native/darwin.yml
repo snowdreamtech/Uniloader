@@ -1,0 +1,75 @@
+---
+# =====================================================================
+# roles/apps/tasks/mongodb/native/darwin.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Step 1: Install MongoDB packages via package_loader
+# ---------------------------------------------------------------------
+# WHY: package_loader automatically detects Homebrew vs MacPorts
+#      and handles the installation accordingly.
+# ---------------------------------------------------------------------
+# Step 0: Check Support
+# ---------------------------------------------------------------------
+- name: "MongoDB: Check MacPorts Support {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "MongoDB is not supported on MacPorts due to license/build issues. Please use Homebrew (mongodb-community) or Docker."
+  when:
+    - os_pkg_mgr | default('homebrew') == 'macports'
+    - app_state in ['present', 'latest', 'started', 'stopped', 'restarted']
+
+- name: "MongoDB: Install packages (macOS) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_list: "{{ app_packages }}"
+    package_state: "{{ 'latest' if app_state == 'latest' else 'present' }}"
+  when: app_state in ['present', 'latest', 'started', 'stopped', 'restarted']
+
+# ---------------------------------------------------------------------
+# Step 2: Manage MongoDB service (launchd)
+# ---------------------------------------------------------------------
+- name: "MongoDB: Manage service (macOS) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "{{ app_service }}"
+    service_state: "{{ 'started' if app_state in ['started', 'present', 'latest'] else ('stopped' if app_state == 'stopped' else 'restarted') }}"
+    service_enabled: "{{ app_service_enabled | default(true) }}"
+  when:
+    - app_service is defined
+    - app_state in ['present', 'latest', 'started', 'stopped', 'restarted']
+
+# ---------------------------------------------------------------------
+# Step 3: Uninstall logic
+# ---------------------------------------------------------------------
+- name: "MongoDB: Stop service before uninstall (macOS) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader/main"
+  vars:
+    service_name: "{{ app_service }}"
+    service_state: "stopped"
+  when:
+    - app_service is defined
+    - app_state in ['absent', 'purged']
+
+- name: "MongoDB: Remove packages (macOS) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_list: "{{ app_packages }}"
+    package_state: "{{ app_state }}"
+  when: app_state in ['absent', 'purged']
+
+- name: "MongoDB: Remove data directory (purge only, macOS) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ app_data_dir }}"
+    state: "absent"
+  become: "{{ become_enabled }}"
+  when:
+    - app_state == 'purged'
+    - app_data_dir is defined

@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/native/fedora.yml
+# =====================================================================
+
+valkey_overrides:
+  # WHY: Valkey is available in Fedora repositories
+  # Fedora 41+ has Valkey in default repos, older versions via Remi
+  app_packages: ["valkey"]
+  app_service: "valkey"

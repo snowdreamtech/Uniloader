@@ -1,0 +1,18 @@
+---
+# =====================================================================
+# roles/apps/vars/cc_switch/native/redhat.yml
+# =====================================================================
+
+# RPM package naming patterns
+cc_switch_redhat_package: "CC-Switch-v{{ cc_switch_version }}-Linux.rpm"
+
+# RPM download URL
+cc_switch_redhat_rpm_url: >-
+  {{
+    github_proxy +
+    cc_switch_github_url + '/releases/download/v' +
+    cc_switch_version + '/' + cc_switch_redhat_package
+  }}
+
+# Temporary download path
+cc_switch_redhat_download_path: "/tmp/{{ cc_switch_redhat_package }}"

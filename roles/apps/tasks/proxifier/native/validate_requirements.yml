@@ -1,0 +1,50 @@
+---
+# =====================================================================
+# roles/apps/tasks/proxifier/native/validate_requirements.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1. OS Family Validation (Whitelist)
+# ---------------------------------------------------------------------
+- name: "proxifier (Native): Validate OS Family"
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family in ['Darwin', 'Windows']
+    fail_msg: |
+      Proxifier is not supported on {{ ansible_os_family }}.
+      Supported Platforms: macOS, Windows.
+    success_msg: "OS Family verified: {{ ansible_os_family }}"
+
+# ---------------------------------------------------------------------
+# 2. macOS Version Check
+# ---------------------------------------------------------------------
+- name: "proxifier (Native/Darwin): Validate macOS version {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when: ansible_os_family == 'Darwin'
+  block:
+    - name: "proxifier (Native/Darwin): Check macOS >= {{ proxifier_min_requirements.macos_version }}"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution_major_version | int >= proxifier_min_requirements.macos_version | int
+        fail_msg: |
+          Proxifier requires macOS {{ proxifier_min_requirements.macos_version }} or later.
+          Found: {{ ansible_distribution_version }} (Major: {{ ansible_distribution_major_version }})
+
+# ---------------------------------------------------------------------
+# 3. Windows Version Check
+# ---------------------------------------------------------------------
+- name: "proxifier (Native/Windows): Validate Windows version {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when: ansible_os_family == 'Windows'
+  block:
+    # Windows version logic can be complex in Ansible facts.
+    # ansible_distribution_major_version for Win 10/11/Server 2016+ is usually "10".
+    # Windows 7 is "6", Windows 8 is "6".
+    # Requirement: Windows 7+ (NT 6.1+)
+
+    - name: "proxifier (Native/Windows): Check Windows Version (NT Kernel)"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution_major_version | int >= 6
+          - (ansible_distribution_major_version | int > 6) or (ansible_distribution_minor_version | int >= 1)
+        fail_msg: |
+          Proxifier requires Windows 7 / Server 2008 R2 (NT 6.1) or later.
+          Found: Windows {{ ansible_distribution_major_version }}.{{ ansible_distribution_minor_version }}

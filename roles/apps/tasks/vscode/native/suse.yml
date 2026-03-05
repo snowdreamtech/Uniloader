@@ -1,0 +1,92 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/native/suse.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "vscode (SUSE/Native): Check if code is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "rpm -q code"
+  register: _vscode_rpm_check
+  failed_when: false
+  changed_when: false
+
+- name: "vscode (SUSE/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Visual Studio Code is already installed. Skipping installation steps."
+  when: _vscode_rpm_check.rc == 0
+
+# ---------------------------------------------------------------------
+# 1. GPG Key Import
+# ---------------------------------------------------------------------
+
+- name: "vscode (SUSE/Native): Import Microsoft GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.rpm_key:
+    state: present
+    key: "{{ vscode_suse_repo_key }}"
+  become: "{{ become_enabled }}"
+  when:
+    - _vscode_rpm_check.rc != 0
+    - app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 2. Repository Setup
+# ---------------------------------------------------------------------
+
+- name: "vscode (SUSE/Native): Add VS Code Zypper repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.zypper_repository:
+    name: "vscode"
+    description: "Visual Studio Code"
+    repo: "{{ vscode_suse_repo_url }}"
+    state: present
+    auto_import_keys: true
+  become: "{{ become_enabled }}"
+  when:
+    - _vscode_rpm_check.rc != 0
+    - app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 3. Installation
+# ---------------------------------------------------------------------
+
+- name: "vscode (SUSE/Native): Install VS Code via Zypper {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.zypper:
+    name: "code"
+    state: "{{ 'present' if app_state | default('present', true) == 'present' else 'absent' }}"
+    update_cache: true
+  become: "{{ become_enabled }}"
+  when:
+    - _vscode_rpm_check.rc != 0
+    - app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 4. Extension Management
+# ---------------------------------------------------------------------
+
+# WHY: Explicitly included here to ensure it runs regardless of how this file was loaded.
+- name: "vscode (SUSE/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_extensions is defined
+    - vscode_extensions | length > 0
+
+# ---------------------------------------------------------------------
+# 5. Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "vscode (SUSE/Native): Remove code package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.zypper:
+    name: "code"
+    state: absent
+  become: "{{ become_enabled }}"
+  when: app_state | default('present', true) == 'absent'
+
+- name: "vscode (SUSE/Native): Remove extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.vscode"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'

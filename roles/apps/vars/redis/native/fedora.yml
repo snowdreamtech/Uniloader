@@ -1,0 +1,17 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native/fedora.yml
+# =====================================================================
+
+redis_overrides:
+  # WHY: Fedora 41+ replaced Redis with Valkey in default repos
+  app_packages: >-
+    {{
+      ['valkey'] if (os_distribution_major_version | int >= 41)
+      else ['redis']
+    }}
+  app_service: >-
+    {{
+      'valkey' if (os_distribution_major_version | int >= 41)
+      else 'redis'
+    }}

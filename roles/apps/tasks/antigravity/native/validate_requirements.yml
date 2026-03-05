@@ -1,0 +1,132 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity/native/validate_requirements.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Check Hardware Requirements
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Native): Check CPU Cores {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - (ansible_processor_vcpus | int) >= (antigravity_min_requirements.cpu_cores | int)
+    fail_msg: |
+      Antigravity requires at least {{ antigravity_min_requirements.cpu_cores }} CPU cores.
+      Found: {{ ansible_processor_vcpus }} cores.
+    success_msg: "CPU Cores check passed: {{ ansible_processor_vcpus }} >= {{ antigravity_min_requirements.cpu_cores }}"
+  when: ansible_processor_vcpus is defined
+
+- name: "antigravity (Native): Check Total Memory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - ((ansible_memtotal_mb | float) / 1024) >= (antigravity_min_requirements.memory_gb | float)
+    fail_msg: |
+      Antigravity requires at least {{ antigravity_min_requirements.memory_gb }} GB of RAM.
+      Found: {{ (ansible_memtotal_mb / 1024) | round(1) }} GB.
+    success_msg: "Memory check passed: {{ (ansible_memtotal_mb / 1024) | round(1) }} GB >= {{ antigravity_min_requirements.memory_gb }} GB"
+  when: ansible_memtotal_mb is defined
+
+- name: "antigravity (Native): Check Free Disk Space (root) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - ((item.size_available | float) / 1024 / 1024 / 1024) >= (antigravity_min_requirements.disk_gb | float)
+    fail_msg: |
+      Antigravity requires at least {{ antigravity_min_requirements.disk_gb }} GB free disk space.
+      Found: {{ (item.size_available / 1024 / 1024 / 1024) | round(1) }} GB on {{ item.mount }}.
+    success_msg: "Disk Space check passed: {{ (item.size_available / 1024 / 1024 / 1024) | round(1) }} GB >= {{ antigravity_min_requirements.disk_gb }} GB"
+  loop: "{{ ansible_mounts }}"
+  when:
+    - ansible_mounts is defined
+    - item.mount == '/'
+  loop_control:
+    label: "{{ item.mount }}"
+
+# ---------------------------------------------------------------------
+# Validation: Check OS-Specific Requirements
+# ---------------------------------------------------------------------
+
+# --- macOS Requirements ---
+# Min Version 12 (Monterey), X86 is not supported
+- name: "antigravity (Native/Darwin): Validate macOS version and architecture"
+  when: ansible_os_family == 'Darwin'
+  block:
+    - name: "antigravity (Native/Darwin): Check macOS version >= 12 (Monterey)"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution_major_version | int >= 12
+        fail_msg: "Antigravity requires macOS 12 (Monterey) or later. Found version {{ ansible_distribution_version }}."
+
+    - name: "antigravity (Native/Darwin): Check architecture (x86_64/ARM64)"
+      ansible.builtin.assert:
+        that:
+          - ansible_architecture in ['x86_64', 'arm64', 'aarch64']
+        fail_msg: |
+          Antigravity on macOS requires 64-bit architecture (x86_64 or ARM64).
+          Found: {{ ansible_architecture }}
+
+# --- Windows Requirements ---
+# Windows 10 (64 bit)
+- name: "antigravity (Native/Windows): Validate Windows version"
+  when: ansible_os_family == 'Windows'
+  block:
+    - name: "antigravity (Native/Windows): Check Windows 10+"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution_major_version | int >= 10
+        fail_msg: "Antigravity requires Windows 10 or later."
+
+    - name: "antigravity (Native/Windows): Check 64-bit architecture"
+      ansible.builtin.assert:
+        that:
+          - ansible_architecture in ['x64', '64-bit', 'x86_64', 'amd64']
+        fail_msg: "Antigravity requires a 64-bit OS. Found: {{ ansible_architecture }}"
+
+# --- Linux Requirements ---
+# glibc >= 2.28, glibcxx >= 3.4.25
+- name: "antigravity (Native/Linux): Validate GLIBC version"
+  when: ansible_system == 'Linux'
+  block:
+    - name: "antigravity (Native/Linux): Get GLIBC version"
+      ansible.builtin.shell: "ldd --version | head -n1 | awk '{print $NF}'"
+      register: _ag_glibc_version
+      changed_when: false
+      failed_when: false
+
+    - name: "antigravity (Native/Linux): Check GLIBC >= 2.28"
+      ansible.builtin.assert:
+        that:
+          - _ag_glibc_version.stdout is version('2.28', '>=')
+        fail_msg: "Antigravity requires GLIBC >= 2.28. Found: {{ _ag_glibc_version.stdout }}"
+      when: _ag_glibc_version.rc == 0
+
+    - name: "antigravity (Native/Linux): Find libstdc++ path"
+      ansible.builtin.shell: "ldconfig -p | grep libstdc++.so.6 | awk '{print $NF}' | head -n1"
+      register: _ag_libstdc_path
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "antigravity (Native/Linux): Check GLIBCXX version"
+      ansible.builtin.shell: "grep -aq 'GLIBCXX_3.4.25' {{ _ag_libstdc_path.stdout }}"
+      register: _ag_glibcxx_check
+      when:
+        - ansible_architecture == 'x86_64'
+        - _ag_libstdc_path.stdout | length > 0
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "antigravity (Native/Linux): Validate GLIBCXX >= 3.4.25"
+      ansible.builtin.assert:
+        that:
+          - _ag_glibcxx_check.rc == 0
+        fail_msg: "Antigravity requires GLIBCXX >= 3.4.25. Please upgrade your system libraries."
+      when:
+        - ansible_architecture == 'x86_64'
+        - _ag_glibcxx_check.rc is defined
+        - not _ag_glibcxx_check.skipped | default(false)
+
+    # Note: GLIBCXX check is complex via CLI (part of libstdc++).
+    # Typically GLIBC 2.28 implies a sufficiently modern environment (e.g. Debian 10, RHEL 8).
+    # We rely on the distro version checks implicitly or adding explicit libstdc++ check if strictly needed.

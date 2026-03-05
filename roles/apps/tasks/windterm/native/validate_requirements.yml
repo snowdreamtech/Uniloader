@@ -1,0 +1,13 @@
+---
+# =====================================================================
+# roles/apps/tasks/windterm/native/validate_requirements.yml
+# =====================================================================
+
+- name: "windterm (Native): Validate architecture {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - windterm_is_supported_arch | bool
+    fail_msg: |
+      WindTerm does not support architecture '{{ ansible_architecture }}'.
+      Only x86_64 (amd64) is supported.
+    success_msg: "Architecture verified: {{ ansible_architecture }}"

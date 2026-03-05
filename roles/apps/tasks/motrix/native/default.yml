@@ -1,0 +1,38 @@
+---
+# =====================================================================
+# roles/apps/tasks/motrix/native/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Check architecture support
+# ---------------------------------------------------------------------
+
+- name: "motrix (Native): Validate architecture support {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Architecture {{ ansible_architecture }} (mapped to {{ motrix_arch }}) is not supported by Motrix. Supported: x86_64, arm64."
+  when:
+    - app_state | default('present', true) == 'present'
+    - not (motrix_is_supported_arch | default(false, true) | bool)
+
+# ---------------------------------------------------------------------
+# Dispatch: Platform-specific installation
+# ---------------------------------------------------------------------
+
+- name: "motrix (Native): Carry out platform-specific installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      paths: ["{{ role_path }}/tasks/motrix/native"]
+      files:
+        - "{{ os_distribution }}.yml"
+        - "{{ os_family }}.yml"
+        - "linux_install.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+    - os_family != 'windows'
+
+- name: "motrix (Native/Windows): Carry out Windows installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "windows.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+    - os_family == 'windows'

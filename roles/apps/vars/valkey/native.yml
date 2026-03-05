@@ -1,0 +1,13 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/native.yml
+# =====================================================================
+
+valkey_overrides:
+  app_state: "started"
+  app_service_enabled: true
+  # WHY: Common config paths across distributions
+  app_config_paths:
+    - "/etc/valkey/valkey.conf"
+    - "/etc/valkey.conf"
+    - "/usr/local/etc/valkey.conf"

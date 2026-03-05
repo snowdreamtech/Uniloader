@@ -1,0 +1,39 @@
+---
+# =====================================================================
+# roles/apps/tasks/motrix/native/redhat.yml
+# =====================================================================
+
+# Case 1: x86_64 - Use RPM
+- name: "motrix (RedHat): Create temporary directory for RPM {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: motrix_rpm
+  register: _motrix_temp_rpm
+  when: ansible_architecture in ['x86_64', 'amd64']
+
+- name: "motrix (RedHat): Download .rpm package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ motrix_rpm_url }}"
+    dest: "{{ _motrix_temp_rpm.path }}/{{ motrix_rpm_filename }}"
+    mode: "0644"
+  register: _motrix_download_rpm
+  when: ansible_architecture in ['x86_64', 'amd64']
+
+- name: "motrix (RedHat): Install .rpm package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.dnf:
+    name: "{{ _motrix_download_rpm.dest }}"
+    state: present
+    disable_gpg_check: true
+  become: "{{ become_enabled }}"
+  when: ansible_architecture in ['x86_64', 'amd64']
+
+- name: "motrix (RedHat): Clean up temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ _motrix_temp_rpm.path }}"
+    state: absent
+  when: _motrix_temp_rpm is defined
+
+# Case 2: Non-x86_64 (e.g. ARM64) - Fallback to AppImage
+- name: "motrix (RedHat): Fallback to AppImage for non-x86_64 architectures {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "linux_install.yml"
+  when: ansible_architecture not in ['x86_64', 'amd64']

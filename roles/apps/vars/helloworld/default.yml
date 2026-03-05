@@ -1,0 +1,15 @@
+---
+# =====================================================================
+# roles/apps/vars/helloworld/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for helloworld
+# ---------------------------------------------------------------------
+helloworld_defaults:
+  app_desc: "Hello World for Container and Native"
+  app_version: "1.0.0"
+  app_homepage: "https://github.com/snowdreamtech/helloworld"
+  app_license: "MIT"
+  app_state: "present"
+  managed_by: "snowdreamtech"

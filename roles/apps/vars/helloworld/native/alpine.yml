@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/vars/helloworld/native/alpine.yml
+# =====================================================================
+
+helloworld_overrides:
+  # WHY: Alpine uses busybox as demonstration (hello package not available)
+  app_packages: ["busybox"]

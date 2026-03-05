@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/nginx/default.yml
+# =====================================================================
+
+nginx_defaults:
+  app_desc: "Nginx High-Performance Web Server and Reverse Proxy"
+  app_version: "latest"
+  app_homepage: "https://nginx.org"
+  app_license: "BSD-2-Clause"

@@ -1,0 +1,60 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity_tools/native/archlinux.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "antigravity_tools (ArchLinux): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "antigravity_tools (ArchLinux): Check if package is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pacman -Qi {{ antigravity_tools_package_name }}"
+  register: _ag_package_status
+  failed_when: false
+  changed_when: false
+  check_mode: false
+
+- name: "antigravity_tools (ArchLinux): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    antigravity_tools_is_installed: "{{ _ag_package_status.rc == 0 }}"
+
+# ---------------------------------------------------------------------
+# Installation: Run Official Script
+# ---------------------------------------------------------------------
+
+- name: "antigravity_tools (ArchLinux): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not antigravity_tools_is_installed or (antigravity_tools_force_install | default(false) | bool)
+  block:
+    - name: "antigravity_tools (ArchLinux): Run official installation script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.shell: |
+        curl -sSL https://raw.githubusercontent.com/lbjlaq/Antigravity-Manager/main/deploy/arch/install.sh | bash
+      args:
+        executable: /bin/bash
+      become: "{{ become_enabled }}"
+      register: _install_result
+      until: _install_result is succeeded
+      retries: "{{ antigravity_tools_download_retries | default(5) }}"
+      delay: "{{ antigravity_tools_download_delay | default(10) }}"
+
+# ---------------------------------------------------------------------
+# Uninstallation: Remove Package
+# ---------------------------------------------------------------------
+
+- name: "antigravity_tools (ArchLinux): Remove package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.pacman:
+    name: "{{ antigravity_tools_package_name }}"
+    state: absent
+  become: "{{ become_enabled }}"
+  when:
+    - app_state | default('present', true) == 'absent'
+    - antigravity_tools_is_installed

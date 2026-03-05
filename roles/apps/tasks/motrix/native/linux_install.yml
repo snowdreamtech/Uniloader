@@ -1,0 +1,44 @@
+---
+# =====================================================================
+# roles/apps/tasks/motrix/native/linux_install.yml
+# =====================================================================
+
+- name: "motrix (Linux): Ensure install directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ motrix_install_dir }}"
+    state: directory
+    mode: "0755"
+  become: "{{ become_enabled }}"
+
+- name: "motrix (Linux): Create temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: motrix
+  register: _motrix_temp_dir
+
+- name: "motrix (Linux): Download AppImage from GitHub Releases {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ motrix_linux_url }}"
+    dest: "{{ motrix_install_dir }}/Motrix.AppImage"
+    mode: "0755"
+  register: _motrix_download
+  become: "{{ become_enabled }}"
+  # Save directly to install dir? Or temp then move?
+  # Direct is fine if we have permissions (become used).
+  # We name it generic "Motrix.AppImage" for easier symlinking and updates.
+  # But usually versioning in filename is good for rollback?
+  # Let's keep it simple: overwrite "Motrix.AppImage".
+
+- name: "motrix (Linux): Symlink binary to bin dir {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    src: "{{ motrix_install_dir }}/Motrix.AppImage"
+    dest: "{{ motrix_bin_dir }}/{{ motrix_bin_name }}"
+    state: link
+    mode: "0755"
+  become: "{{ become_enabled }}"
+
+- name: "motrix (Linux): Clean up temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ _motrix_temp_dir.path }}"
+    state: absent
+  when: _motrix_temp_dir is defined

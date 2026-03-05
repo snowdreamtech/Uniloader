@@ -1,0 +1,149 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/native/windows.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "vscode (Windows/Native): Check if VS Code is already installed (Registry) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_powershell:
+    script: |
+      $uninstallKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+
+      $app = $uninstallKeys | ForEach-Object {
+        if (Test-Path $_) {
+          Get-ChildItem -Path $_ -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -match '^Microsoft Visual Studio Code' }
+        }
+      } | Select-Object -First 1
+
+      if ($app) {
+        $ansible.Result = @{ installed = $true; path = $app.InstallLocation; version = $app.DisplayVersion }
+      } else {
+        $ansible.Result = @{ installed = $false }
+      }
+  register: _vscode_reg_check
+
+- name: "vscode (Windows/Native): Set installation status fact"
+  ansible.builtin.set_fact:
+    _vscode_is_installed: "{{ _vscode_reg_check.result.installed | default(false) }}"
+
+- name: "vscode (Windows/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Visual Studio Code is already installed. Skipping installation steps."
+  when: _vscode_is_installed
+
+# ---------------------------------------------------------------------
+# 1. Winget Installation
+# ---------------------------------------------------------------------
+
+# WHY: Winget is superior for Windows 10/11 standard installs.
+- name: "vscode (Windows/Native): Install via Winget {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.windows.win_winget:
+    name: "{{ vscode_windows_package_name }}"
+    state: "{{ 'present' if app_state | default('present', true) == 'present' else 'absent' }}"
+  when:
+    - not _vscode_is_installed
+    - app_state | default('present', true) == 'present'
+  register: _vscode_winget_result
+  ignore_errors: true
+
+# ---------------------------------------------------------------------
+# 2. Chocolatey Fallback
+# ---------------------------------------------------------------------
+
+- name: "vscode (Windows/Native): Install via Chocolatey fallback {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  chocolatey.chocolatey.win_chocolatey:
+    name: "vscode"
+    state: "{{ 'present' if app_state | default('present', true) == 'present' else 'absent' }}"
+  when:
+    - not _vscode_is_installed
+    - _vscode_winget_result is skipped or _vscode_winget_result is failed
+  register: _vscode_choco_result
+  ignore_errors: true
+
+# ---------------------------------------------------------------------
+# 3. Direct Download Fallback (User Installer)
+# ---------------------------------------------------------------------
+
+- name: "vscode (Windows/Native): Prepare for Direct Download {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - not _vscode_is_installed
+    - (_vscode_winget_result is skipped or _vscode_winget_result is failed)
+    - (_vscode_choco_result is skipped or _vscode_choco_result is failed)
+  block:
+    - name: "vscode (Windows/Native): Determine Download URL"
+      ansible.builtin.set_fact:
+        _vscode_dl_url: "https://update.code.visualstudio.com/latest/win32-{{ vscode_arch }}-user/stable"
+
+    - name: "vscode (Windows/Native): Create temp directory"
+      ansible.windows.win_tempfile:
+        state: directory
+        suffix: "vscode_install"
+      register: _vscode_temp_dir
+
+    - name: "vscode (Windows/Native): Download VS Code User Installer"
+      ansible.windows.win_get_url:
+        url: "{{ _vscode_dl_url }}"
+        dest: "{{ _vscode_temp_dir.path }}\\VSCodeUserSetup.exe"
+      register: _vscode_download
+      retries: 3
+      delay: 5
+      until: _vscode_download is succeeded
+
+    - name: "vscode (Windows/Native): Install VS Code (User)"
+      ansible.windows.win_package:
+        path: "{{ _vscode_temp_dir.path }}\\VSCodeUserSetup.exe"
+        product_id: "auto"
+        arguments: "/verysilent /mergetasks=!runcode,addcontextmenufiles,addcontextmenufolders"
+        state: present
+      register: _vscode_direct_install
+
+    - name: "vscode (Windows/Native): Cleanup"
+      ansible.windows.win_file:
+        path: "{{ _vscode_temp_dir.path }}"
+        state: absent
+
+# ---------------------------------------------------------------------
+# 4. Extension Management
+# ---------------------------------------------------------------------
+
+# WHY: Explicitly included here to ensure it runs regardless of how this file was loaded.
+- name: "vscode (Windows/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_extensions is defined
+    - vscode_extensions | length > 0
+
+# ---------------------------------------------------------------------
+# 5. Uninstallation (Direct Download / Cleanup)
+# ---------------------------------------------------------------------
+
+- name: "vscode (Windows/Native): Check for uninstaller (User) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_stat:
+    path: '%LocalAppData%\Programs\Microsoft VS Code\unins000.exe'
+  register: _vscode_user_uninstaller
+  when: app_state | default('present', true) == 'absent'
+
+- name: "vscode (Windows/Native): Run uninstaller (User) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_command: '"{{ _vscode_user_uninstaller.stat.path }}" /verysilent'
+  when:
+    - app_state | default('present', true) == 'absent'
+    - _vscode_user_uninstaller.stat.exists
+
+- name: "vscode (Windows/Native): Remove install directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_file:
+    path: '%LocalAppData%\Programs\Microsoft VS Code'
+    state: absent
+  when: app_state | default('present', true) == 'absent'
+
+- name: "vscode (Windows/Native): Remove extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_file:
+    path: '%UserProfile%\.vscode'
+    state: absent
+  when: app_state | default('present', true) == 'absent'

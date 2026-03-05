@@ -1,0 +1,13 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/container.yml
+# =====================================================================
+
+redis_overrides:
+  app_image: "redis:alpine"
+  app_ports:
+    - "6379:6379"
+  app_env:
+    ALLOW_EMPTY_PASSWORD: "yes"
+  app_volumes:
+    - "redis_data:/data"

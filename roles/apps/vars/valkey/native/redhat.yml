@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/native/redhat.yml
+# =====================================================================
+
+valkey_overrides:
+  # WHY: Valkey is the package name across all RHEL-family distributions
+  # Available in RHEL 10+, Rocky 10+, AlmaLinux 10+, Fedora 41+ default repos
+  # For older versions, available via EPEL or Remi repositories
+  app_packages: ["valkey"]
+  app_service: "valkey"

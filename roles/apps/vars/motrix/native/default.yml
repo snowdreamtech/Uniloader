@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/motrix/native/default.yml
+# =====================================================================
+
+motrix_install_dir: "/opt/Motrix"
+motrix_bin_dir: "/usr/local/bin"
+motrix_bin_name: "motrix"
+
+# macOS Specific
+motrix_app_name: "Motrix.app"
+motrix_mac_install_path: "/Applications"

@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/nvm/native.yml
+# =====================================================================
+
+nvm_overrides:
+  # WHY: NVM is installed via official install script on most platforms
+  # No official packages available in most distro repositories
+  app_state: "present"
+  app_install_cmd: "curl -fsSL {{ github_proxy }}https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash"
+  app_install_creates: "{{ ansible_user_home }}/.nvm/nvm.sh"

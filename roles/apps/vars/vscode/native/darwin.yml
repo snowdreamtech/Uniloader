@@ -1,0 +1,23 @@
+---
+# =====================================================================
+# roles/apps/vars/vscode/native/darwin.yml
+# =====================================================================
+
+vscode_overrides:
+  # WHY: Both Homebrew (cask) and MacPorts provide VSCode
+  # Homebrew: visual-studio-code, MacPorts: vscode
+  app_packages: >-
+    {{
+      ['visual-studio-code'] if os_pkg_mgr == 'homebrew'
+      else ['vscode'] if os_pkg_mgr == 'macports'
+      else ['visual-studio-code']
+    }}
+
+# Package name for Brew/Port
+vscode_darwin_brew_cask: "visual-studio-code"
+
+# Direct download URL construction
+# Example: https://update.code.visualstudio.com/latest/darwin/stable (Intel)
+# Example: https://update.code.visualstudio.com/latest/darwin-arm64/stable (ARM)
+vscode_darwin_download_arch: "{{ '' if vscode_arch == 'x64' else '-' ~ vscode_arch }}"
+vscode_darwin_download_url: "{{ vscode_download_url_base }}/darwin{{ vscode_darwin_download_arch }}/{{ vscode_channel }}"

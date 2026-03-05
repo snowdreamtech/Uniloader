@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/nginx/native/ubuntu.yml
+# =====================================================================
+
+nginx_overrides:
+  app_packages: ["nginx"]
+  app_service: "nginx"
+  # WHY: Ubuntu uses systemd for service management
+  app_init_system: "systemd"

@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity_tools/container.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Container Configuration
+# ---------------------------------------------------------------------
+antigravity_tools_container_supported: true
+
+# Image
+antigravity_tools_image: "lbjlaq/antigravity-manager:{{ antigravity_tools_version }}"
+antigravity_tools_container_name: "antigravity-manager"
+
+# Ports
+# Default port is 8080 (internal) mapped to app_port (external)
+antigravity_tools_ports:
+  - "{{ app_port | default('8080') }}:8080"
+
+# Volumes
+# Persistence: Mount ~/.antigravity-tools to persist your data.
+antigravity_tools_volumes:
+  - "{{ antigravity_tools_persistence_path | default('~/.antigravity-tools') }}:~/.antigravity-tools"
+
+# Environment Variables
+antigravity_tools_env: {}

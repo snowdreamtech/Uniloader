@@ -1,0 +1,61 @@
+---
+# =====================================================================
+# roles/apps/tasks/motrix/native/windows.yml
+# =====================================================================
+
+- name: "motrix (Windows): Create temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_tempfile:
+    state: directory
+    suffix: motrix
+  register: _motrix_temp_win
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "motrix (Windows): Check if Motrix is installed (Registry) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_powershell:
+    script: |
+      $uninstallKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+
+      $app = $uninstallKeys | ForEach-Object {
+        if (Test-Path $_) {
+          Get-ChildItem -Path $_ -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -match '^Motrix' }
+        }
+      } | Select-Object -First 1
+
+      if ($app) {
+        $ansible.Result = @{ installed = $true; path = $app.InstallLocation; version = $app.DisplayVersion }
+      } else {
+        $ansible.Result = @{ installed = $false }
+      }
+  register: _motrix_reg_check
+
+- name: "motrix (Windows): Skip installation if installed"
+  ansible.builtin.debug:
+    msg: "Motrix is already installed."
+  when: _motrix_reg_check.result.installed | default(false)
+
+- name: "motrix (Windows): Download Installer {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_get_url:
+    url: "{{ motrix_win_url }}"
+    dest: "{{ _motrix_temp_win.path }}\\{{ motrix_win_filename }}"
+  register: _motrix_download_win
+
+- name: "motrix (Windows): Install Motrix {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_package:
+    path: "{{ _motrix_download_win.dest }}"
+    product_id: "Motrix" # Needs verification of actual ProductId/DisplayName
+    arguments: "/S" # NSIS silent install standard
+    state: present
+  when: not (_motrix_reg_check.result.installed | default(false))
+  register: _motrix_install_win
+
+- name: "motrix (Windows): Clean up temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_file:
+    path: "{{ _motrix_temp_win.path }}"
+    state: absent
+  when: _motrix_temp_win is defined

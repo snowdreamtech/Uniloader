@@ -1,0 +1,29 @@
+---
+# =====================================================================
+# roles/apps/tasks/motrix/native/debian.yml
+# =====================================================================
+
+- name: "motrix (Debian): Create temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: motrix_deb
+  register: _motrix_temp_deb
+
+- name: "motrix (Debian): Download .deb package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ motrix_deb_url }}"
+    dest: "{{ _motrix_temp_deb.path }}/{{ motrix_deb_filename }}"
+    mode: "0644"
+  register: _motrix_download_deb
+
+- name: "motrix (Debian): Install .deb package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apt:
+    deb: "{{ _motrix_download_deb.dest }}"
+    state: present
+  become: "{{ become_enabled }}"
+
+- name: "motrix (Debian): Clean up temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ _motrix_temp_deb.path }}"
+    state: absent
+  when: _motrix_temp_deb is defined

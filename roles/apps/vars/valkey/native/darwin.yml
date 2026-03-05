@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/native/darwin.yml
+# =====================================================================
+
+valkey_overrides:
+  # WHY: Both Homebrew and MacPorts use 'redis' as package name
+  app_packages: ["valkey"]
+  app_service: "valkey"
+  # WHY: macOS uses launchd for service management
+  app_init_system: "launchd"

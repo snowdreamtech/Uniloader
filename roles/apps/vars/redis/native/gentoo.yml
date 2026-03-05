@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native/gentoo.yml
+# =====================================================================
+
+redis_overrides:
+  # WHY: Gentoo uses category/package naming convention
+  app_packages: ["dev-db/redis"]
+  app_service: "redis"
+  # WHY: Gentoo uses OpenRC by default
+  app_init_system: "openrc"

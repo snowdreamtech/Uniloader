@@ -1,0 +1,21 @@
+---
+# =====================================================================
+# roles/apps/vars/cc_switch/native/archlinux.yml
+# =====================================================================
+
+# AUR package name
+cc_switch_aur_package: "cc-switch"
+
+# AppImage naming pattern
+cc_switch_archlinux_appimage: "CC-Switch-v{{ cc_switch_version }}-Linux.AppImage"
+
+# AppImage download URL
+cc_switch_archlinux_appimage_url: >-
+  {{
+    github_proxy +
+    cc_switch_github_url + '/releases/download/v' +
+    cc_switch_version + '/' + cc_switch_archlinux_appimage
+  }}
+
+# Installation path for AppImage
+cc_switch_archlinux_install_path: "/usr/local/bin/cc-switch"

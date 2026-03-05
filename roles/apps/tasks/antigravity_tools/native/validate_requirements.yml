@@ -1,0 +1,67 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity_tools/native/validate_requirements.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Check Hardware Requirements
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Native): Check Memory (Min 256MB) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - (ansible_memtotal_mb | default(0) | int) >= (antigravity_tools_min_requirements.ram_mb_min | int)
+    fail_msg: |
+      [Minimum Requirements Found]
+      RAM: 1GB recommended (minimum 256MB).
+      Current System RAM: {{ ansible_memtotal_mb }}MB.
+
+      Antigravity Tools requires at least 256MB of RAM to function.
+    success_msg: "Memory requirement met: {{ ansible_memtotal_mb }}MB >= 256MB"
+  when:
+    - app_state | default('present', true) == 'present'
+
+- name: "antigravity-tools (Native): Warn if Memory < Recommended (1GB) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Warning: Recommended memory is {{ antigravity_tools_min_requirements.ram_mb_rec }}MB. Current memory: {{ ansible_memtotal_mb }}MB."
+  when:
+    - app_state | default('present', true) == 'present'
+    - (ansible_memtotal_mb | default(0) | int) < (antigravity_tools_min_requirements.ram_mb_rec | int)
+
+# ---------------------------------------------------------------------
+# Validation: Check Architecture Support
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Native): Validate architecture support {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: |
+      [Minimum Requirements Found]
+      Architecture: Supports x86_64 (amd64) and ARM64 (aarch64).
+      Current Architecture: {{ ansible_architecture }}
+
+      See: Docker Deployment Guide (docker) if your architecture is not supported natively.
+  when:
+    - app_state | default('present', true) == 'present'
+    - ansible_architecture not in antigravity_tools_min_requirements.supported_arch
+
+# ---------------------------------------------------------------------
+# Validation: Check Persistence Path
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Native): Validate persistence path parent existence {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "{{ antigravity_tools_persistence_path | dirname }}"
+  register: _ag_persist_parent
+  when:
+    - app_state | default('present', true) == 'present'
+
+- name: "antigravity-tools (Native): Fail if persistence path parent is missing {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: |
+      [Minimum Requirements Found]
+      Persistence: Mount {{ antigravity_tools_persistence_path }} to persist your data.
+      Error: Parent directory '{{ antigravity_tools_persistence_path | dirname }}' does not exist.
+  when:
+    - app_state | default('present', true) == 'present'
+    - not (_ag_persist_parent.stat.exists | default(false))
+    - not (_ag_persist_parent.stat.isdir | default(false))

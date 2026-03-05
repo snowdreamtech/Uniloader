@@ -1,0 +1,30 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity_tools/native/darwin.yml
+# =====================================================================
+
+# macOS download file patterns
+antigravity_tools_darwin_dmg_universal: "Antigravity.Tools_{{ antigravity_tools_version }}_universal.dmg"
+antigravity_tools_darwin_dmg_x64: "Antigravity.Tools_{{ antigravity_tools_version }}_x64.dmg"
+antigravity_tools_darwin_dmg_aarch64: "Antigravity.Tools_{{ antigravity_tools_version }}_aarch64.dmg"
+
+# Select appropriate DMG based on architecture
+antigravity_tools_darwin_dmg: >-
+  {{
+    antigravity_tools_darwin_dmg_universal if ansible_architecture in ['universal'] else (
+      antigravity_tools_darwin_dmg_aarch64 if ansible_architecture in ['arm64', 'aarch64'] else
+      antigravity_tools_darwin_dmg_x64
+    )
+  }}
+
+# DMG download URL
+antigravity_tools_darwin_dmg_url: >-
+  {{
+    github_proxy +
+    antigravity_tools_github_url + '/releases/download/v' +
+    antigravity_tools_version + '/' + antigravity_tools_darwin_dmg
+  }}
+
+# App bundle name
+antigravity_tools_app_bundle: "Antigravity Tools.app"
+antigravity_tools_app_install_path: "/Applications/{{ antigravity_tools_app_bundle }}"

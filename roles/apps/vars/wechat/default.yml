@@ -1,0 +1,64 @@
+---
+# =====================================================================
+# roles/apps/vars/wechat/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for wechat
+# ---------------------------------------------------------------------
+wechat_defaults:
+  app_desc: "WeChat - A messaging and calling app"
+  app_version: "latest"
+  app_homepage: "https://weixin.qq.com/"
+  app_license: "Proprietary"
+  app_state: "present"
+
+# Global WeChat settings
+wechat_force_install: false
+wechat_download_retries: 5
+wechat_download_delay: 10
+
+# GitHub/Proxy Support (not strictly used for official dldir1 links, but good compatibility practice)
+# wechat_github_url: ...
+
+# Architecture mapping for Linux
+# Official Linux builds: x86_64, arm64, LoongArch
+_wechat_linux_arch_map:
+  x86_64: "x86_64"
+  amd64: "x86_64"
+  aarch64: "arm64"
+  arm64: "arm64"
+  loongarch64: "LoongArch"
+  loong64: "LoongArch"
+
+wechat_linux_arch: "{{ _wechat_linux_arch_map[ansible_architecture] | default(ansible_architecture, true) }}"
+
+# Check if architecture is supported (Linux)
+wechat_linux_supported_archs:
+  - "x86_64"
+  - "arm64"
+  - "LoongArch"
+
+wechat_is_supported_linux_arch: "{{ wechat_linux_arch in wechat_linux_supported_archs }}"
+
+# Download URLs
+# Windows
+wechat_win_url: "https://dldir1.qq.com/weixin/Windows/WeChatSetup.exe"
+wechat_win_min_version: "6.1" # Windows 7 (NT 6.1)
+
+# macOS
+wechat_mac_url: "https://dldir1.qq.com/weixin/mac/WeChatMac.dmg"
+
+# Linux Base
+wechat_linux_url_base: "https://dldir1v6.qq.com/weixin/Universal/Linux"
+
+# Linux Filenames (Dynamic)
+# Format: WeChatLinux_{ARCH}.{EXT}
+# EXT is determined by OS family in tasks (deb for Debian, rpm for RedHat, AppImage fallback)
+wechat_linux_filename_deb: "WeChatLinux_{{ wechat_linux_arch }}.deb"
+wechat_linux_filename_rpm: "WeChatLinux_{{ wechat_linux_arch }}.rpm"
+wechat_linux_filename_appimage: "WeChatLinux_{{ wechat_linux_arch }}.AppImage"
+
+wechat_linux_url_deb: "{{ wechat_linux_url_base }}/{{ wechat_linux_filename_deb }}"
+wechat_linux_url_rpm: "{{ wechat_linux_url_base }}/{{ wechat_linux_filename_rpm }}"
+wechat_linux_url_appimage: "{{ wechat_linux_url_base }}/{{ wechat_linux_filename_appimage }}"

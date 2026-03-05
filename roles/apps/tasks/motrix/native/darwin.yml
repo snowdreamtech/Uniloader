@@ -1,0 +1,42 @@
+---
+# =====================================================================
+# roles/apps/tasks/motrix/native/darwin.yml
+# =====================================================================
+
+- name: "motrix (Darwin): Create temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: motrix
+  register: _motrix_temp_mac
+  vars: pass
+
+- name: "motrix (Darwin): Download DMG from GitHub Releases {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ motrix_mac_url }}"
+    dest: "{{ _motrix_temp_mac.path }}/{{ motrix_mac_filename }}"
+    mode: "0644"
+  register: _motrix_download_mac
+
+- name: "motrix (Darwin): Mount DMG {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >-
+    hdiutil attach "{{ _motrix_download_mac.dest }}" -nobrowse -mountpoint "{{ _motrix_temp_mac.path }}/mnt"
+  changed_when: true
+  register: _motrix_mount
+
+- name: "motrix (Darwin): Copy app to Applications {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: >-
+    cp -R "{{ _motrix_temp_mac.path }}/mnt/{{ motrix_app_name }}" "{{ motrix_mac_install_path }}/"
+  become: "{{ become_enabled }}"
+  changed_when: true
+
+- name: "motrix (Darwin): Unmount DMG {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >-
+    hdiutil detach "{{ _motrix_temp_mac.path }}/mnt"
+  changed_when: true
+  ignore_errors: true
+
+- name: "motrix (Darwin): Clean up temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ _motrix_temp_mac.path }}"
+    state: absent
+  when: _motrix_temp_mac is defined

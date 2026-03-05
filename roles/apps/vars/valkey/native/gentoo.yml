@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/native/gentoo.yml
+# =====================================================================
+
+valkey_overrides:
+  # WHY: Gentoo uses category/package naming convention
+  app_packages: ["dev-db/valkey"]
+  app_service: "valkey"
+  # WHY: Gentoo uses OpenRC by default
+  app_init_system: "openrc"

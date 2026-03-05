@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/apps/vars/nvm/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for nvm
+# ---------------------------------------------------------------------
+nvm_defaults:
+  app_desc: "Node Version Manager - POSIX-compliant bash script to manage multiple active node.js versions"
+  app_version: "latest"
+  app_homepage: "https://github.com/nvm-sh/nvm"
+  app_license: "MIT"
+  app_state: "present"

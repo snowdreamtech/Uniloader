@@ -1,0 +1,164 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/native/darwin.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "vscode (Darwin/Native): Check if 'code' command is in PATH"
+  ansible.builtin.shell: "PATH={{ os_paths }} which code"
+  register: _vscode_which_code
+  failed_when: false
+  changed_when: false
+  check_mode: false
+
+- name: "vscode (Darwin/Native): Check if VS Code app exists"
+  ansible.builtin.stat:
+    path: "/Applications/Visual Studio Code.app"
+  register: _vscode_app_stat
+  check_mode: false
+
+- name: "vscode (Darwin/Native): Map installation status fact"
+  ansible.builtin.set_fact:
+    vscode_is_installed: "{{ _vscode_which_code.rc == 0 or _vscode_app_stat.stat.exists | default(false) }}"
+
+- name: "vscode (Darwin/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Visual Studio Code detected (Command: {{ _vscode_which_code.rc == 0 }}, App: {{ _vscode_app_stat.stat.exists }}). Skipping installation."
+  when: vscode_is_installed | bool
+
+# ---------------------------------------------------------------------
+# 1. Homebrew Installation
+# ---------------------------------------------------------------------
+
+- name: "vscode (Darwin/Native): Install via Homebrew Cask {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.homebrew_cask:
+    name: "{{ vscode_darwin_brew_cask }}"
+    state: "{{ 'present' if app_state | default('present', true) == 'present' else 'absent' }}"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not vscode_is_installed | bool
+    - is_homebrew_installed | default(false) | bool
+  register: _vscode_brew_result
+  ignore_errors: true
+
+# ---------------------------------------------------------------------
+# 2. Direct Download Fallback
+# ---------------------------------------------------------------------
+
+- name: "vscode (Darwin/Native): Prepare for Direct Download {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not vscode_is_installed | bool
+    - (not (is_homebrew_installed | default(false) | bool)) or (_vscode_brew_result is failed)
+  block:
+    - name: "vscode (Darwin/Native): Create temp directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: "_vscode_install"
+      register: _vscode_temp_dir
+
+    - name: "vscode (Darwin/Native): Determine Download URL"
+      ansible.builtin.set_fact:
+        _vscode_dl_url: >-
+          {{
+            'https://code.visualstudio.com/sha/download?build=stable&os=darwin-arm64'
+            if ansible_machine == 'arm64'
+            else (
+              'https://code.visualstudio.com/sha/download?build=stable&os=darwin'
+              if ansible_machine == 'x86_64'
+              else 'https://code.visualstudio.com/sha/download?build=stable&os=darwin-universal'
+            )
+          }}
+
+    - name: "vscode (Darwin/Native): Download VS Code Archive"
+      ansible.builtin.get_url:
+        url: "{{ _vscode_dl_url }}"
+        dest: "{{ _vscode_temp_dir.path }}/VSCode-darwin.zip"
+        mode: "0644"
+        headers:
+          User-Agent: "Ansible/VSCode-Installer"
+      register: _vscode_download
+      until: _vscode_download is succeeded
+      retries: 3
+      delay: 5
+
+    - name: "vscode (Darwin/Native): Validating Zip File"
+      ansible.builtin.stat:
+        path: "{{ _vscode_temp_dir.path }}/VSCode-darwin.zip"
+      register: _vscode_zip_stat
+
+    - name: "vscode (Darwin/Native): Fail if download failed"
+      ansible.builtin.fail:
+        msg: "Failed to download VS Code from {{ _vscode_dl_url }}"
+      when: not _vscode_zip_stat.stat.exists
+
+    - name: "vscode (Darwin/Native): Unzip VS Code"
+      ansible.builtin.unarchive:
+        src: "{{ _vscode_temp_dir.path }}/VSCode-darwin.zip"
+        dest: "{{ _vscode_temp_dir.path }}"
+        remote_src: true
+
+    - name: "vscode (Darwin/Native): Move to Applications"
+      ansible.builtin.command: "mv '{{ _vscode_temp_dir.path }}/Visual Studio Code.app' /Applications/"
+      become: true
+
+    - name: "vscode (Darwin/Native): Cleanup"
+      ansible.builtin.file:
+        path: "{{ _vscode_temp_dir.path }}"
+        state: absent
+
+# ---------------------------------------------------------------------
+# 3. PATH Configuration
+# ---------------------------------------------------------------------
+
+- name: "vscode (Darwin/Native): Configure PATH (symlink 'code') {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    src: "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+    dest: "/usr/local/bin/code"
+    state: link
+    force: true
+  become: true
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_is_installed or (_vscode_brew_result is succeeded) or (_vscode_download is succeeded)
+
+# ---------------------------------------------------------------------
+# 4. Extension Management
+# ---------------------------------------------------------------------
+
+# WHY: Since app_loader might select this file directly on macOS, bypassing
+# default.yml, we explicitly include extension management here to ensure
+# extensions are always checked/installed.
+- name: "vscode (Darwin/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+    - vscode_extensions is defined
+    - vscode_extensions | length > 0
+# ---------------------------------------------------------------------
+# 5. Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "vscode (Darwin/Native): Remove VS Code application {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/Applications/Visual Studio Code.app"
+    state: absent
+  become: true
+  when: app_state | default('present', true) == 'absent'
+
+- name: "vscode (Darwin/Native): Remove VS Code binary symlink {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/usr/local/bin/code"
+    state: absent
+  become: true
+  when: app_state | default('present', true) == 'absent'
+
+- name: "vscode (Darwin/Native): Remove VS Code extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.vscode"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'

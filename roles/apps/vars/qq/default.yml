@@ -1,0 +1,74 @@
+---
+# =====================================================================
+# roles/apps/vars/qq/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for qq
+# ---------------------------------------------------------------------
+qq_defaults:
+  app_desc: "QQ - A popular instant messaging app by Tencent"
+  app_version: "latest"
+  app_homepage: "https://im.qq.com/"
+  app_license: "Proprietary"
+  app_state: "present"
+
+# Global QQ settings
+qq_force_install: false
+qq_download_retries: 5
+qq_download_delay: 10
+
+# Architecture mapping for Linux
+# Official Linux builds: x86_64, arm64, loongarch64, mips64el
+_qq_linux_arch_map:
+  x86_64: "x86_64"
+  amd64: "x86_64"
+  aarch64: "arm64"
+  arm64: "arm64"
+  loongarch64: "loongarch64"
+  loong64: "loongarch64"
+  mips64el: "mips64el"
+
+qq_linux_arch: "{{ _qq_linux_arch_map[ansible_architecture] | default(ansible_architecture, true) }}"
+
+# Check if architecture is supported (Linux)
+qq_linux_supported_archs:
+  - "x86_64"
+  - "arm64"
+  - "loongarch64"
+  - "mips64el"
+
+qq_is_supported_linux_arch: "{{ qq_linux_arch in qq_linux_supported_archs }}"
+
+# Download URLs
+# NOTE: QQ often uses versioned URLs. These should be updated periodically.
+
+# Windows
+# Latest PC version as of Jan 2026.
+# If a static link exists (e.g. https://dldir1.qq.com/qqfile/qq/QQ9.exe), it would be better,
+# but usually it redirects or changes.
+# Using a specific recent version for stability.
+qq_win_url: "https://dldir1.qq.com/qqfile/qq/PCQQ9.7.23/29329/QQ9.7.23.29329.exe"
+qq_win_min_version: "6.1" # Windows 7 (NT 6.1)
+
+# macOS
+# Official download link for macOS
+qq_mac_url: "https://dldir1.qq.com/qqfile/qq/QQNT/Mac/QQ_6.9.26.21634_universal.dmg"
+
+# Linux Base
+# Official generic Linux versions (QQ NT)
+qq_linux_version: "3.2.14_250109"
+qq_linux_url_base: "https://dldir1.qq.com/qqfile/qq/QQNT/Linux"
+
+# Linux Filenames (Dynamic)
+# Format: NEW: QQ_{VERSION}_{ARCH}_01.{EXT} or similar
+# Old format was linuxqq_...
+# We need to be careful with the exact filename format as it changes.
+# Based on research: QQ_3.2.14_250109_x86_64_01.deb
+qq_linux_filename_deb: "QQ_{{ qq_linux_version }}_{{ qq_linux_arch }}_01.deb"
+qq_linux_filename_rpm: "QQ_{{ qq_linux_version }}_{{ qq_linux_arch }}_01.rpm"
+qq_linux_filename_appimage: "QQ_{{ qq_linux_version }}_{{ qq_linux_arch }}_01.AppImage"
+
+qq_linux_url_deb: "{{ qq_linux_url_base }}/{{ qq_linux_filename_deb }}"
+qq_linux_url_rpm: "{{ qq_linux_url_base }}/{{ qq_linux_filename_rpm }}"
+qq_linux_url_appimage: "{{ qq_linux_url_base }}/{{ qq_linux_filename_appimage }}"

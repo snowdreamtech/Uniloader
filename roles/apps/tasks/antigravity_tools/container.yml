@@ -1,0 +1,34 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity_tools/container.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+- name: "antigravity-tools (Container): Validate support {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Container deployment is not supported for antigravity-tools on this platform."
+  when: not (antigravity_tools_container_supported | default(true) | bool)
+
+# ---------------------------------------------------------------------
+# Configuration: Logic
+# ---------------------------------------------------------------------
+- name: "antigravity-tools (Container): Set container facts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _ag_container_state: "{{ 'started' if app_state | default('present', true) == 'present' else 'absent' }}"
+
+# ---------------------------------------------------------------------
+# Execution: Docker Container
+# ---------------------------------------------------------------------
+- name: "antigravity-tools (Container): Manage container {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.docker.docker_container:
+    name: "{{ antigravity_tools_container_name | default('antigravity-manager') }}"
+    image: "{{ antigravity_tools_image }}"
+    state: "{{ _ag_container_state }}"
+    restart_policy: "{{ antigravity_tools_restart_policy | default('unless-stopped') }}"
+    ports: "{{ antigravity_tools_ports | default(['8080:8080']) }}"
+    volumes: "{{ antigravity_tools_volumes | default(['~/.antigravity-tools:~/.antigravity-tools']) }}"
+    env: "{{ antigravity_tools_env | default({}) }}"
+    recreate: "{{ antigravity_tools_recreate | default(false) }}"
+  become: "{{ become_enabled }}"

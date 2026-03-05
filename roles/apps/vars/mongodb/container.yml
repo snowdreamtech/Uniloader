@@ -1,0 +1,45 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/container.yml
+# =====================================================================
+
+mongodb_overrides:
+  # Container ownership (Automatically detected if omitted)
+  # app_volume_owner: "101"
+  # app_volume_group: "101"
+
+  # Container image
+  app_image: "mongo:{{ app_version | default('7.0') }}"
+
+  # Port mapping
+  app_ports:
+    - "{{ app_port | default(27017) }}:27017"
+
+  # Environment variables
+  app_env:
+    MONGODB_INITDB_ROOT_USERNAME: "{{ mongodb_root_user | default(ansible_user_name) }}"
+    MONGODB_INITDB_ROOT_PASSWORD: "{{ mongodb_root_password | default(ansible_user_password) }}"
+    MONGODB_INITDB_DATABASE: "{{ mongodb_init_database | default('admin') }}"
+
+  # Volume mounts
+  app_volumes:
+    - "{{ mongodb_data_volume | default('mongodb_data') }}:/data/db"
+    - "{{ mongodb_config_volume | default('mongodb_config') }}:/data/configdb"
+
+  # Restart policy
+  app_restart_policy: "unless-stopped"
+
+  # Health check
+  app_healthcheck:
+    test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+    interval: "10s"
+    timeout: "5s"
+    retries: 3
+    start_period: "40s"
+
+  # Resource limits (optional, can be overridden)
+  app_memory: "{{ mongodb_memory_limit | default(omit) }}"
+  app_cpus: "{{ mongodb_cpu_limit | default(omit) }}"
+
+  # Network (optional)
+  app_networks: "{{ mongodb_networks | default(omit) }}"

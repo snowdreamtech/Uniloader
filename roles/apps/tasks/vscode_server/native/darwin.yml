@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode_server/native/darwin.yml
+# =====================================================================
+
+- name: "Vscode_server (Darwin): Fail on unsupported OS"
+  ansible.builtin.fail:
+    msg: "VS Code Server does NOT support macOS (Darwin)."

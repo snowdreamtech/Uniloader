@@ -1,0 +1,98 @@
+---
+# =====================================================================
+# roles/apps/tasks/windterm/native/linux_install.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "windterm (Linux): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "windterm (Linux): Check if WindTerm binary exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "{{ windterm_install_dir }}/WindTerm"
+  register: _windterm_bin_stat
+
+- name: "windterm (Linux): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    windterm_is_installed: "{{ _windterm_bin_stat.stat.exists | default(false) }}"
+
+# ---------------------------------------------------------------------
+# Installation: Zip Download and Install
+# ---------------------------------------------------------------------
+
+- name: "windterm (Linux): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not windterm_is_installed or (windterm_force_install | default(false) | bool)
+  block:
+    - name: "windterm (Linux): Create install directory"
+      ansible.builtin.file:
+        path: "{{ windterm_install_dir }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ ansible_user_id }}"
+        group: "{{ ansible_user_gid | default(omit) }}"
+      become: true
+
+    - name: "windterm (Linux): Create temporary directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: windterm
+      register: _wt_temp_dir
+
+    - name: "windterm (Linux): Download Zip artifact"
+      ansible.builtin.get_url:
+        url: "{{ windterm_linux_url }}"
+        dest: "{{ _wt_temp_dir.path }}/WindTerm.zip"
+      register: _zip_download
+      until: _zip_download is succeeded
+      retries: "{{ windterm_download_retries | default(5) }}"
+      delay: "{{ windterm_download_delay | default(10) }}"
+
+    - name: "windterm (Linux): Unarchive Zip"
+      ansible.builtin.unarchive:
+        src: "{{ _zip_download.dest }}"
+        dest: "{{ windterm_install_dir }}"
+        remote_src: true
+        mode: "0755" # Ensure executable permissions
+      become: true
+
+    - name: "windterm (Linux): Create global symlink"
+      ansible.builtin.file:
+        src: "{{ windterm_install_dir }}/WindTerm"
+        dest: "/usr/local/bin/WindTerm"
+        state: link
+      become: true
+
+  always:
+    - name: "windterm (Linux): Clean up"
+      ansible.builtin.file:
+        path: "{{ _wt_temp_dir.path }}"
+        state: absent
+      when: _wt_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "windterm (Linux): Remove installation directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ windterm_install_dir }}"
+    state: absent
+  become: true
+  when: app_state | default('present', true) == 'absent'
+
+- name: "windterm (Linux): Remove global symlink {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/usr/local/bin/WindTerm"
+    state: absent
+  become: true
+  when: app_state | default('present', true) == 'absent'

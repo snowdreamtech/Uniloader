@@ -1,0 +1,79 @@
+---
+# =====================================================================
+# roles/apps/tasks/cc_switch/native/debian.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Debian): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Debian): Check if package is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "dpkg-query -W -f='${Status}' {{ cc_switch_package_name }}"
+  register: _cc_package_status
+  failed_when: false
+  changed_when: false
+  check_mode: false
+
+- name: "cc_switch (Debian): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    cc_switch_is_installed: "{{ 'install ok installed' in _cc_package_status.stdout }}"
+
+# ---------------------------------------------------------------------
+# Installation: Download and Install DEB
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Debian): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not cc_switch_is_installed or (cc_switch_force_install | default(false) | bool)
+  block:
+    - name: "cc_switch (Debian): Create temporary directory for download {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: ccswitch
+      register: _cc_temp_dir
+
+    - name: "cc_switch (Debian): Download DEB artifact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.get_url:
+        url: "{{ cc_switch_download_url_base }}/{{ cc_switch_artifacts.linux_deb }}"
+        dest: "{{ _cc_temp_dir.path }}/{{ cc_switch_artifacts.linux_deb }}"
+        mode: "0644"
+      register: _download_result
+      until: _download_result is succeeded
+      retries: "{{ cc_switch_download_retries | default(5) }}"
+      delay: "{{ cc_switch_download_delay | default(10) }}"
+
+    - name: "cc_switch (Debian): Install DEB package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.apt:
+        deb: "{{ _cc_temp_dir.path }}/{{ cc_switch_artifacts.linux_deb }}"
+        state: present
+      become: "{{ become_enabled }}"
+      register: _install_result
+
+  always:
+    - name: "cc_switch (Debian): Clean up temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.file:
+        path: "{{ _cc_temp_dir.path }}"
+        state: absent
+      when: _cc_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation: Remove Package
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Debian): Remove package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apt:
+    name: "{{ cc_switch_package_name }}"
+    state: absent
+  become: "{{ become_enabled }}"
+  when:
+    - app_state | default('present', true) == 'absent'
+    - cc_switch_is_installed

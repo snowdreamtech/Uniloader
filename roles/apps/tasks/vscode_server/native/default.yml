@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode_server/native/default.yml
+# =====================================================================
+
+- name: "Vscode_server (Default): Include Linux implementation"
+  ansible.builtin.include_tasks: "linux.yml"
+  # We attempt linux.yml as a "best effort" fallback for unknown Linux distros.
+  # If it's not Linux, validate_requirements.yml inside linux.yml will catch it.

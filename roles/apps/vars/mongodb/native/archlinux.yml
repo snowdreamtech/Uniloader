@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/archlinux.yml
+# =====================================================================
+
+mongodb_overrides:
+  # WHY: Arch uses mongodb-bin from AUR (binary package)
+  # or mongodb from community repos (compile from source)
+  app_packages: ["mongodb-bin"]
+  app_service: "mongodb"
+  # WHY: Arch Linux uses systemd for service management
+  app_init_system: "systemd"

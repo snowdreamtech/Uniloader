@@ -1,0 +1,110 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity/native/redhat.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "antigravity (RedHat/Native): Validate system requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+- name: "antigravity (RedHat/Native): Check if Antigravity is already installed (rpm) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "rpm -q {{ antigravity_redhat_package }}"
+  register: _antigravity_rpm_check
+  failed_when: false
+  changed_when: false
+
+- name: "antigravity (RedHat/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Antigravity is already installed. Skipping installation steps."
+  when: _antigravity_rpm_check.rc == 0
+
+# ---------------------------------------------------------------------
+# 1. Repository Setup: Google YUM Repository
+# ---------------------------------------------------------------------
+
+- name: "antigravity (RedHat/Native): Setup repository for Antigravity {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - _antigravity_rpm_check.rc != 0
+    - app_state | default('present', true) == 'present'
+  block:
+    - name: "antigravity (RedHat/Native): Add Antigravity YUM repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.yum_repository:
+        name: "antigravity-rpm"
+        description: "Antigravity RPM Repository"
+        baseurl: "{{ antigravity_redhat_repo_url }}"
+        enabled: true
+        gpgcheck: false
+      become: "{{ become_enabled }}"
+
+    - name: "antigravity (RedHat/Native): Install Antigravity via yum/dnf {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.package:
+        name: "{{ antigravity_redhat_package }}"
+        state: present
+      become: "{{ become_enabled }}"
+  rescue:
+    # ---------------------------------------------------------------------
+    # 2. Fallback: Direct .rpm installation
+    # ---------------------------------------------------------------------
+    - name: "antigravity (RedHat/Native): Fallback to direct download installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      when: app_state | default('present', true) == 'present'
+      block:
+        - name: "antigravity (RedHat/Native): Download .rpm package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.get_url:
+            url: "{{ antigravity_redhat_download_url }}"
+            dest: "/tmp/antigravity.rpm"
+            mode: "0644"
+          become: "{{ become_enabled }}"
+          retries: 3
+          delay: 5
+          register: _antigravity_rpm_download
+          until: _antigravity_rpm_download is succeeded
+
+        - name: "antigravity (RedHat/Native): Install .rpm package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.yum:
+            name: "/tmp/antigravity.rpm"
+            state: present
+            disable_gpg_check: true
+          become: "{{ become_enabled }}"
+
+        - name: "antigravity (RedHat/Native): Clean up temporary .rpm file {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.file:
+            path: "/tmp/antigravity.rpm"
+            state: absent
+          become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# 3. Extension Management
+# ---------------------------------------------------------------------
+
+- name: "antigravity (RedHat/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 4. Cleanup: Remove package if state is absent
+# ---------------------------------------------------------------------
+
+- name: "antigravity (RedHat/Native): Remove Antigravity package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.package:
+    name: "{{ antigravity_redhat_package }}"
+    state: absent
+  become: "{{ become_enabled }}"
+  when: app_state | default('present', true) == 'absent'
+
+- name: "antigravity (RedHat/Native): Remove Antigravity repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.yum_repository:
+    name: "antigravity-rpm"
+    state: absent
+  become: "{{ become_enabled }}"
+  when: app_state | default('present', true) == 'absent'
+
+- name: "antigravity (RedHat/Native): Remove Antigravity extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.antigravity"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'

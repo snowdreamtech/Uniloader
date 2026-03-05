@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/apps/vars/helloworld/container.yml
+# =====================================================================
+
+helloworld_overrides:
+  app_name: helloworld
+  app_image: "hello-world:latest"
+  app_restart_policy: "no"
+  app_desc: "HelloWorld running as Container Service"
+  app_labels:
+    tier: "HelloWorld"
+    mode: "container"
+    managed_by: "snowdreamtech"

@@ -1,0 +1,83 @@
+---
+# =====================================================================
+# roles/apps/tasks/qq/native/windows.yml
+# =====================================================================
+
+- name: "qq (Windows): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# Detection
+- name: "qq (Windows): Check if QQ is installed (Registry)"
+  ansible.windows.win_powershell:
+    script: |
+      $uninstallKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+      $app = $uninstallKeys | ForEach-Object {
+        if (Test-Path $_) { Get-ChildItem -Path $_ -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -match '^QQ' } }
+      } | Select-Object -First 1
+      if ($app) { $ansible.Result = @{ installed = $true } } else { $ansible.Result = @{ installed = $false } }
+  register: _qq_reg_check
+
+- name: "qq (Windows): Set installation status fact"
+  ansible.builtin.set_fact:
+    qq_is_installed: "{{ _qq_reg_check.result.installed | default(false) }}"
+
+# Installation
+- name: "qq (Windows): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not qq_is_installed or (qq_force_install | default(false) | bool)
+  block:
+    - name: "qq (Windows): Create temporary directory"
+      ansible.windows.win_tempfile:
+        state: directory
+        suffix: qq
+      register: _qq_win_temp
+
+    - name: "qq (Windows): Download Installer"
+      ansible.windows.win_get_url:
+        url: "{{ qq_win_url }}"
+        dest: "{{ _qq_win_temp.path }}\\QQSetup.exe"
+      register: _win_download
+      until: _win_download is succeeded
+      retries: "{{ qq_download_retries | default(5) }}"
+      delay: "{{ qq_download_delay | default(10) }}"
+
+    - name: "qq (Windows): Install package (Silent)"
+      ansible.windows.win_package:
+        path: "{{ _qq_win_temp.path }}\\QQSetup.exe"
+        arguments: "/S"
+        state: present
+      become: true
+
+  always:
+    - name: "qq (Windows): Clean up"
+      ansible.windows.win_file:
+        path: "{{ _qq_win_temp.path }}"
+        state: absent
+      when: _qq_win_temp.path is defined
+
+# Uninstallation
+# Note: Uninstallation usually requires finding the UninstallString from registry which can be complex to automate reliably if not standard MSI.
+# QQ uses NSIS installer usually.
+- name: "qq (Windows): Uninstall package"
+  ansible.windows.win_powershell:
+    script: |
+      $uninstallKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+      $uString = $uninstallKeys | ForEach-Object {
+        if (Test-Path $_) { Get-ChildItem -Path $_ -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -match '^QQ' } }
+      } | Select-Object -ExpandProperty UninstallString -ErrorAction SilentlyContinue
+
+      if ($uString) {
+        Start-Process -FilePath $uString -ArgumentList "/S" -Wait -NoNewWindow
+      }
+  become: true
+  when:
+    - app_state | default('present', true) == 'absent'
+    - qq_is_installed

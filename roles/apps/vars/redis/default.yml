@@ -1,0 +1,15 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/default.yml
+# =====================================================================
+
+redis_defaults:
+  app_desc: "Redis High-Performance Key-Value Store"
+  app_version: "latest"
+  app_homepage: "https://redis.io"
+  app_license: "SSPL (Server Side Public License)"
+  # WHY: Some distributions migrated to Valkey due to licensing concerns
+  # RHEL 10+, Rocky 10+, AlmaLinux 10+, Fedora 41+ use Valkey by default
+  app_migration_note: >-
+    RHEL 10+, Rocky 10+, AlmaLinux 10+, Fedora 41+
+    use Valkey as default replacement

@@ -1,0 +1,13 @@
+---
+# =====================================================================
+# roles/apps/tasks/windterm/native/default.yml
+# =====================================================================
+
+- name: "windterm (Default): Fail on unsupported OS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: |
+      Error: WindTerm is not supported on {{ ansible_os_family }} ({{ ansible_distribution }}).
+      Supported Platforms:
+      - macOS (x86_64)
+      - Windows (x86_64)
+      - Linux (x86_64)

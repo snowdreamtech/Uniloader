@@ -1,0 +1,94 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity_tools/native/windows.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Windows): Validate architecture {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Windows installation only supports amd64 (x64) architecture."
+  when:
+    - app_state | default('present', true) == 'present'
+    - ansible_architecture != 'amd64'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Windows): Check if package is installed (Registry) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_powershell:
+    script: |
+      $uninstallKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+
+      $app = $uninstallKeys | ForEach-Object {
+        if (Test-Path $_) {
+          Get-ChildItem -Path $_ -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -match '^Antigravity Tools' }
+        }
+      } | Select-Object -First 1
+
+      if ($app) {
+        $ansible.Result = @{ installed = $true; path = $app.InstallLocation; version = $app.DisplayVersion }
+      } else {
+        $ansible.Result = @{ installed = $false }
+      }
+  register: _ag_reg_check
+
+- name: "antigravity-tools (Windows): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    antigravity_tools_is_installed: "{{ _ag_reg_check.result.installed | default(false) }}"
+
+# ---------------------------------------------------------------------
+# Installation: Download and Install
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Windows): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not antigravity_tools_is_installed or (antigravity_tools_force_install | default(false) | bool)
+  block:
+    - name: "antigravity-tools (Windows): Create temporary directory for download"
+      ansible.windows.win_tempfile:
+        state: directory
+        suffix: agtools
+      register: _ag_temp_dir
+
+    # Prefer MSI for Windows management if available, otherwise Setup EXE
+    - name: "antigravity-tools (Windows): Download MSI artifact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.windows.win_get_url:
+        url: "{{ antigravity_tools_download_url_base }}/{{ antigravity_tools_artifacts.windows_msi }}"
+        dest: "{{ _ag_temp_dir.path }}\\{{ antigravity_tools_artifacts.windows_msi }}"
+      register: _download_result
+      until: _download_result is succeeded
+      retries: "{{ antigravity_tools_download_retries | default(5) }}"
+      delay: "{{ antigravity_tools_download_delay | default(10) }}"
+
+    - name: "antigravity-tools (Windows): Install MSI package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.windows.win_package:
+        path: "{{ _ag_temp_dir.path }}\\{{ antigravity_tools_artifacts.windows_msi }}"
+        state: present
+      register: _install_result
+
+  always:
+    - name: "antigravity-tools (Windows): Clean up temporary directory"
+      ansible.windows.win_file:
+        path: "{{ _ag_temp_dir.path }}"
+        state: absent
+      when: _ag_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation: Remove Package
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Windows): Remove package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_package:
+    name: "Antigravity Tools"
+    state: absent
+  when:
+    - app_state | default('present', true) == 'absent'
+    - antigravity_tools_is_installed

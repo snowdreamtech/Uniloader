@@ -1,0 +1,34 @@
+---
+# =====================================================================
+# roles/apps/tasks/cc_switch/native/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Check architecture support
+# ---------------------------------------------------------------------
+
+# WHY: CC Switch officially supports x86_64 and ARM64.
+# We fail early if the architecture is not in our supported list.
+- name: "cc-switch (Native): Validate architecture support {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Architecture {{ ansible_architecture }} (mapped to {{ cc_switch_arch }}) is not supported by CC Switch. Supported: x64, arm64."
+  when:
+    - app_state | default('present', true) == 'present'
+    - not (cc_switch_is_supported_arch | default(false, true) | bool)
+
+# ---------------------------------------------------------------------
+# Dispatch: Platform-specific installation
+# ---------------------------------------------------------------------
+
+# WHY: Each OS family has a distinct installation method.
+# We use first_found to locate the most specific implementation.
+- name: "cc-switch (Native): Carry out platform-specific installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      paths: ["{{ role_path }}/tasks/cc-switch/native"]
+      files:
+        - "{{ os_distribution }}.yml"
+        - "{{ os_family }}.yml"
+  when:
+    - app_state | default('present', true) == 'present'

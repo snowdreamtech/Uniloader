@@ -1,0 +1,26 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity/native/darwin.yml
+# =====================================================================
+
+# Homebrew Cask name
+# WHY: Homebrew Cask is the standard way to install GUI apps on macOS
+antigravity_darwin_brew_cask: "antigravity"
+
+# Architecture mapping for Darwin
+# WHY: macOS uses different arch naming in download URLs
+_antigravity_darwin_arch_map:
+  amd64: "x64"
+  arm64: "arm"
+
+antigravity_darwin_arch: "{{ _antigravity_darwin_arch_map[antigravity_arch] | default(antigravity_arch, true) }}"
+
+# Direct download URL
+# WHY: Official Google download mirror
+# Example: https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/1.15.8-5724687216017408/darwin-arm/Antigravity.dmg
+antigravity_darwin_download_base: "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity"
+antigravity_darwin_download_url: "{{ antigravity_darwin_download_base }}/{{ antigravity_channel }}/{{ antigravity_version }}/darwin-{{ antigravity_darwin_arch }}/Antigravity.dmg"
+
+# Installation path
+# WHY: Standard macOS application installation location
+antigravity_darwin_app_path: "/Applications/Antigravity.app"

@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/nginx/native/freebsd.yml
+# =====================================================================
+
+nginx_overrides:
+  app_packages: ["nginx"]
+  app_service: "nginx"
+  # WHY: FreeBSD uses rc.d for service management
+  app_init_system: "bsd_rc"

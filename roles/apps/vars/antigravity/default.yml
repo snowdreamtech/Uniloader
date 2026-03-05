@@ -1,0 +1,38 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for antigravity
+# ---------------------------------------------------------------------
+antigravity_defaults:
+  app_desc: "Google Antigravity - AI-powered Development Environment"
+  app_version: "latest"
+  app_homepage: "https://antigravity.google"
+  app_license: "Proprietary"
+  app_state: "present"
+
+# Global Antigravity settings
+antigravity_channel: "stable" # stable or preview
+# antigravity_version: "latest" # latest or specific version like "1.15.8-5724687216017408"
+antigravity_version: "1.15.8-5724687216017408" # latest or specific version like "1.15.8-5724687216017408"
+
+# Architecture mapping
+# WHY: Antigravity uses specific architecture labels in download URLs
+_antigravity_arch_map:
+  x86_64: "amd64"
+  aarch64: "arm64"
+
+# Derived architecture
+antigravity_arch: "{{ _antigravity_arch_map[ansible_architecture] | default(ansible_architecture, true) }}"
+
+# Check if architecture is supported
+# WHY: Early failure for unsupported architectures
+antigravity_is_supported_arch: "{{ antigravity_arch in ['amd64', 'arm64'] }}"
+
+# Download URLs base
+# WHY: Google uses different download mechanisms for different platforms
+# - Linux: Artifact Registry (apt.pkg.dev, yum.pkg.dev)
+# - macOS/Windows: Google Edge DL (edgedl.me.gvt1.com)
+antigravity_download_url_base: "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity"

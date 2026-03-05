@@ -1,0 +1,40 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode_server/native/validate_requirements.yml
+# =====================================================================
+
+# 1. OS Validation
+- name: "Vscode_server (Native): Check OS Family"
+  ansible.builtin.assert:
+    that:
+      - ansible_system == 'Linux'
+    fail_msg: "VS Code Server only supports Linux. Detected: {{ ansible_system }}."
+
+# Note: Ideally we want to detect glibc vs musl.
+# Ansible facts don't explicitly say "glibc", but 'Alpine' implies musl.
+- name: "Vscode_server (Native): Check for Alpine (Explicitly Unsupported)"
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family != 'Alpine'
+    fail_msg: "VS Code Server does not support Alpine Linux (musl libc). Detected: Alpine."
+
+# 2. Architecture Validation
+- name: "Vscode_server (Native): Check Architecture"
+  ansible.builtin.assert:
+    that:
+      - vscode_server_is_supported_arch | bool
+    fail_msg: "VS Code Server only supports x86_64 and arm64. Detected: {{ ansible_architecture }}."
+
+# 3. Tool Availability (Basic sanity check)
+# These are usually standard on glibc Linux, but good to check.
+- name: "Vscode_server (Native): Check for required tools"
+  ansible.builtin.shell: "command -v tar && command -v gzip && command -v bash"
+  changed_when: false
+  failed_when: false
+  register: _vscode_server_tools_check
+
+- name: "Vscode_server (Native): Enforce required tools"
+  ansible.builtin.assert:
+    that:
+      - _vscode_server_tools_check.rc == 0
+    fail_msg: "Missing required tools: tar, gzip, or bash."

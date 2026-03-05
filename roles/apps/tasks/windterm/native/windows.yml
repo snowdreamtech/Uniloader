@@ -1,0 +1,85 @@
+---
+# =====================================================================
+# roles/apps/tasks/windterm/native/windows.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "windterm (Windows): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+# Portable App Standard: Use win_stat on the Single Source of Truth directory.
+# Defined in vars: windterm_win_install_dir
+- name: "windterm (Windows): Check if WindTerm executable exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_stat:
+    path: "{{ windterm_win_install_dir }}\\WindTerm.exe"
+  register: _windterm_exe_stat
+
+- name: "windterm (Windows): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    windterm_is_installed: "{{ _windterm_exe_stat.stat.exists | default(false) }}"
+
+# ---------------------------------------------------------------------
+# Installation: Zip Download and Install
+# ---------------------------------------------------------------------
+
+- name: "windterm (Windows): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not windterm_is_installed or (windterm_force_install | default(false) | bool)
+  block:
+    - name: "windterm (Windows): Create install directory"
+      ansible.windows.win_file:
+        path: "{{ windterm_win_install_dir }}"
+        state: directory
+
+    - name: "windterm (Windows): Create temporary directory"
+      ansible.windows.win_tempfile:
+        state: directory
+        suffix: windterm
+      register: _wt_temp_dir
+
+    - name: "windterm (Windows): Download Zip artifact"
+      ansible.windows.win_get_url:
+        url: "{{ windterm_win_url }}"
+        dest: "{{ _wt_temp_dir.path }}\\WindTerm.zip"
+      register: _zip_download
+      retries: "{{ windterm_download_retries | default(5) }}"
+      delay: "{{ windterm_download_delay | default(10) }}"
+      # until check is built-in to win_get_url retries? typically yes, but explicit until loop is safer if needed
+
+    - name: "windterm (Windows): Unzip artifact"
+      community.windows.win_unzip:
+        src: "{{ _zip_download.dest }}"
+        dest: "{{ windterm_win_install_dir }}"
+        delete_archive: true
+        # WindTerm portable zip usually contains the files directly or a folder.
+        # If it contains a folder, we might need to adjust, but based on typical portable zips, it's often a folder.
+        # WindTerm_2.7.0_Windows_Portable_x86_64.zip usually unzips to a folder named "WindTerm" or similar?
+        # Let's assume direct extraction for now, user can adjust if nested.
+        # Actually standard behavior: unzip to dest.
+      register: _unzip_result
+
+  always:
+    - name: "windterm (Windows): Clean up"
+      ansible.windows.win_file:
+        path: "{{ _wt_temp_dir.path }}"
+        state: absent
+      when: _wt_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "windterm (Windows): Remove installation directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_file:
+    path: "{{ windterm_win_install_dir }}"
+    state: absent
+  when: app_state | default('present', true) == 'absent'

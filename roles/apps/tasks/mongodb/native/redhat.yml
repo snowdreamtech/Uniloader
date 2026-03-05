@@ -1,0 +1,106 @@
+---
+# =====================================================================
+# roles/apps/tasks/mongodb/native/redhat.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Step 1: Download and import MongoDB GPG key
+# ---------------------------------------------------------------------
+- name: "MongoDB: Download GPG key for {{ app_version | default('7.0') }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ app_repo_gpgkey_url }}"
+    dest: "/tmp/mongodb-server-{{ app_version | default('7.0') }}.asc"
+    mode: "0644"
+  become: "{{ become_enabled }}"
+  when: app_repo_gpgkey_url is defined
+
+- name: "MongoDB: Import GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.rpm_key:
+    state: "present"
+    key: "/tmp/mongodb-server-{{ app_version | default('7.0') }}.asc"
+  become: "{{ become_enabled }}"
+  when: app_repo_gpgkey_url is defined
+
+# ---------------------------------------------------------------------
+# Step 2: Add MongoDB official YUM repository
+# ---------------------------------------------------------------------
+- name: "MongoDB: Add official YUM repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.yum_repository:
+    name: "{{ app_repo_name }}"
+    description: "MongoDB {{ app_version | default('7.0') }} Repository"
+    baseurl: "{{ app_repo_baseurl }}"
+    gpgcheck: "{{ app_repo_gpgcheck | default(true) }}"
+    enabled: "{{ app_repo_enabled | default(true) }}"
+    gpgkey: "{{ app_repo_gpgkey_url }}"
+  become: "{{ become_enabled }}"
+  when:
+    - app_repo_name is defined
+    - app_repo_baseurl is defined
+
+# ---------------------------------------------------------------------
+# Step 3: Install MongoDB packages
+# ---------------------------------------------------------------------
+- name: "MongoDB: Install packages {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_list: "{{ app_packages }}"
+    package_state: "{{ 'latest' if app_state == 'latest' else 'present' }}"
+  when: app_state in ['present', 'latest', 'started', 'stopped', 'restarted']
+
+# ---------------------------------------------------------------------
+# Step 4: Manage MongoDB service
+# ---------------------------------------------------------------------
+- name: "MongoDB: Manage service {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader"
+  vars:
+    service_name: "{{ app_service }}"
+    service_state: "{{ 'started' if app_state in ['started', 'present', 'latest'] else ('stopped' if app_state == 'stopped' else 'restarted') }}"
+    service_enabled: "{{ app_service_enabled | default(true) }}"
+  when:
+    - app_service is defined
+    - app_state in ['present', 'latest', 'started', 'stopped', 'restarted']
+
+# ---------------------------------------------------------------------
+# Step 5: Uninstall logic
+# ---------------------------------------------------------------------
+- name: "MongoDB: Stop service before uninstall {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "service_loader"
+  vars:
+    service_name: "{{ app_service }}"
+    service_state: "stopped"
+  when:
+    - app_service is defined
+    - app_state in ['absent', 'purged']
+
+- name: "MongoDB: Remove packages {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_list: "{{ app_packages }}"
+    package_state: "{{ app_state }}"
+  when: app_state in ['absent', 'purged']
+
+- name: "MongoDB: Remove data directory (purge only) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ app_data_dir }}"
+    state: "absent"
+  become: "{{ become_enabled }}"
+  when:
+    - app_state == 'purged'
+    - app_data_dir is defined
+
+- name: "MongoDB: Remove repository (purge only) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.yum_repository:
+    name: "{{ app_repo_name }}"
+    state: "absent"
+  become: "{{ become_enabled }}"
+  when:
+    - app_state == 'purged'
+    - app_repo_name is defined

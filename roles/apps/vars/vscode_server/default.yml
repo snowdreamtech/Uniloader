@@ -1,0 +1,63 @@
+---
+# =====================================================================
+# roles/apps/vars/vscode_server/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for vscode_server
+# ---------------------------------------------------------------------
+vscode_server_defaults:
+  app_desc: "VS Code Server - Remote Development Backend"
+  app_version: "latest"
+  app_homepage: "https://code.visualstudio.com/docs/remote/vscode-server"
+  app_license: "MIT"
+  app_state: "present"
+
+# Global settings
+vscode_server_force_install: false
+vscode_server_download_retries: 5
+vscode_server_download_delay: 10
+vscode_server_cleanup_old_versions: true
+
+# Commit ID:
+# - If empty, the role will attempt to detect it from the Control Node's `code --version`.
+# - If detection fails and this is still empty, installation will fail.
+# User MUST provide this if Control Node does not have VS Code installed.
+vscode_server_commit_id: ""
+
+# Install Directory:
+# - Default: ~/.vscode-server/bin/<commit_id>
+# - Can be overridden if needed, but not recommended as VS Code expects this path.
+vscode_server_install_dir: "{{ ansible_user_home }}/.vscode-server/bin/{{ vscode_server_commit_id }}"
+
+# CDN Provider:
+# - official: update.code.visualstudio.com (Default)
+# - azure_cn: vscode.download.prss.microsoft.com (China optimization)
+vscode_server_cdn_provider: "official"
+
+# Architecture mapping for Linux (VS Code Server is Linux-only glibc)
+_vscode_server_arch_map:
+  x86_64: "x64"
+  amd64: "x64"
+  aarch64: "arm64"
+  arm64: "arm64"
+
+vscode_server_arch: "{{ _vscode_server_arch_map[ansible_architecture] | default(ansible_architecture, true) }}"
+
+# Check if architecture is supported
+# Only x64 and arm64 are supported by VS Code Server official builds.
+vscode_server_supported_archs:
+  - "x64"
+  - "arm64"
+
+vscode_server_is_supported_arch: "{{ vscode_server_arch in vscode_server_supported_archs }}"
+
+# Download URL Templates
+# official: https://update.code.visualstudio.com/commit:<COMMIT>/server-linux-<ARCH>/stable
+# azure_cn: https://vscode.download.prss.microsoft.com/dbazure/download/stable/<COMMIT>/vscode-server-linux-<ARCH>.tar.gz
+
+vscode_server_url_templates:
+  official: "https://update.code.visualstudio.com/commit:{{ vscode_server_commit_id }}/server-linux-{{ vscode_server_arch }}/stable"
+  azure_cn: "https://vscode.download.prss.microsoft.com/dbazure/download/stable/{{ vscode_server_commit_id }}/vscode-server-linux-{{ vscode_server_arch }}.tar.gz"
+
+vscode_server_download_url: "{{ vscode_server_url_templates[vscode_server_cdn_provider] }}"

@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/nginx/native.yml
+# =====================================================================
+
+nginx_overrides:
+  app_state: "started"
+  app_service_enabled: true
+  # WHY: Common config paths across distributions
+  app_config_paths:
+    - "/etc/nginx/nginx.conf"
+    - "/usr/local/etc/nginx/nginx.conf"

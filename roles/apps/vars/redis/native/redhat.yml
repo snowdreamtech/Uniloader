@@ -1,0 +1,34 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native/redhat.yml
+# =====================================================================
+
+redis_overrides:
+  # WHY: RHEL 10+, Rocky 10+, AlmaLinux 10+ replaced Redis with Valkey
+  # Fedora 41+ also uses Valkey by default due to licensing changes
+  app_packages: >-
+    {{
+      ['valkey'] if (
+        (os_distribution == 'RedHat' and
+        os_distribution_major_version | int >= 10) or
+        (os_distribution == 'Rocky' and
+        os_distribution_major_version | int >= 10) or
+        (os_distribution == 'AlmaLinux' and
+        os_distribution_major_version | int >= 10) or
+        (os_distribution == 'Fedora' and
+        os_distribution_major_version | int >= 41)
+      ) else ['redis']
+    }}
+  app_service: >-
+    {{
+      'valkey' if (
+        (os_distribution == 'RedHat' and
+        os_distribution_major_version | int >= 10) or
+        (os_distribution == 'Rocky' and
+        os_distribution_major_version | int >= 10) or
+        (os_distribution == 'AlmaLinux' and
+        os_distribution_major_version | int >= 10) or
+        (os_distribution == 'Fedora' and
+        os_distribution_major_version | int >= 41)
+      ) else 'redis'
+    }}

@@ -1,0 +1,119 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity/native/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Minimum System Requirements
+# ---------------------------------------------------------------------
+# Engineering Insights regarding hardware requirements:
+#
+# 1. Minimum Runnable (Can open, basic editing):
+#    - 1 CPU Core
+#    - 1 GB RAM
+#    * Experience will be poor; suitable only for minimal CLI usage.
+#
+# 2. Usable (Remote-SSH, Language Servers active):
+#    - 2 CPU Cores
+#    - 2 GB RAM
+#    * This is the minimum comfort baseline for VS Code Server.
+#
+# 3. Recommended (AI, Language Servers, Full Features):
+#    - 4 CPU Cores
+#    - 4 GB RAM
+#    * Antigravity AI features (Gemini), Language Servers (TS/Py/Go),
+#      and multiple extensions require this for stability.
+#
+# 4. Ideal (Engineer Workflow):
+#    - 4-8 CPU Cores
+#    - 8-16 GB RAM
+#    * Best for Remote-SSH, Container Development, and heavy AI usage.
+#
+antigravity_min_requirements:
+  cpu_cores: 1
+  memory_gb: 0.8
+  disk_gb: 5
+  supported_os:
+    - darwin
+    - debian
+    - ubuntu
+    - redhat
+    - centos
+    - windows
+
+# ---------------------------------------------------------------------
+# Extensions
+# ---------------------------------------------------------------------
+# Common extensions for all platforms
+antigravity_extensions_common:
+  # - "google.cloud-code" # Fails in Antigravity
+  # - "google.gemini" # Fails in Antigravity
+  # - "google.flutter" # Fails in Antigravity
+  # - "google.go" # Fails in Antigravity
+  - "MS-CEINTL.vscode-language-pack-zh-hans"
+  - "MS-CEINTL.vscode-language-pack-zh-hant"
+  # - "ms-vscode.remote-server" # Fails in Antigravity
+  # - "ms-vscode-remote.remote-ssh" # Fails in Antigravity
+  # - "ms-vscode.remote-explorer" # Fails in Antigravity
+  # - "ms-vscode-remote.remote-ssh-edit" # Fails in Antigravity
+  # - "ms-vscode-remote.vscode-remote-extensionpack" # Fails in Antigravity
+  # - "ms-vscode.remote-repositories" # Fails in Antigravity
+  - "mhutchie.git-graph"
+  - "GitHub.github-vscode-theme"
+  - "GitHub.vscode-github-actions"
+  # - "GitHub.codespaces" # Fails in Antigravity
+  # - "GitHub.copilot" # Fails in Antigravity
+  # - "GitHub.copilot-chat" # Fails in Antigravity
+  # - "GitHub.remotehub" # Fails in Antigravity
+  - "GitHub.vscode-pull-request-github"
+  - "ms-python.python"
+  # - "ms-python.vscode-pylance" # Fails in Antigravity
+  - "ms-toolsai.jupyter"
+  - "ms-azuretools.vscode-docker"
+  - "ms-kubernetes-tools.vscode-kubernetes-tools"
+  # - "ms-vscode-remote.remote-containers" # Fails in Antigravity
+  - "ms-vscode.PowerShell"
+  - "docker.docker"
+  - "golang.go"
+  - "rust-lang.rust-analyzer"
+  # - "ms-vscode.cpptools" # Fails with 'Extension not found' in Antigravity
+  # - "ms-vscode.cpptools-extension-pack" # Fails with 'Extension not found' in Antigravity
+  - "vscjava.vscode-java-pack"
+  - "redhat.java"
+  - "redhat.ansible"
+  - "redhat.vscode-yaml"
+  - "timonwong.shellcheck"
+  - "Dart-Code.dart-code"
+  - "Dart-Code.flutter"
+  - "Shopify.ruby-lsp"
+  - "bmewburn.vscode-intelephense-client"
+  - "Vue.volar"
+  - "dsznajder.es7-react-js-snippets"
+  - "dbaeumer.vscode-eslint"
+  - "esbenp.prettier-vscode"
+  - "msjsdiag.vscode-react-native"
+  - "shd101wyy.markdown-preview-enhanced"
+  - "continue.continue"
+  - "anthropic.claude-code"
+
+# Extensions supported ONLY on x86_64/amd64
+# WHY: Some AI acceleration extensions are x64 specific for now
+antigravity_extensions_x64:
+  # - "google.tensorflow-lite" # Fails in Antigravity
+  # - "google.mediapipe" # Fails in Antigravity
+  - "DEVSENSE.phptools-vscode"
+  - "DEVSENSE.profiler-php-vscode"
+  - "DEVSENSE.intelli-php-vscode"
+  - "DEVSENSE.composer-php-vscode"
+
+# Extensions supported ONLY on arm64
+# WHY: Optimized extensions for Apple Silicon / ARM64
+antigravity_extensions_arm64: []
+
+# Combined extensions list based on architecture
+antigravity_extensions: >-
+  {{
+    antigravity_extensions_common +
+    (antigravity_extensions_x64 if antigravity_arch == 'amd64' else []) +
+    (antigravity_extensions_arm64 if antigravity_arch == 'arm64' else [])
+  }}

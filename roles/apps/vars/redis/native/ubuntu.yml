@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native/ubuntu.yml
+# =====================================================================
+
+redis_overrides:
+  # WHY: Ubuntu uses 'redis-server' package name
+  # NOTE: Ubuntu 24.04+ also provides 'valkey' in universe repo
+  app_packages: ["redis-server"]
+  app_service: "redis-server"

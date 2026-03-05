@@ -1,0 +1,27 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/container.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Fail immediately with error message
+# ---------------------------------------------------------------------
+# WHY: VS Code is a desktop IDE application that requires:
+#   - GUI (graphical user interface)
+#   - Local development workstation environment
+# Container deployment is fundamentally incompatible with these requirements.
+- name: "vscode (Container): Fail - Container deployment not supported {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: |
+      Visual Studio Code is a desktop IDE application and does not support container deployment.
+
+      Reasons:
+        - Requires GUI (graphical user interface)
+        - Designed for local development workstations
+
+      Please use native installation instead:
+        - ansible.builtin.include_role:
+            name: "app"
+          vars:
+            app_name: "vscode"
+            app_delivery_mode: "native"

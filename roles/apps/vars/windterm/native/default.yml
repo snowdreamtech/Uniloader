@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/windterm/native/default.yml
+# =====================================================================
+
+windterm_install_dir: "/opt/WindTerm"
+windterm_bin_dir: "/usr/local/bin"
+windterm_bin_name: "windterm"
+
+# macOS Specific
+windterm_app_name: "WindTerm.app"
+windterm_mac_install_path: "/Applications"

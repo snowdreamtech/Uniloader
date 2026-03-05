@@ -1,0 +1,6 @@
+---
+# =====================================================================
+# roles/apps/tasks/motrix/native/archlinux.yml
+# =====================================================================
+
+- ansible.builtin.include_tasks: "linux_install.yml"

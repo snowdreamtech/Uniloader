@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/vars/pnpm/native/darwin.yml
+# =====================================================================
+
+pnpm_overrides:
+  app_packages: ["pnpm"]
+  app_install_cmd: "" # Use package manager

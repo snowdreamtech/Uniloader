@@ -1,0 +1,30 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/native/extensions.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Check 'code' availability
+# ---------------------------------------------------------------------
+
+- name: "vscode (Native): Check if 'code' command is available {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "code --version"
+  register: _vscode_cmd_check
+  changed_when: false
+  failed_when: false
+
+# ---------------------------------------------------------------------
+# Execution: Install extensions
+# ---------------------------------------------------------------------
+
+- name: "vscode (Native): Install extensions {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "code --install-extension {{ extension_item }} --force"
+  loop: "{{ vscode_extensions }}"
+  loop_control:
+    loop_var: extension_item
+  changed_when: "'already installed' not in _vscode_ext_result.stdout"
+  register: _vscode_ext_result
+  when:
+    - _vscode_cmd_check.rc == 0
+    - app_state | default('present', true) == 'present'
+  become: false # Extensions should be installed per user

@@ -1,0 +1,15 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/alpine.yml
+# =====================================================================
+
+mongodb_overrides:
+  # Client tools only - NO server packages
+  app_packages:
+    - "mongodb-tools" # mongodump, mongorestore, mongoexport, etc.
+
+  # No service management for Alpine (client-only)
+  # app_service is intentionally not defined
+
+  # Config file (for client configuration if needed)
+  app_config_file: "/etc/mongodb.conf"

@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/apps/vars/nvm/native/darwin.yml
+# =====================================================================
+
+nvm_overrides:
+  # WHY: Both Homebrew and MacPorts provide nvm package
+  app_packages: ["nvm"]
+  app_install_cmd: "" # Use package manager

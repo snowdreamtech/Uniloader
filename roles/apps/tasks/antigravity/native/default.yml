@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity/native/default.yml
+# =====================================================================
+
+- name: "antigravity (Linux/Native): Fail on unsupported distribution {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "Error: Distribution {{ os_distribution }} is not explicitly supported for native package installation. Please use Debian or RHEL based systems for full support."

@@ -1,0 +1,140 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity/native/debian.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Debian/Native): Validate system requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+- name: "antigravity (Debian/Native): Check if Antigravity is already installed (dpkg) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "dpkg -l | grep antigravity"
+  register: _antigravity_dpkg_check
+  failed_when: false
+  changed_when: false
+
+- name: "antigravity (Debian/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Antigravity is already installed. Skipping installation steps."
+  when: _antigravity_dpkg_check.rc == 0
+
+# ---------------------------------------------------------------------
+# 1. Repository Setup: Google APT Repository
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Debian/Native): Setup repository for Antigravity {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - _antigravity_dpkg_check.rc != 0
+    - app_state | default('present', true) == 'present'
+  block:
+    - name: "antigravity (Debian/Native): Ensure keyrings directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.file:
+        path: "/etc/apt/keyrings"
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+      become: "{{ become_enabled }}"
+
+    - name: "antigravity (Debian/Native): Download Google GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.get_url:
+        url: "{{ antigravity_debian_repo_key_url }}"
+        dest: "/tmp/antigravity.asc"
+        mode: "0644"
+      become: "{{ become_enabled }}"
+      retries: 3
+      delay: 5
+      register: _antigravity_key_download
+      until: _antigravity_key_download is succeeded
+
+    - name: "antigravity (Debian/Native): De-armor GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.shell: |
+        PATH={{ os_paths }}
+        set -euo pipefail
+        gpg --dearmor < /tmp/antigravity.asc > /etc/apt/keyrings/antigravity-repo-key.gpg
+      become: "{{ become_enabled }}"
+      changed_when: false
+
+    - name: "antigravity (Debian/Native): Add Antigravity repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.apt_repository:
+        repo: "{{ antigravity_debian_repo_line }}"
+        state: present
+        filename: "antigravity"
+      become: "{{ become_enabled }}"
+
+    - name: "antigravity (Debian/Native): Install Antigravity via apt {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.apt:
+        name: "{{ antigravity_debian_package }}"
+        state: present
+        update_cache: true
+      become: "{{ become_enabled }}"
+  rescue:
+    # ---------------------------------------------------------------------
+    # 2. Fallback: Direct .deb installation
+    # ---------------------------------------------------------------------
+    - name: "antigravity (Debian/Native): Fallback to direct download installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      when: app_state | default('present', true) == 'present'
+      block:
+        - name: "antigravity (Debian/Native): Download .deb package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.get_url:
+            url: "{{ antigravity_debian_download_url }}"
+            dest: "/tmp/antigravity.deb"
+            mode: "0644"
+          become: "{{ become_enabled }}"
+          retries: 3
+          delay: 5
+          register: _antigravity_deb_download
+          until: _antigravity_deb_download is succeeded
+
+        - name: "antigravity (Debian/Native): Install .deb package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.apt:
+            deb: "/tmp/antigravity.deb"
+            state: present
+          become: "{{ become_enabled }}"
+
+        - name: "antigravity (Debian/Native): Clean up temporary .deb file {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.file:
+            path: "/tmp/antigravity.deb"
+            state: absent
+          become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# 3. Extension Management
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Debian/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 4. Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Debian/Native): Remove Antigravity package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apt:
+    name: "{{ antigravity_debian_package }}"
+    state: absent
+    purge: true
+  become: "{{ become_enabled }}"
+  when: app_state | default('present', true) == 'absent'
+
+- name: "antigravity (Debian/Native): Remove Antigravity key and repo {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/etc/apt/keyrings/antigravity-repo-key.gpg"
+    - "/etc/apt/sources.list.d/antigravity.list"
+  become: "{{ become_enabled }}"
+  when: app_state | default('present', true) == 'absent'
+
+- name: "antigravity (Debian/Native): Remove Antigravity extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.antigravity"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'

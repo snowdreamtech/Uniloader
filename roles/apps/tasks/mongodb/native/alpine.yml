@@ -1,0 +1,43 @@
+---
+# =====================================================================
+# roles/apps/tasks/mongodb/native/alpine.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Step 1: Install MongoDB client tools
+# ---------------------------------------------------------------------
+- name: "MongoDB: Install client tools (Alpine) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_list: "{{ app_packages }}"
+    package_state: "{{ 'latest' if app_state == 'latest' else 'present' }}"
+  when: app_state in ['present', 'latest', 'started', 'stopped', 'restarted']
+
+# ---------------------------------------------------------------------
+# Step 2: Log warning about server deployment
+# ---------------------------------------------------------------------
+- name: "Audit Log: {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      [MONGODB_ALPINE] Alpine Linux deployment completed (CLIENT TOOLS ONLY).
+
+      IMPORTANT: MongoDB does not officially support Alpine for server deployment.
+      Only client tools (mongodump, mongorestore, etc.) have been installed.
+
+      To run MongoDB server on Alpine, use container mode instead:
+        app_delivery_mode: "container"
+  when: app_state in ['present', 'latest', 'started']
+
+# ---------------------------------------------------------------------
+# Step 3: Uninstall logic
+# ---------------------------------------------------------------------
+- name: "MongoDB: Remove client tools {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "package_loader/main"
+  vars:
+    package_list: "{{ app_packages }}"
+    package_state: "{{ app_state }}"
+  when: app_state in ['absent', 'purged']

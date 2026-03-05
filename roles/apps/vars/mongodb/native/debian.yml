@@ -1,0 +1,21 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/debian.yml
+# =====================================================================
+
+mongodb_overrides:
+  # MongoDB official repository configuration
+  app_repo_gpgkey_url: "https://pgp.mongodb.com/server-{{ app_version | default('7.0') }}.asc"
+  app_repo_gpgkey_dest: "/usr/share/keyrings/mongodb-server-{{ app_version | default('7.0') }}.gpg"
+  app_repo_line: "deb [ arch={{ os_architecture_oci | default('amd64') }} signed-by=/usr/share/keyrings/mongodb-server-{{ app_version | default('7.0') }}.gpg ] https://repo.mongodb.org/apt/{{ os_distribution }} {{ os_codename }}/mongodb-org/{{ app_version | default('7.0') }} multiverse"
+  app_repo_filename: "mongodb-org-{{ app_version | default('7.0') }}"
+
+  # Packages to install
+  app_packages:
+    - "mongodb-org"
+
+  # Service name
+  app_service: "mongod"
+
+  # Config file path
+  app_config_file: "/etc/mongod.conf"

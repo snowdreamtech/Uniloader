@@ -1,0 +1,100 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity/native/darwin.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Darwin/Native): Validate system requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+- name: "antigravity (Darwin/Native): Check if Antigravity is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "{{ antigravity_darwin_app_path }}"
+  register: _antigravity_app_stat
+
+- name: "antigravity (Darwin/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Antigravity is already installed at {{ antigravity_darwin_app_path }}. Skipping installation steps."
+  when: _antigravity_app_stat.stat.exists
+
+# ---------------------------------------------------------------------
+# 1. Installation: Homebrew Cask (Primary Method)
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Darwin/Native): Install via Homebrew Cask {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - not _antigravity_app_stat.stat.exists
+    - app_state | default('present', true) == 'present'
+  block:
+    # WHY: On macOS, Homebrew Cask is the most standard way to manage
+    # GUI applications in a CLI-driven workflow. Homebrew automatically
+    # handles architecture detection (Intel vs Apple Silicon).
+    - name: "antigravity (Darwin/Native): Install Antigravity via Homebrew Cask {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      community.general.homebrew_cask:
+        name: "{{ antigravity_darwin_brew_cask }}"
+        state: present
+      become: false # Homebrew should not run as root
+  rescue:
+    # ---------------------------------------------------------------------
+    # 2. Fallback: Direct .dmg download and installation
+    # ---------------------------------------------------------------------
+    - name: "antigravity (Darwin/Native): Fallback to direct download {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      block:
+        - name: "antigravity (Darwin/Native): Download .dmg package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.get_url:
+            url: "{{ antigravity_darwin_download_url }}"
+            dest: "/tmp/Antigravity.dmg"
+            mode: "0644"
+          retries: 3
+          delay: 5
+          register: _antigravity_download
+          until: _antigravity_download is succeeded
+
+        - name: "antigravity (Darwin/Native): Mount .dmg {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.command: hdiutil attach "/tmp/Antigravity.dmg" -nobrowse
+          changed_when: false
+
+        - name: "antigravity (Darwin/Native): Copy app to Applications {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.command: cp -R "/Volumes/Antigravity/Antigravity.app" "/Applications/"
+          become: "{{ become_enabled }}"
+          changed_when: true
+
+        - name: "antigravity (Darwin/Native): Unmount .dmg {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.command: hdiutil detach "/Volumes/Antigravity"
+          changed_when: false
+          failed_when: false
+
+        - name: "antigravity (Darwin/Native): Clean up .dmg file {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+          ansible.builtin.file:
+            path: "/tmp/Antigravity.dmg"
+            state: absent
+
+# ---------------------------------------------------------------------
+# 3. Extension Management
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Darwin/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 4. Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Darwin/Native): Remove Antigravity application {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ antigravity_darwin_app_path }}"
+    state: absent
+  become: "{{ become_enabled }}"
+  when: app_state | default('present', true) == 'absent'
+
+- name: "antigravity (Darwin/Native): Remove Antigravity extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.antigravity"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'

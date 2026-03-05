@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/vscode/native/windows.yml
+# =====================================================================
+
+# Package name for Winget/Chocolatey
+vscode_windows_package_name: "Microsoft.VisualStudioCode"
+
+# Direct download URL construction
+# Example: https://update.code.visualstudio.com/latest/win32-x64-user/stable
+# Note: win32 exists but we specify arch
+vscode_windows_download_url: "{{ vscode_download_url_base }}/win32-{{ vscode_arch }}-user/{{ vscode_channel }}"

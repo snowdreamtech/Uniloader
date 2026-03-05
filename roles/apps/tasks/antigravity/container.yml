@@ -1,0 +1,30 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity/container.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Execution: Fail immediately with error message
+# ---------------------------------------------------------------------
+# WHY: Antigravity is a desktop IDE application that requires:
+#   - GUI (graphical user interface)
+#   - User login (personal Gmail account)
+#   - Local development workstation environment
+# Container deployment is fundamentally incompatible with these requirements.
+- name: "antigravity (Container): Fail - Container deployment not supported {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: |
+      Antigravity is a desktop IDE application and does not support container deployment.
+
+      Reasons:
+        - Requires GUI (graphical user interface)
+        - Requires user login (personal Gmail account)
+        - Designed for local development workstations
+        - Needs direct system integration for AI features
+
+      Please use native installation instead:
+        - ansible.builtin.include_role:
+            name: "app"
+          vars:
+            app_name: "antigravity"
+            app_mode: "native"

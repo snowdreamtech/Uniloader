@@ -1,0 +1,75 @@
+---
+# =====================================================================
+# roles/apps/vars/windterm/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for windterm
+# ---------------------------------------------------------------------
+windterm_defaults:
+  app_desc: "WindTerm - A Quicker and better SSH/Telnet/Serial/Shell/Sftp client"
+  app_version: "latest"
+  app_homepage: "https://github.com/kingToolbox/WindTerm"
+  app_license: "Apache-2.0"
+  app_state: "present"
+
+# Global WindTerm settings
+windterm_version: "2.7.0"
+windterm_force_install: false
+windterm_download_retries: 5
+windterm_download_delay: 10
+
+# Installation Paths (Customizable for Portable)
+windterm_install_dir: "/opt/WindTerm"
+# WHY: Portable apps often write config to their own dir. Program Files is read-only for standard users.
+windterm_win_install_dir: "C:\\Apps\\WindTerm"
+
+# GitHub repository information
+windterm_repo_owner: "kingToolbox"
+windterm_repo_name: "WindTerm"
+windterm_github_repo: "{{ windterm_repo_owner }}/{{ windterm_repo_name }}"
+
+# Architecture mapping
+# Note: WindTerm mostly supports x86_64 main releases.
+_windterm_arch_map:
+  x86_64: "x86_64"
+  amd64: "x86_64"
+
+# Derived architecture
+windterm_arch: "{{ _windterm_arch_map[ansible_architecture] | default(ansible_architecture, true) }}"
+
+# Check if architecture is supported
+# STRICT: Only x86_64 is officially supported for Portable builds in this automation context.
+windterm_is_supported_arch: "{{ windterm_arch in ['x86_64'] }}"
+
+# Download URLs base
+windterm_github_url: "https://github.com/{{ windterm_github_repo }}"
+windterm_releases_url: "{{ windterm_github_url }}/releases"
+
+# Download Filenames (Portable)
+# Linux: WindTerm_2.7.0_Linux_Portable_x86_64.zip
+# macOS: WindTerm_2.7.0_Mac_Portable_x86_64.dmg
+# Windows: WindTerm_2.7.0_Windows_Portable_x86_64.zip
+windterm_linux_filename: "WindTerm_{{ windterm_version }}_Linux_Portable_{{ windterm_arch }}.zip"
+windterm_mac_filename: "WindTerm_{{ windterm_version }}_Mac_Portable_{{ windterm_arch }}.dmg"
+windterm_win_filename: "WindTerm_{{ windterm_version }}_Windows_Portable_{{ windterm_arch }}.zip"
+
+# Download URLs with Proxy Support
+# Usage: {{ github_proxy }}https://github.com/...
+windterm_linux_url: >-
+  {{
+    (github_proxy | default('', true)) +
+    windterm_releases_url + '/download/' + windterm_version + '/' + windterm_linux_filename
+  }}
+
+windterm_mac_url: >-
+  {{
+    (github_proxy | default('', true)) +
+    windterm_releases_url + '/download/' + windterm_version + '/' + windterm_mac_filename
+  }}
+
+windterm_win_url: >-
+  {{
+    (github_proxy | default('', true)) +
+    windterm_releases_url + '/download/' + windterm_version + '/' + windterm_win_filename
+  }}

@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/pnpm/default.yml
+# =====================================================================
+
+pnpm_defaults:
+  app_desc: "Fast, disk space efficient package manager"
+  app_version: "latest"
+  app_homepage: "https://pnpm.io"
+  app_license: "MIT"
+  app_state: "present"

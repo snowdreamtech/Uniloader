@@ -1,0 +1,22 @@
+---
+# =====================================================================
+# roles/apps/tasks/qq/native/validate_requirements.yml
+# =====================================================================
+
+- name: "qq (Native): Validate Windows requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when: ansible_os_family == 'Windows'
+  block:
+    - name: "qq (Native): Check Windows version"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution_version is version(qq_win_min_version, '>=')
+        fail_msg: "QQ requires Windows 7 or later. Detected: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+- name: "qq (Native): Validate Linux requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when: ansible_system == 'Linux'
+  block:
+    - name: "qq (Native): Check Linux architecture"
+      ansible.builtin.assert:
+        that:
+          - qq_is_supported_linux_arch | bool
+        fail_msg: "QQ Linux does not officially support architecture '{{ ansible_architecture }}'."

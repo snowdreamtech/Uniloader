@@ -1,0 +1,103 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity_tools/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for antigravity_tools
+# ---------------------------------------------------------------------
+antigravity_tools_defaults:
+  app_desc: "Antigravity Tools - AI Model Management Platform"
+  app_version: "latest"
+  app_homepage: "https://github.com/lbjlaq/Antigravity-Manager"
+  app_license: "MIT"
+  app_state: "present"
+
+# OS-level package management (Linux/macOS behaviors)
+antigravity_tools_package_name: "antigravity-tools" # System package name typically uses hyphens
+
+# Global Antigravity Tools settings
+antigravity_tools_version: "4.0.3" # latest or specific version
+antigravity_tools_download_retries: 5 # Support retry mechanism (5 retries as per standards)
+antigravity_tools_download_delay: 10 # Delay between retries
+
+# Minimum Requirements
+# Reference: https://github.com/lbjlaq/Antigravity-Manager/blob/main/README.md#system-requirements
+antigravity_tools_min_requirements:
+  ram_mb_min: 256
+  ram_mb_rec: 1024
+  disk_gb: 1
+  persistence_path: "~/.antigravity-tools"
+  supported_arch: ["x86_64", "amd64", "aarch64", "arm64"]
+
+antigravity_tools_persistence_path: "{{ antigravity_tools_min_requirements.persistence_path }}"
+
+# GitHub repository information
+antigravity_tools_repo_owner: "lbjlaq"
+antigravity_tools_repo_name: "Antigravity-Manager"
+antigravity_tools_github_repo: "{{ antigravity_tools_repo_owner }}/{{ antigravity_tools_repo_name }}"
+
+# Architecture mapping
+# WHY: Antigravity Tools uses specific architecture labels in download URLs
+_antigravity_tools_arch_map:
+  x86_64: "x64" # Windows/macOS pattern often uses x64
+  amd64: "amd64" # Linux DEB pattern uses amd64
+  aarch64: "aarch64" # Linux RPM/macOS pattern
+  arm64: "arm64" # Linux DEB pattern
+  # Windows-specific mapping if needed elsewhere
+  win_amd64: "x64"
+
+# Derived architecture based on family/distribution
+antigravity_tools_arch: >-
+  {{
+    'x64' if ansible_os_family == 'Windows' and ansible_architecture == 'amd64'
+    else (_antigravity_tools_arch_map[ansible_architecture] | default(ansible_architecture, true))
+  }}
+
+# Check if architecture is supported
+# WHY: Early failure for unsupported architectures
+antigravity_tools_is_supported_arch: >-
+  {{
+    (ansible_os_family == 'Windows' and ansible_architecture == 'amd64') or
+    (antigravity_tools_arch in ['x64', 'amd64', 'aarch64', 'arm64'])
+  }}
+
+# Artifact Naming Patterns (Based on GitHub Releases)
+antigravity_tools_artifacts:
+  debian: "Antigravity.Tools_{{ antigravity_tools_version }}_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}.deb"
+  redhat: "Antigravity.Tools-{{ antigravity_tools_version }}-1.{{ 'x86_64' if ansible_architecture == 'x86_64' else 'aarch64' }}.rpm"
+  darwin_dmg: "Antigravity.Tools_{{ antigravity_tools_version }}_{{ 'x64' if ansible_architecture == 'x86_64' else 'aarch64' }}.dmg"
+  darwin_tarball: "Antigravity.Tools_{{ 'x64' if ansible_architecture == 'x86_64' else 'aarch64' }}.app.tar.gz"
+  windows_setup: "Antigravity.Tools_{{ antigravity_tools_version }}_x64-setup.exe"
+  windows_msi: "Antigravity.Tools_{{ antigravity_tools_version }}_x64_en-US.msi"
+
+# Download URLs base
+antigravity_tools_github_url: "https://github.com/{{ antigravity_tools_github_repo }}"
+antigravity_tools_releases_url: "{{ antigravity_tools_github_url }}/releases"
+antigravity_tools_download_url_base: "{{ antigravity_tools_releases_url }}/download/v{{ antigravity_tools_version }}"
+antigravity_tools_latest_release_url: "{{ antigravity_tools_releases_url }}/latest"
+
+# ---------------------------------------------------------------------
+# Installation Logic Control
+# ---------------------------------------------------------------------
+# Installation/Uninstallation support
+antigravity_tools_install_check: true # Check if already installed
+antigravity_tools_support_uninstall: true # Support uninstallation flow
+
+# ---------------------------------------------------------------------
+# Docker Configuration (Reference)
+# ---------------------------------------------------------------------
+# See container.yml for full Docker configuration details.
+# This section remains for backward compatibility or high-level overrides.
+app_image: "lbjlaq/antigravity-manager:{{ antigravity_tools_version }}"
+
+# Persistence: Mount ~/.antigravity-tools to persist your data.
+app_volumes:
+  - "{{ antigravity_tools_persistence_path | default('~/.antigravity-tools') }}:~/.antigravity-tools"
+
+# Homebrew cask name (if available)
+antigravity_tools_homebrew_cask: "{{ antigravity_tools_package_name }}"
+
+# Installation paths
+antigravity_tools_install_dir: "/opt/{{ antigravity_tools_package_name }}"
+antigravity_tools_bin_dir: "/usr/local/bin"

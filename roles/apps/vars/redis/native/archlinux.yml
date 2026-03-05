@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native/archlinux.yml
+# =====================================================================
+
+redis_overrides:
+  app_packages: ["redis"]
+  app_service: "redis"
+  # WHY: Arch Linux uses systemd for service management
+  app_init_system: "systemd"

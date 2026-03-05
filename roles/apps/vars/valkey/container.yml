@@ -1,0 +1,13 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/container.yml
+# =====================================================================
+
+valkey_overrides:
+  app_image: "valkey/valkey:alpine"
+  app_ports:
+    - "6379:6379"
+  app_env:
+    ALLOW_EMPTY_PASSWORD: "yes"
+  app_volumes:
+    - "valkey_data:/data"

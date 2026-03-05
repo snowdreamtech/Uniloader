@@ -1,0 +1,19 @@
+---
+# =====================================================================
+# roles/apps/vars/cc_switch/native/darwin.yml
+# =====================================================================
+
+# macOS download file patterns
+cc_switch_darwin_archive: "CC-Switch-v{{ cc_switch_version }}-macOS.tar.gz"
+
+# Archive download URL
+cc_switch_darwin_archive_url: >-
+  {{
+    github_proxy +
+    cc_switch_github_url + '/releases/download/v' +
+    cc_switch_version + '/' + cc_switch_darwin_archive
+  }}
+
+# App bundle name
+cc_switch_app_bundle: "CC Switch.app"
+cc_switch_app_install_path: "/Applications/{{ cc_switch_app_bundle }}"

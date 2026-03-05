@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/freebsd.yml
+# =====================================================================
+
+mongodb_overrides:
+  # WHY: FreeBSD uses version-specific package names in ports
+  # mongodb70 for MongoDB 7.0, mongodb80 for 8.0
+  app_packages: ["mongodb70"]
+  app_service: "mongod"
+  # WHY: FreeBSD uses rc.d for service management
+  app_init_system: "bsd_rc"

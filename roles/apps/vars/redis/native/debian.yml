@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native/debian.yml
+# =====================================================================
+
+redis_overrides:
+  app_packages: ["redis-server"]
+  app_service: "redis-server"
+  # WHY: Debian/Ubuntu use 'redis-server' as package and service name
+  # NOTE: Ubuntu 24.04+ also provides 'valkey' package as alternative

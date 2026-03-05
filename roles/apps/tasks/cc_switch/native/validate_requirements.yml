@@ -1,0 +1,61 @@
+---
+# =====================================================================
+# roles/apps/tasks/cc_switch/native/validate_requirements.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1. Architecture Validation (Fail Fast)
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Native): Check architecture support {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - cc_switch_is_supported_arch | bool
+    fail_msg: |
+      Architecture '{{ ansible_architecture }}' is not supported for CC Switch on {{ ansible_system }}.
+      Linux: x64/arm64.
+      macOS: x64/arm64.
+      Windows: x64.
+    success_msg: "Architecture supported: {{ ansible_system }} / {{ ansible_architecture }}"
+
+# ---------------------------------------------------------------------
+# 2. Hardware Validation
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Native): Check CPU Cores {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - (ansible_processor_vcpus | int) >= (cc_switch_min_requirements.cpu_cores | int)
+    fail_msg: "CC Switch requires at least {{ cc_switch_min_requirements.cpu_cores }} CPU cores."
+  when: ansible_processor_vcpus is defined
+
+- name: "cc_switch (Native): Check Memory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - ((ansible_memtotal_mb | float) / 1024) >= (cc_switch_min_requirements.memory_gb | float)
+    fail_msg: "CC Switch requires at least {{ cc_switch_min_requirements.memory_gb }} GB RAM."
+  when: ansible_memtotal_mb is defined
+
+# ---------------------------------------------------------------------
+# 3. Linux GLIBC Validation (Critical)
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Native/Linux): Validate GLIBC version"
+  when: ansible_system == 'Linux'
+  block:
+    - name: "cc_switch (Native/Linux): Get GLIBC version"
+      ansible.builtin.shell: "ldd --version | head -n1 | awk '{print $NF}'"
+      register: _cc_glibc_version
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: "cc_switch (Native/Linux): Check GLIBC >= {{ cc_switch_min_requirements.glibc_version }}"
+      ansible.builtin.assert:
+        that:
+          - _cc_glibc_version.stdout is version(cc_switch_min_requirements.glibc_version, '>=')
+        fail_msg: "CC Switch requires GLIBC >= {{ cc_switch_min_requirements.glibc_version }}. Found: {{ _cc_glibc_version.stdout }}"
+      when: _cc_glibc_version.rc == 0
+
+    # Note: CC Switch is an Electron app, typically self-contained, but native modules might depend on system libraries.
+    # The requirement GLIBC >= 2.28 is explicit from the user context.

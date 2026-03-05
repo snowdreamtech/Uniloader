@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/darwin.yml
+# =====================================================================
+
+mongodb_overrides:
+  app_packages:
+    - "{{ 'mongodb-community' if os_pkg_mgr | default('homebrew') == 'homebrew' else '' }}"
+  app_service: "{{ 'mongodb-community' if os_pkg_mgr | default('homebrew') == 'homebrew' else '' }}"
+
+  # WHY: MacPorts does not support MongoDB due to license issues.
+  # We disable it here to prevent build failures. Users should use Homebrew or Docker.

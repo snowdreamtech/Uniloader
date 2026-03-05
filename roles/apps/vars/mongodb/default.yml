@@ -1,0 +1,19 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/default.yml
+# =====================================================================
+
+mongodb_defaults:
+  app_desc: "MongoDB Document Database"
+  app_version: "7.0" # Default to LTS version, user can override
+  app_homepage: "https://www.mongodb.com"
+  app_license: "SSPL (Server Side Public License)"
+  # WHY: Package names vary across distributions
+  # mongodb-community (Homebrew/MacPorts)
+  # mongodb-org (Official MongoDB repos)
+  # mongodb (Distribution repos)
+  app_port: 27017
+  app_bind_ip: "127.0.0.1" # Security: localhost only by default
+  app_data_dir: "/var/lib/mongodb"
+  app_log_dir: "/var/log/mongodb"
+  app_config_file: "/etc/mongod.conf"

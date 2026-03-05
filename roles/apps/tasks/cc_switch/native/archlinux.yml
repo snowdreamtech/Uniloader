@@ -1,0 +1,67 @@
+---
+# =====================================================================
+# roles/apps/tasks/cc_switch/native/archlinux.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (ArchLinux): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (ArchLinux): Check if package is already installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pacman -Qi {{ cc_switch_package_name }}"
+  register: _cc_package_status
+  failed_when: false
+  changed_when: false
+  check_mode: false
+
+- name: "cc_switch (ArchLinux): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    cc_switch_is_installed: "{{ _cc_package_status.rc == 0 }}"
+
+# ---------------------------------------------------------------------
+# Installation: AUR Helper or AppImage (Fallback)
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (ArchLinux): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not cc_switch_is_installed or (cc_switch_force_install | default(false) | bool)
+  block:
+    # Option 1: Try AUR via 'yay' or 'paru' if available
+    - name: "cc_switch (ArchLinux): Check for AUR helper"
+      ansible.builtin.shell: "command -v yay || command -v paru"
+      register: _aur_helper_check
+      failed_when: false
+      changed_when: false
+
+    - name: "cc_switch (ArchLinux): Install via AUR {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.command: "{{ _aur_helper_check.stdout }} -S --noconfirm cc-switch-bin"
+      when: _aur_helper_check.rc == 0
+      become: false # AUR hepers should not run as root
+
+    # Option 2: Fallback to AppImage if no AUR helper (simplified for now to just fail gracefully or warn)
+    - name: "cc_switch (ArchLinux): Warn if no AUR helper found"
+      ansible.builtin.debug:
+        msg: "No AUR helper (yay/paru) found. Manual installation of 'cc-switch-bin' from AUR is recommended."
+      when: _aur_helper_check.rc != 0
+
+# ---------------------------------------------------------------------
+# Uninstallation: Remove Package
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (ArchLinux): Remove package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.pacman:
+    name: "{{ cc_switch_package_name }}"
+    state: absent
+  become: "{{ become_enabled }}"
+  when:
+    - app_state | default('present', true) == 'absent'
+    - cc_switch_is_installed

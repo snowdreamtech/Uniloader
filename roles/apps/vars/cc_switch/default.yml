@@ -1,0 +1,79 @@
+---
+# =====================================================================
+# roles/apps/vars/cc_switch/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for cc_switch
+# ---------------------------------------------------------------------
+cc_switch_defaults:
+  app_desc: "CC Switch - Claude Code Configuration Switcher"
+  app_version: "latest"
+  app_homepage: "https://github.com/farion1231/cc-switch"
+  app_license: "MIT"
+  app_state: "present"
+
+# OS-level package management (System package name typically uses hyphens)
+cc_switch_package_name: "cc-switch"
+
+# Global CC Switch settings
+cc_switch_version: "3.10.3" # latest or user-defined specific version
+cc_switch_download_retries: 5
+cc_switch_download_delay: 10
+cc_switch_force_install: false # Force re-installation even if present
+
+# System Requirements
+# Reference: https://github.com/farion1231/cc-switch/releases/latest
+cc_switch_min_requirements:
+  cpu_cores: 1
+  memory_gb: 0.5 # Lightweight CLI/GUI tool
+  disk_gb: 0.5
+  glibc_version: "2.28" # Linux requirement
+
+# GitHub repository information
+cc_switch_repo_owner: "farion1231"
+cc_switch_repo_name: "cc-switch"
+cc_switch_github_repo: "{{ cc_switch_repo_owner }}/{{ cc_switch_repo_name }}"
+
+# Architecture mapping
+# WHY: CC Switch uses specific architecture labels in download URLs
+_cc_switch_arch_map:
+  x86_64: "x64"
+  amd64: "x64"
+  aarch64: "arm64"
+  arm64: "arm64"
+
+# Derived architecture
+cc_switch_arch: "{{ _cc_switch_arch_map[ansible_architecture] | default(ansible_architecture, true) }}"
+
+# Check if architecture is supported
+# WHY: Linux only supports x64 currently. macOS supports Universal/Intel/Apple Silicon.
+cc_switch_is_supported_arch: >-
+  {{
+    (ansible_system == 'Linux' and cc_switch_arch in ['x64', 'arm64']) or
+    (ansible_os_family == 'Darwin' and cc_switch_arch in ['x64', 'arm64']) or
+    (ansible_os_family == 'Windows' and cc_switch_arch == 'x64')
+  }}
+
+# Download URLs base
+cc_switch_github_url: "https://github.com/{{ cc_switch_github_repo }}"
+cc_switch_releases_url: "{{ cc_switch_github_url }}/releases"
+cc_switch_download_url_base: "{{ cc_switch_releases_url }}/download/v{{ cc_switch_version }}"
+cc_switch_latest_release_url: "{{ cc_switch_releases_url }}/latest"
+
+# Artifact Naming Patterns
+# Based on GitHub Release assets
+cc_switch_artifacts:
+  linux_deb: "CC-Switch-v{{ cc_switch_version }}-Linux{{ '-arm64' if cc_switch_arch == 'arm64' else '' }}.deb"
+  linux_rpm: "CC-Switch-v{{ cc_switch_version }}-Linux{{ '-arm64' if cc_switch_arch == 'arm64' else '' }}.rpm"
+  linux_appimage: "CC-Switch-v{{ cc_switch_version }}-Linux{{ '-arm64' if cc_switch_arch == 'arm64' else '' }}.AppImage"
+  macos_zip: "CC-Switch-v{{ cc_switch_version }}-macOS.zip"
+  windows_msi: "CC-Switch-v{{ cc_switch_version }}-Windows.msi"
+
+# Homebrew cask name (if available via tap)
+cc_switch_homebrew_tap: "farion1231/ccswitch"
+cc_switch_homebrew_cask: "cc-switch"
+
+# Installation paths
+cc_switch_install_dir: "/opt/cc-switch"
+cc_switch_bin_dir: "/usr/local/bin"

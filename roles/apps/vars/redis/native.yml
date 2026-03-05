@@ -1,0 +1,13 @@
+---
+# =====================================================================
+# roles/apps/vars/redis/native.yml
+# =====================================================================
+
+redis_overrides:
+  app_state: "started"
+  app_service_enabled: true
+  # WHY: Common config paths across distributions
+  app_config_paths:
+    - "/etc/redis/redis.conf"
+    - "/etc/redis.conf"
+    - "/usr/local/etc/redis.conf"

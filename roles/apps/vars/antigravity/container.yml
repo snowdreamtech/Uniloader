@@ -1,0 +1,15 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity/container.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Container deployment is NOT supported
+# ---------------------------------------------------------------------
+# WHY: Antigravity is a desktop IDE application requiring:
+#   - GUI (graphical user interface)
+#   - User login (personal Gmail account)
+#   - Local development environment
+#
+# The container.yml task file will fail with a clear error message.
+antigravity_container_supported: false

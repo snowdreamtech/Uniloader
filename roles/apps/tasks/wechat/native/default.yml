@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/tasks/wechat/native/default.yml
+# =====================================================================
+
+- name: "wechat (Default): Fail on unsupported OS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "WeChat role does not support this OS: {{ ansible_os_family }}."

@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/gentoo.yml
+# =====================================================================
+
+mongodb_overrides:
+  # WHY: Gentoo uses category/package naming convention
+  app_packages: ["dev-db/mongodb"]
+  app_service: "mongodb"
+  # WHY: Gentoo uses OpenRC by default
+  app_init_system: "openrc"

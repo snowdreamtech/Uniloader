@@ -1,0 +1,18 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity/native.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Native overrides for antigravity
+# ---------------------------------------------------------------------
+antigravity_overrides:
+  # WHY: Package name may vary by platform
+  # Platform-specific files override this default
+  app_packages: ["antigravity"]
+
+# CLI tools included with Antigravity
+# WHY: Document CLI tools for reference
+antigravity_cli_tools:
+  - "agy" # Main CLI to launch Antigravity IDE
+  - "antigravity-usage" # Usage and quota tracking tool

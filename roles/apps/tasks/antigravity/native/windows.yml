@@ -1,0 +1,126 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity/native/windows.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Windows/Native): Validate system requirements {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+- name: "antigravity (Windows/Native): Check if Antigravity is already installed (Registry) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_powershell:
+    script: |
+      $uninstallKeys = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+
+      $app = $uninstallKeys | ForEach-Object {
+        if (Test-Path $_) {
+          Get-ChildItem -Path $_ -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object { $_.DisplayName -match '^Antigravity' }
+        }
+      } | Select-Object -First 1
+
+      if ($app) {
+        $ansible.Result = @{ installed = $true; path = $app.InstallLocation; version = $app.DisplayVersion }
+      } else {
+        $ansible.Result = @{ installed = $false }
+      }
+  register: _antigravity_reg_check
+
+- name: "antigravity (Windows/Native): Set installation status fact"
+  ansible.builtin.set_fact:
+    _antigravity_is_installed: "{{ _antigravity_reg_check.result.installed | default(false) }}"
+
+- name: "antigravity (Windows/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Antigravity is already installed. Skipping installation steps."
+  when: _antigravity_is_installed
+
+# ---------------------------------------------------------------------
+# 1. Installation: Winget Package Manager
+# ---------------------------------------------------------------------
+
+# WHY: Winget is the official Windows package manager introduced in Windows 10.
+# It provides standardized installation and automatic updates.
+- name: "antigravity (Windows/Native): Install Antigravity via winget {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_command:
+    cmd: "winget install --id {{ antigravity_windows_winget_id }} --silent --accept-source-agreements --accept-package-agreements"
+  when:
+    - not _antigravity_is_installed
+    - app_state | default('present', true) == 'present'
+  changed_when: false
+  register: _antigravity_winget_result
+  ignore_errors: true
+
+# ---------------------------------------------------------------------
+# 2. Fallback: Direct Download
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Windows/Native): Fallback to direct download {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - not _antigravity_is_installed
+    - app_state | default('present', true) == 'present'
+    - _antigravity_winget_result is skipped or _antigravity_winget_result is failed
+  block:
+    - name: "antigravity (Windows/Native): Create temp directory"
+      ansible.windows.win_tempfile:
+        state: directory
+        suffix: "antigravity_install"
+      register: _antigravity_temp_dir
+
+    - name: "antigravity (Windows/Native): Download Antigravity Installer"
+      ansible.windows.win_get_url:
+        url: "{{ antigravity_windows_download_url }}"
+        dest: "{{ _antigravity_temp_dir.path }}\\AntigravityUserSetup.exe"
+      register: _antigravity_download
+      retries: 3
+      delay: 5
+      until: _antigravity_download is succeeded
+
+    - name: "antigravity (Windows/Native): Install Antigravity (Direct)"
+      ansible.windows.win_package:
+        path: "{{ _antigravity_temp_dir.path }}\\AntigravityUserSetup.exe"
+        product_id: "auto"
+        arguments: "/verysilent"
+        state: present
+
+    - name: "antigravity (Windows/Native): Cleanup Temp Files"
+      ansible.windows.win_file:
+        path: "{{ _antigravity_temp_dir.path }}"
+        state: absent
+
+# ---------------------------------------------------------------------
+# 3. Extension Management
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Windows/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 4. Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "antigravity (Windows/Native): Uninstall Antigravity via winget {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_command:
+    cmd: "winget uninstall --id {{ antigravity_windows_winget_id }} --silent"
+  when: app_state | default('present', true) == 'absent'
+  changed_when: false
+  ignore_errors: true
+
+- name: "antigravity (Windows/Native): Remove install directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_file:
+    path: '%LocalAppData%\Programs\Antigravity'
+    state: absent
+  when: app_state | default('present', true) == 'absent'
+
+- name: "antigravity (Windows/Native): Remove extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.windows.win_file:
+    path: '%UserProfile%\.antigravity'
+    state: absent
+  when: app_state | default('present', true) == 'absent'

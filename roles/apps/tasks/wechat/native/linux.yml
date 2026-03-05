@@ -1,0 +1,117 @@
+---
+# =====================================================================
+# roles/apps/tasks/wechat/native/linux.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "wechat (Linux): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Prepare Variables
+# ---------------------------------------------------------------------
+
+- name: "wechat (Linux): Determine package format and URL"
+  ansible.builtin.set_fact:
+    wechat_linux_pkg_url: >-
+      {{
+        wechat_linux_url_deb if ansible_pkg_mgr in ['apt', 'dpkg'] else
+        wechat_linux_url_rpm if ansible_pkg_mgr in ['dnf', 'yum', 'zypper'] else
+        wechat_linux_url_appimage
+      }}
+    wechat_linux_pkg_ext: >-
+      {{
+        'deb' if ansible_pkg_mgr in ['apt', 'dpkg'] else
+        'rpm' if ansible_pkg_mgr in ['dnf', 'yum', 'zypper'] else
+        'AppImage'
+      }}
+
+# ---------------------------------------------------------------------
+# Detection
+# ---------------------------------------------------------------------
+# TODO: Implement robust detection. For Deb/RPM, package manager check is best.
+
+- name: "wechat (Linux/Debian): Check if package is installed"
+  ansible.builtin.command: "dpkg-query -W -f='${Status}' weixin"
+  register: _wechat_deb_check
+  failed_when: false
+  changed_when: false
+  when: ansible_pkg_mgr in ['apt', 'dpkg']
+
+- name: "wechat (Linux/RedHat): Check if package is installed"
+  ansible.builtin.command: "rpm -q weixin"
+  register: _wechat_rpm_check
+  failed_when: false
+  changed_when: false
+  when: ansible_pkg_mgr in ['dnf', 'yum', 'zypper']
+
+- name: "wechat (Linux): Set installation status fact"
+  ansible.builtin.set_fact:
+    wechat_is_installed: >-
+      {{
+        (_wechat_deb_check.rc == 0) if ansible_pkg_mgr in ['apt', 'dpkg'] else
+        (_wechat_rpm_check.rc == 0) if ansible_pkg_mgr in ['dnf', 'yum', 'zypper'] else
+        false
+      }}
+
+# ---------------------------------------------------------------------
+# Installation
+# ---------------------------------------------------------------------
+
+- name: "wechat (Linux): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not wechat_is_installed or (wechat_force_install | default(false) | bool)
+  block:
+    - name: "wechat (Linux): Create temporary directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: wechat
+      register: _wc_temp_dir
+
+    - name: "wechat (Linux): Download Artifact ({{ wechat_linux_pkg_ext }})"
+      ansible.builtin.get_url:
+        url: "{{ wechat_linux_pkg_url }}"
+        dest: "{{ _wc_temp_dir.path }}/WeChat.{{ wechat_linux_pkg_ext }}"
+      register: _linux_download
+      until: _linux_download is succeeded
+      retries: "{{ wechat_download_retries | default(5) }}"
+      delay: "{{ wechat_download_delay | default(10) }}"
+
+    - name: "wechat (Linux/Debian): Install DEB package"
+      ansible.builtin.apt:
+        deb: "{{ _linux_download.dest }}"
+      become: true
+      when: ansible_pkg_mgr in ['apt', 'dpkg']
+
+    - name: "wechat (Linux/RedHat): Install RPM package"
+      ansible.builtin.dnf:
+        name: "{{ _linux_download.dest }}"
+        state: present
+        disable_gpg_check: true
+      become: true
+      when: ansible_pkg_mgr in ['dnf', 'yum', 'zypper']
+
+  always:
+    - name: "wechat (Linux): Clean up"
+      ansible.builtin.file:
+        path: "{{ _wc_temp_dir.path }}"
+        state: absent
+      when: _wc_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "wechat (Linux): Uninstall package"
+  ansible.builtin.package:
+    name: "weixin"
+    state: absent
+  become: true
+  when:
+    - app_state | default('present', true) == 'absent'
+    - wechat_is_installed

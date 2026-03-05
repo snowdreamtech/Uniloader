@@ -1,0 +1,75 @@
+---
+# =====================================================================
+# roles/apps/tasks/wechat/native/darwin.yml
+# =====================================================================
+
+- name: "wechat (Darwin): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# Detection
+- name: "wechat (Darwin): Check if WeChat app exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/Applications/WeChat.app"
+  register: _wechat_app_stat
+  check_mode: false
+
+- name: "wechat (Darwin): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    wechat_is_installed: "{{ _wechat_app_stat.stat.exists | default(false) }}"
+
+# Installation
+- name: "wechat (Darwin): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not wechat_is_installed or (wechat_force_install | default(false) | bool)
+  block:
+    - name: "wechat (Darwin): Create temporary directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: wechat
+      register: _wc_temp_dir
+
+    - name: "wechat (Darwin): Download DMG artifact"
+      ansible.builtin.get_url:
+        url: "{{ wechat_mac_url }}"
+        dest: "{{ _wc_temp_dir.path }}/WeChat.dmg"
+        mode: "0644"
+      register: _dmg_download
+      until: _dmg_download is succeeded
+      retries: "{{ wechat_download_retries | default(5) }}"
+      delay: "{{ wechat_download_delay | default(10) }}"
+
+    - name: "wechat (Darwin): Mount DMG"
+      ansible.builtin.command: "hdiutil attach '{{ _dmg_download.dest }}' -nobrowse -readonly"
+      register: _dmg_mount
+      changed_when: false
+
+    - name: "wechat (Darwin): Get mount point"
+      ansible.builtin.shell: "df | grep 'WeChat' | awk '{print $NF}' | head -n 1"
+      register: _dmg_mount_point
+      changed_when: false
+
+    - name: "wechat (Darwin): Copy Application to /Applications"
+      ansible.builtin.command: "cp -R '{{ _dmg_mount_point.stdout }}/WeChat.app' /Applications/"
+      become: true
+
+    - name: "wechat (Darwin): Unmount DMG"
+      ansible.builtin.command: "hdiutil detach '{{ _dmg_mount_point.stdout }}'"
+      changed_when: false
+
+  always:
+    - name: "wechat (Darwin): Clean up"
+      ansible.builtin.file:
+        path: "{{ _wc_temp_dir.path }}"
+        state: absent
+      when: _wc_temp_dir.path is defined
+
+# Uninstallation
+- name: "wechat (Darwin): Remove Application {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/Applications/WeChat.app"
+    state: absent
+  become: true
+  when:
+    - app_state | default('present', true) == 'absent'

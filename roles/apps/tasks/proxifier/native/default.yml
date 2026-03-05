@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/tasks/proxifier/native/default.yml
+# =====================================================================
+
+- name: "proxifier (Default): Fail on unsupported OS {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: |
+      Error: Proxifier is not supported on {{ ansible_os_family }} ({{ ansible_distribution }}).
+      Supported Platforms:
+      - macOS (>= 12)
+      - Windows (>= 7)

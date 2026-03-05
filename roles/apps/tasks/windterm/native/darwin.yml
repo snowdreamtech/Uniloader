@@ -1,0 +1,89 @@
+---
+# =====================================================================
+# roles/apps/tasks/windterm/native/darwin.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "windterm (Darwin): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "windterm (Darwin): Check if WindTerm app exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/Applications/WindTerm.app"
+  register: _windterm_app_stat
+  check_mode: false
+
+- name: "windterm (Darwin): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    windterm_is_installed: "{{ _windterm_app_stat.stat.exists | default(false) }}"
+
+# ---------------------------------------------------------------------
+# Installation: DMG Download and Install
+# ---------------------------------------------------------------------
+
+- name: "windterm (Darwin): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not windterm_is_installed or (windterm_force_install | default(false) | bool)
+  block:
+    - name: "windterm (Darwin): Create temporary directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: windterm
+      register: _wt_temp_dir
+
+    - name: "windterm (Darwin): Download DMG artifact"
+      ansible.builtin.get_url:
+        url: "{{ windterm_mac_url }}"
+        dest: "{{ _wt_temp_dir.path }}/WindTerm.dmg"
+        mode: "0644"
+      register: _dmg_download
+      until: _dmg_download is succeeded
+      retries: "{{ windterm_download_retries | default(5) }}"
+      delay: "{{ windterm_download_delay | default(10) }}"
+
+    - name: "windterm (Darwin): Mount DMG"
+      ansible.builtin.command: "hdiutil attach '{{ _dmg_download.dest }}' -nobrowse -readonly"
+      register: _dmg_mount
+      changed_when: false
+
+    - name: "windterm (Darwin): Get mount point"
+      ansible.builtin.shell: "df | grep 'WindTerm' | awk '{print $NF}' | head -n 1"
+      register: _dmg_mount_point
+      changed_when: false
+
+    - name: "windterm (Darwin): Copy Application to /Applications"
+      ansible.builtin.command: "cp -R '{{ _dmg_mount_point.stdout }}/WindTerm.app' /Applications/"
+      become: true
+
+    - name: "windterm (Darwin): Unmount DMG"
+      ansible.builtin.command: "hdiutil detach '{{ _dmg_mount_point.stdout }}'"
+      changed_when: false
+
+  always:
+    - name: "windterm (Darwin): Clean up"
+      ansible.builtin.file:
+        path: "{{ _wt_temp_dir.path }}"
+        state: absent
+      when: _wt_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "windterm (Darwin): Remove Application {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/Applications/WindTerm.app"
+    state: absent
+  become: true
+  when:
+    - app_state | default('present', true) == 'absent'
+    - windterm_is_installed

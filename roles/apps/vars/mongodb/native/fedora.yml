@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/fedora.yml
+# =====================================================================
+
+mongodb_overrides:
+  # WHY: Fedora uses mongodb-org from MongoDB official repos
+  # or mongodb from Fedora repos (older versions)
+  app_packages: ["mongodb-org"]
+  app_service: "mongod"
+  # WHY: Fedora uses systemd for service management
+  app_init_system: "systemd"

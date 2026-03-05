@@ -1,0 +1,75 @@
+---
+# =====================================================================
+# roles/apps/tasks/qq/native/darwin.yml
+# =====================================================================
+
+- name: "qq (Darwin): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# Detection
+- name: "qq (Darwin): Check if QQ app exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/Applications/QQ.app"
+  register: _qq_app_stat
+  check_mode: false
+
+- name: "qq (Darwin): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    qq_is_installed: "{{ _qq_app_stat.stat.exists | default(false) }}"
+
+# Installation
+- name: "qq (Darwin): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not qq_is_installed or (qq_force_install | default(false) | bool)
+  block:
+    - name: "qq (Darwin): Create temporary directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: qq
+      register: _qq_temp_dir
+
+    - name: "qq (Darwin): Download DMG artifact"
+      ansible.builtin.get_url:
+        url: "{{ qq_mac_url }}"
+        dest: "{{ _qq_temp_dir.path }}/QQ.dmg"
+        mode: "0644"
+      register: _dmg_download
+      until: _dmg_download is succeeded
+      retries: "{{ qq_download_retries | default(5) }}"
+      delay: "{{ qq_download_delay | default(10) }}"
+
+    - name: "qq (Darwin): Mount DMG"
+      ansible.builtin.command: "hdiutil attach '{{ _dmg_download.dest }}' -nobrowse -readonly"
+      register: _dmg_mount
+      changed_when: false
+
+    - name: "qq (Darwin): Get mount point"
+      ansible.builtin.shell: "df | grep 'QQ' | awk '{print $NF}' | head -n 1"
+      register: _dmg_mount_point
+      changed_when: false
+
+    - name: "qq (Darwin): Copy Application to /Applications"
+      ansible.builtin.command: "cp -R '{{ _dmg_mount_point.stdout }}/QQ.app' /Applications/"
+      become: true
+
+    - name: "qq (Darwin): Unmount DMG"
+      ansible.builtin.command: "hdiutil detach '{{ _dmg_mount_point.stdout }}'"
+      changed_when: false
+
+  always:
+    - name: "qq (Darwin): Clean up"
+      ansible.builtin.file:
+        path: "{{ _qq_temp_dir.path }}"
+        state: absent
+      when: _qq_temp_dir.path is defined
+
+# Uninstallation
+- name: "qq (Darwin): Remove Application {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/Applications/QQ.app"
+    state: absent
+  become: true
+  when:
+    - app_state | default('present', true) == 'absent'

@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/vscode/native/alpine.yml
+# =====================================================================
+
+vscode_overrides:
+  # WHY: VSCode not available in Alpine repos, requires manual download
+  # Use direct download URL from Microsoft
+  app_install_cmd: "wget -O /tmp/vscode.tar.gz {{ vscode_download_url_base }}/linux-alpine-{{ vscode_arch }}/{{ vscode_channel }}"
+  app_install_creates: "/usr/share/code/code"

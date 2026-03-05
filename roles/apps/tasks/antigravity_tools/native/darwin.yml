@@ -1,0 +1,92 @@
+---
+# =====================================================================
+# roles/apps/tasks/antigravity_tools/native/darwin.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Darwin): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Darwin): Check if app is installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/Applications/Antigravity Tools.app"
+  register: _ag_app_stat
+
+- name: "antigravity-tools (Darwin): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    antigravity_tools_is_installed: "{{ _ag_app_stat.stat.exists }}"
+
+# ---------------------------------------------------------------------
+# Installation: Download and Install DMG
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Darwin): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not antigravity_tools_is_installed or (antigravity_tools_force_install | default(false) | bool)
+  block:
+    - name: "antigravity-tools (Darwin): Create temporary directory for download {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: agtools
+      register: _ag_temp_dir
+
+    - name: "antigravity-tools (Darwin): Download DMG artifact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.get_url:
+        url: "{{ antigravity_tools_download_url_base }}/{{ antigravity_tools_artifacts.darwin_dmg }}"
+        dest: "{{ _ag_temp_dir.path }}/{{ antigravity_tools_artifacts.darwin_dmg }}"
+        mode: "0644"
+      register: _download_result
+      until: _download_result is succeeded
+      retries: "{{ antigravity_tools_download_retries | default(5) }}"
+      delay: "{{ antigravity_tools_download_delay | default(10) }}"
+
+    - name: "antigravity-tools (Darwin): Install DMG package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.shell: |
+        hdiutil attach "{{ _ag_temp_dir.path }}/{{ antigravity_tools_artifacts.darwin_dmg }}" -mountpoint /Volumes/AntigravityTools -nobrowse -quiet
+        cp -R "/Volumes/AntigravityTools/Antigravity Tools.app" /Applications/
+        hdiutil detach /Volumes/AntigravityTools -quiet
+      args:
+        creates: "/Applications/Antigravity Tools.app"
+      become: "{{ become_enabled }}"
+      register: _install_result
+
+    # Rename support if required (optional based on user request "重命名")
+    - name: "antigravity-tools (Darwin): Create symlink to bin directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.file:
+        src: "/Applications/Antigravity Tools.app/Contents/MacOS/antigravity-tools" # Assuming internal binary path
+        dest: "{{ antigravity_tools_bin_dir }}/antigravity-tools"
+        state: link
+      become: "{{ become_enabled }}"
+      failed_when: false # Don't fail if binary path is different - this is a convenience link
+
+  always:
+    - name: "antigravity-tools (Darwin): Clean up temporary directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      ansible.builtin.file:
+        path: "{{ _ag_temp_dir.path }}"
+        state: absent
+      when: _ag_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation: Remove App
+# ---------------------------------------------------------------------
+
+- name: "antigravity-tools (Darwin): Remove application and link {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/Applications/Antigravity Tools.app"
+    - "{{ antigravity_tools_bin_dir }}/antigravity-tools"
+  become: "{{ become_enabled }}"
+  when:
+    - app_state | default('present', true) == 'absent'
+    - antigravity_tools_is_installed

@@ -1,0 +1,19 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode_server/native/uninstall.yml
+# =====================================================================
+
+# Re-use Commit ID logic from install.yml or assume it's set.
+# If we just want to nuke the whole bin folder, that might be too aggressive.
+# For now, let's rely on install.yml handling the absent state as configured in native.yml
+# Wait, native.yml dispatches to install.yml.
+# So this file might be redundant unless we change native.yml dispatch logic.
+# However, for completeness:
+
+- name: "vscode_server (Linux): Uninstall specific version"
+  ansible.builtin.file:
+    path: "{{ vscode_server_install_dir }}"
+    state: absent
+  when:
+    - app_state | default('present', true) == 'absent'
+    - vscode_server_commit_id | length > 0

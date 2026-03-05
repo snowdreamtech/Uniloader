@@ -1,0 +1,8 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode_server/native/alpine.yml
+# =====================================================================
+
+- name: "Vscode_server (Alpine): Fail on unsupported OS"
+  ansible.builtin.fail:
+    msg: "VS Code Server does NOT support Alpine Linux (musl libc)."

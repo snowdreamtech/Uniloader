@@ -1,0 +1,10 @@
+---
+# =====================================================================
+# roles/apps/vars/valkey/native/freebsd.yml
+# =====================================================================
+
+valkey_overrides:
+  app_packages: ["valkey"]
+  app_service: "valkey"
+  # WHY: FreeBSD uses rc.d for service management
+  app_init_system: "bsd_rc"

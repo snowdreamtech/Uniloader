@@ -1,0 +1,122 @@
+---
+# =====================================================================
+# roles/apps/tasks/vscode/native/archlinux.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 0. Pre-Flight Checks
+# ---------------------------------------------------------------------
+
+- name: "vscode (Arch/Native): Check if visual-studio-code-bin is installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pacman -Q visual-studio-code-bin"
+  register: _vscode_arch_check
+  failed_when: false
+  changed_when: false
+
+- name: "vscode (Arch/Native): Check if generic code package is installed {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pacman -Q code"
+  register: _vscode_arch_oss_check
+  failed_when: false
+  changed_when: false
+  when: _vscode_arch_check.rc != 0
+
+- name: "vscode (Arch/Native): Skip installation if already present"
+  ansible.builtin.debug:
+    msg: "Visual Studio Code is already installed. Skipping installation steps."
+  when: (_vscode_arch_check.rc == 0) or (_vscode_arch_oss_check.rc | default(1) == 0)
+
+# ---------------------------------------------------------------------
+# 1. Dependency Check
+# ---------------------------------------------------------------------
+
+- name: "vscode (Arch/Native): Ensure git and base-devel are present for fallback {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  community.general.pacman:
+    name:
+      - git
+      - base-devel
+    state: present
+  become: "{{ become_enabled }}"
+  when:
+    - not ((_vscode_arch_check.rc == 0) or (_vscode_arch_oss_check.rc | default(1) == 0))
+    - app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# 2. AUR Installation (Helper)
+# ---------------------------------------------------------------------
+
+- name: "vscode (Arch/Native): Detect available AUR helper {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: "command -v yay || command -v paru"
+  register: _vscode_aur_helper
+  changed_when: false
+  failed_when: false
+  when:
+    - not ((_vscode_arch_check.rc == 0) or (_vscode_arch_oss_check.rc | default(1) == 0))
+    - app_state | default('present', true) == 'present'
+
+- name: "vscode (Arch/Native): Install via AUR helper {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "{{ _vscode_aur_helper.stdout }} -S --noconfirm visual-studio-code-bin"
+  become: false # AUR helpers usually should not run as root, or handle sudo themselves
+  when:
+    - not ((_vscode_arch_check.rc == 0) or (_vscode_arch_oss_check.rc | default(1) == 0))
+    - app_state | default('present', true) == 'present'
+    - _vscode_aur_helper.rc == 0
+  register: _vscode_aur_install
+  ignore_errors: true
+
+# ---------------------------------------------------------------------
+# 3. Manual Fallback
+# ---------------------------------------------------------------------
+
+- name: "vscode (Arch/Native): Prepare Manual Build {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  when:
+    - not ((_vscode_arch_check.rc == 0) or (_vscode_arch_oss_check.rc | default(1) == 0))
+    - app_state | default('present', true) == 'present'
+    - (_vscode_aur_helper.rc != 0) or (_vscode_aur_install is failed)
+  block:
+    - name: "vscode (Arch/Native): Create temp directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: "vscode_aur"
+      register: _vscode_temp_dir
+
+    - name: "vscode (Arch/Native): Clone AUR repository"
+      ansible.builtin.git:
+        repo: "https://aur.archlinux.org/visual-studio-code-bin.git"
+        dest: "{{ _vscode_temp_dir.path }}"
+        version: "master"
+
+    - name: "vscode (Arch/Native): Build and Install Package"
+      ansible.builtin.command:
+        cmd: "makepkg -si --noconfirm"
+        chdir: "{{ _vscode_temp_dir.path }}"
+      become: false # makepkg must not be run as root
+
+    - name: "vscode (Arch/Native): Cleanup"
+      ansible.builtin.file:
+        path: "{{ _vscode_temp_dir.path }}"
+        state: absent
+
+# ---------------------------------------------------------------------
+# 4. Extension Management
+# ---------------------------------------------------------------------
+
+- name: "vscode (Arch/Native): Carry out extension management {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "extensions.yml"
+  when:
+    - app_state | default('present', true) == 'present'
+# ---------------------------------------------------------------------
+# 5. Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "vscode (Arch/Native): Remove visual-studio-code-bin package {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "pacman -Rns visual-studio-code-bin --noconfirm"
+  become: true
+  when: app_state | default('present', true) == 'absent'
+  ignore_errors: true
+
+- name: "vscode (Arch/Native): Remove extensions directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ ansible_user_home }}/.vscode"
+    state: absent
+  become: false
+  when: app_state | default('present', true) == 'absent'

@@ -1,0 +1,116 @@
+---
+# =====================================================================
+# roles/apps/vars/motrix/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Default variables for motrix
+# ---------------------------------------------------------------------
+motrix_defaults:
+  app_desc: "Motrix - A full-featured download manager"
+  app_version: "latest"
+  app_homepage: "https://motrix.app/"
+  app_license: "MIT"
+  app_state: "present"
+
+# Global Motrix settings
+# motrix_version: "1.8.19"  # latest or specific version
+motrix_version: "latest" # latest or specific version
+
+# GitHub repository information
+motrix_repo_owner: "agalwood"
+motrix_repo_name: "Motrix"
+motrix_github_repo: "{{ motrix_repo_owner }}/{{ motrix_repo_name }}"
+
+# Architecture mapping
+_motrix_arch_map:
+  x86_64: "x86_64"
+  amd64: "x86_64"
+  aarch64: "arm64"
+  arm64: "arm64"
+
+# Derived architecture
+motrix_arch: "{{ _motrix_arch_map[ansible_architecture] | default(ansible_architecture, true) }}"
+
+# Check if architecture is supported
+motrix_is_supported_arch: "{{ motrix_arch in ['x86_64', 'arm64'] }}"
+
+# Download URLs base
+motrix_github_url: "https://github.com/{{ motrix_github_repo }}"
+motrix_releases_url: "{{ motrix_github_url }}/releases"
+
+# Archive Extensions
+motrix_ext_linux: "AppImage"
+motrix_ext_mac: "dmg"
+motrix_ext_deb: "deb"
+motrix_ext_rpm: "rpm"
+motrix_ext_win: "exe"
+
+# ---------------------------------------------------------------------
+# Filename Logic
+# ---------------------------------------------------------------------
+
+# AppImage (Generic Linux)
+motrix_linux_filename: "Motrix-{{ motrix_version }}-{{ motrix_arch }}.{{ motrix_ext_linux }}"
+
+# Windows (NSIS Installer)
+# Note: The setup exe is usually generic "Motrix-Setup-v.x.y.exe" or similar.
+# Step 11 said: "Motrix-Setup-1.8.19.exe"
+motrix_win_filename: "Motrix-Setup-{{ motrix_version }}.{{ motrix_ext_win }}"
+
+# Debian / Ubuntu (DEB)
+_motrix_deb_arch_map:
+  x86_64: "amd64"
+  amd64: "amd64"
+  aarch64: "arm64"
+  arm64: "arm64"
+
+motrix_deb_arch: "{{ _motrix_deb_arch_map[ansible_architecture] | default(ansible_architecture, true) }}"
+motrix_deb_filename: "Motrix_{{ motrix_version }}_{{ motrix_deb_arch }}.{{ motrix_ext_deb }}"
+
+# RedHat / Fedora (RPM)
+# Only x86_64 is reliably provided as RPM for 1.8.19
+motrix_rpm_arch: "x86_64"
+motrix_rpm_filename: "Motrix-{{ motrix_version }}.{{ motrix_rpm_arch }}.{{ motrix_ext_rpm }}"
+
+# macOS Filename Logic
+# x86_64 -> Motrix-1.8.19.dmg
+# arm64  -> Motrix-1.8.19-arm64.dmg
+_motrix_mac_suffix_map:
+  x86_64: ""
+  arm64: "-arm64"
+
+motrix_mac_suffix: "{{ _motrix_mac_suffix_map[motrix_arch] | default('', true) }}"
+motrix_mac_filename: "Motrix-{{ motrix_version }}{{ motrix_mac_suffix }}.{{ motrix_ext_mac }}"
+
+# Download URLs
+# Usage: {{ github_proxy }}https://github.com/...
+motrix_linux_url: >-
+  {{
+    (github_proxy | default('', true)) +
+    motrix_releases_url + '/download/v' + motrix_version + '/' + motrix_linux_filename
+  }}
+
+motrix_mac_url: >-
+  {{
+    (github_proxy | default('', true)) +
+    motrix_releases_url + '/download/v' + motrix_version + '/' + motrix_mac_filename
+  }}
+
+motrix_deb_url: >-
+  {{
+    (github_proxy | default('', true)) +
+    motrix_releases_url + '/download/v' + motrix_version + '/' + motrix_deb_filename
+  }}
+
+motrix_rpm_url: >-
+  {{
+    (github_proxy | default('', true)) +
+    motrix_releases_url + '/download/v' + motrix_version + '/' + motrix_rpm_filename
+  }}
+
+motrix_win_url: >-
+  {{
+    (github_proxy | default('', true)) +
+    motrix_releases_url + '/download/v' + motrix_version + '/' + motrix_win_filename
+  }}

@@ -1,0 +1,7 @@
+---
+# =====================================================================
+# roles/apps/tasks/windterm/native/redhat.yml
+# =====================================================================
+
+# Wrapper to load generic linux install
+- ansible.builtin.include_tasks: linux_install.yml

@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/opensuse.yml
+# =====================================================================
+
+mongodb_overrides:
+  # WHY: openSUSE uses mongodb from official repos
+  app_packages: ["mongodb"]
+  app_service: "mongod"
+  # WHY: openSUSE uses systemd for service management
+  app_init_system: "systemd"

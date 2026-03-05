@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/apps/vars/mongodb/native/ubuntu.yml
+# =====================================================================
+
+mongodb_overrides:
+  # WHY: Ubuntu uses mongodb-org from MongoDB official repos (recommended)
+  # Distribution repos may have older versions
+  app_packages: ["mongodb-org"]
+  app_service: "mongod"
+  # WHY: Ubuntu uses systemd for service management
+  app_init_system: "systemd"

@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/vars/antigravity/native/redhat.yml
+# =====================================================================
+
+# Repository configuration
+# WHY: Official Google Artifact Registry provides automatic updates
+antigravity_redhat_repo_url: "https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm"
+
+# Package name
+antigravity_redhat_package: "antigravity"

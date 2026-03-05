@@ -1,0 +1,102 @@
+---
+# =====================================================================
+# roles/apps/tasks/cc_switch/native/darwin.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Darwin): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Detection: Check Installation Status
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Darwin): Check if CC Switch app exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "/Applications/CC Switch.app"
+  register: _cc_app_stat
+  check_mode: false
+
+- name: "cc_switch (Darwin): Set installation status fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    cc_switch_is_installed: "{{ _cc_app_stat.stat.exists | default(false) }}"
+
+# ---------------------------------------------------------------------
+# Installation: Homebrew Cask (Preferred) or ZIP
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Darwin): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not cc_switch_is_installed or (cc_switch_force_install | default(false) | bool)
+  block:
+    # 1. Homebrew Method
+    - name: "cc_switch (Darwin): Tap Homebrew repository {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      community.general.homebrew_tap:
+        name: "{{ cc_switch_homebrew_tap }}"
+        state: present
+      when: is_homebrew_installed | default(false) | bool
+      # Don't fail if brew isn't there, just skip to fallback
+
+    - name: "cc_switch (Darwin): Install via Homebrew Cask {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      community.general.homebrew_cask:
+        name: "{{ cc_switch_homebrew_cask }}"
+        state: present
+      when: is_homebrew_installed | default(false) | bool
+      register: _brew_install
+      ignore_errors: true
+
+    # 2. Direct ZIP Download (Fallback)
+    - name: "cc_switch (Darwin): Download ZIP artifact (Fallback) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+      when:
+        - _brew_install is skipped or _brew_install is failed
+      block:
+        - name: "cc_switch (Darwin): Create temporary directory"
+          ansible.builtin.tempfile:
+            state: directory
+            suffix: ccswitch
+          register: _cc_temp_dir
+
+        - name: "cc_switch (Darwin): Download macOS ZIP"
+          ansible.builtin.get_url:
+            url: "{{ cc_switch_download_url_base }}/{{ cc_switch_artifacts.macos_zip }}"
+            dest: "{{ _cc_temp_dir.path }}/{{ cc_switch_artifacts.macos_zip }}"
+            mode: "0644"
+          register: _zip_download
+          until: _zip_download is succeeded
+          retries: "{{ cc_switch_download_retries | default(5) }}"
+          delay: "{{ cc_switch_download_delay | default(10) }}"
+
+        - name: "cc_switch (Darwin): Unzip Application"
+          ansible.builtin.unarchive:
+            src: "{{ _cc_temp_dir.path }}/{{ cc_switch_artifacts.macos_zip }}"
+            dest: "{{ _cc_temp_dir.path }}"
+            remote_src: true
+
+        - name: "cc_switch (Darwin): Move to /Applications"
+          ansible.builtin.command: "mv '{{ _cc_temp_dir.path }}/CC Switch.app' /Applications/"
+          become: true
+
+      always:
+        - name: "cc_switch (Darwin): Clean up"
+          ansible.builtin.file:
+            path: "{{ _cc_temp_dir.path }}"
+            state: absent
+          when: _cc_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "cc_switch (Darwin): Remove Application {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "/Applications/CC Switch.app"
+    state: absent
+  become: true
+  when:
+    - app_state | default('present', true) == 'absent'
+    - cc_switch_is_installed

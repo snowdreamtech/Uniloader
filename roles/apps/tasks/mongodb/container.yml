@@ -1,0 +1,30 @@
+---
+# =====================================================================
+# roles/apps/tasks/mongodb/container.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Container deployment via container role
+# ---------------------------------------------------------------------
+# WHY: All container-specific configuration (image, ports, volumes,
+#      healthcheck, etc.) is already defined in vars/mongodb/container.yml
+#      and merged into app_* variables by the app_loader.
+#      We simply delegate to the container role's loader.
+- name: "MongoDB: Deploy via container runtime {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "container"
+    tasks_from: "container_loader"
+  vars:
+    container_app_name: "{{ app_name }}"
+    container_app_image: "{{ app_image }}"
+    container_app_state: "{{ app_state }}"
+    container_app_ports: "{{ app_ports | default(omit) }}"
+    container_app_env: "{{ app_env | default(omit) }}"
+    container_app_volumes: "{{ app_volumes | default(omit) }}"
+    container_app_restart_policy: "{{ app_restart_policy | default(omit) }}"
+    container_app_healthcheck: "{{ app_healthcheck | default(omit) }}"
+    container_app_memory: "{{ app_memory | default(omit) }}"
+    container_app_cpus: "{{ app_cpus | default(omit) }}"
+    container_app_networks: "{{ app_networks | default(omit) }}"
+    container_app_volume_owner: "{{ app_volume_owner | default(omit) }}"
+    container_app_volume_group: "{{ app_volume_group | default(omit) }}"

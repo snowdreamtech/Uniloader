@@ -1,0 +1,11 @@
+---
+# =====================================================================
+# roles/apps/tasks/mongodb/native.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Dispatch to OS-specific implementation
+# ---------------------------------------------------------------------
+- name: "MongoDB: Dispatch to {{ os_family }} implementation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "native/{{ os_family }}.yml"
+  when: os_family in ['redhat', 'debian', 'alpine', 'darwin']

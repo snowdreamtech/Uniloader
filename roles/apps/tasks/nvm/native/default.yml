@@ -1,0 +1,109 @@
+---
+# =====================================================================
+# roles/apps/tasks/nvm/native/default.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Preparation: Set installation directory
+# ---------------------------------------------------------------------
+
+# WHY: nvm is typically installed in the user's home directory.
+# We allow customization via nvm_install_dir variable.
+- name: "nvm (Native): Set installation directory {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    _nvm_install_dir: "{{ nvm_install_dir | default(ansible_user_home ~ '/.nvm', true) }}"
+
+# ---------------------------------------------------------------------
+# Installation: Prepare and run nvm install script
+# ---------------------------------------------------------------------
+
+# WHY: Some environments require the NVM_DIR to exist before the script
+# is executed, or the script might fail if the environment variable
+# is set but the directory is missing.
+- name: "nvm (Native): Ensure installation directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ _nvm_install_dir }}"
+    state: directory
+    mode: "0755"
+  become: "{{ become_enabled }}"
+  become_user: "{{ ansible_user_name | default('root') }}"
+  when: app_state | default('present', true) == 'present'
+
+# WHY: The official nvm installation method is via a bash script that
+# clones the nvm repository and sets up the necessary shell integration.
+# We use 'creates' to ensure idempotence - the script only runs if
+# nvm.sh doesn't already exist.
+# For 'latest' or empty version, use master branch; otherwise use versioned tag.
+- name: "nvm (Native): Download and install nvm {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: |
+    PATH={{ os_paths }}
+    set -euo pipefail
+    {% if app_version | default('latest', true) == 'latest' %}
+    curl -o- {{ github_proxy }}https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+    {% else %}
+    curl -o- {{ github_proxy }}https://raw.githubusercontent.com/nvm-sh/nvm/v{{ app_version }}/install.sh | bash
+    {% endif %}
+  args:
+    creates: "{{ _nvm_install_dir }}/nvm.sh"
+    executable: /bin/bash
+  environment:
+    NVM_DIR: "{{ _nvm_install_dir }}"
+  become: "{{ become_enabled }}"
+  become_user: "{{ ansible_user_name | default('root') }}"
+  changed_when: false
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Verification: Check nvm installation
+# ---------------------------------------------------------------------
+
+# WHY: Verify that nvm.sh was successfully installed to provide
+# feedback on installation status.
+- name: "nvm (Native): Verify nvm installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.stat:
+    path: "{{ _nvm_install_dir }}/nvm.sh"
+  register: _nvm_installed
+  when: app_state | default('present', true) == 'present'
+
+- name: "nvm (Native): Report installation status {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "nvm {{ app_version | default('latest', true) }} installed successfully at {{ _nvm_install_dir }}"
+  when:
+    - app_state | default('present', true) == 'present'
+    - _nvm_installed.stat.exists | default(false, true)
+
+# ---------------------------------------------------------------------
+# Removal: Uninstall nvm if state is absent
+# ---------------------------------------------------------------------
+
+# WHY: Support removal of nvm by deleting the installation directory.
+- name: "nvm (Native): Remove nvm installation {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ _nvm_install_dir }}"
+    state: absent
+  when: app_state | default('present', true) == 'absent'
+
+# WHY: Clean up shell configuration files by removing nvm-related lines.
+# This prevents errors when shell tries to load non-existent nvm.
+- name: "nvm (Native): Remove NVM_DIR lines from shell rc files {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_user_home }}/{{ rc_file_item }}"
+    regexp: ".*NVM_DIR.*"
+    state: absent
+    create: false
+  register: result
+  loop:
+    - ".bashrc"
+    - ".bash_profile"
+    - ".zshrc"
+    - ".profile"
+  loop_control:
+    loop_var: rc_file_item
+  failed_when: false
+  # Manual changed_when to ensure idempotence and clean output
+  changed_when: result.found | default(0) > 0
+  when:
+    - app_state | default('present', true) == 'absent'
+    - rc_file_item_path.stat.exists | default(false, true)
+  vars:
+    rc_file_item_path: "{{ lookup('ansible.builtin.stat', ansible_user_home ~ '/' ~ rc_file_item) }}"

@@ -1,0 +1,7 @@
+---
+# =====================================================================
+# roles/apps/tasks/windterm/native/debian.yml
+# =====================================================================
+
+# Wrapper to load generic linux install
+- ansible.builtin.include_tasks: linux_install.yml

@@ -1,0 +1,118 @@
+---
+# =====================================================================
+# roles/apps/tasks/qq/native/linux.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation
+# ---------------------------------------------------------------------
+
+- name: "qq (Linux): Validate requirements"
+  ansible.builtin.include_tasks: "validate_requirements.yml"
+  when: app_state | default('present', true) == 'present'
+
+# ---------------------------------------------------------------------
+# Prepare Variables
+# ---------------------------------------------------------------------
+
+- name: "qq (Linux): Determine package format and URL"
+  ansible.builtin.set_fact:
+    qq_linux_pkg_url: >-
+      {{
+        qq_linux_url_deb if ansible_pkg_mgr in ['apt', 'dpkg'] else
+        qq_linux_url_rpm if ansible_pkg_mgr in ['dnf', 'yum', 'zypper'] else
+        qq_linux_url_appimage
+      }}
+    qq_linux_pkg_ext: >-
+      {{
+        'deb' if ansible_pkg_mgr in ['apt', 'dpkg'] else
+        'rpm' if ansible_pkg_mgr in ['dnf', 'yum', 'zypper'] else
+        'AppImage'
+      }}
+
+# ---------------------------------------------------------------------
+# Detection
+# ---------------------------------------------------------------------
+# Use 'qq' as the package name for the new Linux QQ (NT architecture)
+
+- name: "qq (Linux/Debian): Check if package is installed"
+  ansible.builtin.command: "dpkg-query -W -f='${Status}' qq"
+  register: _qq_deb_check
+  failed_when: false
+  changed_when: false
+  when: ansible_pkg_mgr in ['apt', 'dpkg']
+
+- name: "qq (Linux/RedHat): Check if package is installed"
+  ansible.builtin.command: "rpm -q qq"
+  register: _qq_rpm_check
+  failed_when: false
+  changed_when: false
+  when: ansible_pkg_mgr in ['dnf', 'yum', 'zypper']
+
+- name: "qq (Linux): Set installation status fact"
+  ansible.builtin.set_fact:
+    qq_is_installed: >-
+      {{
+        (_qq_deb_check.rc == 0) if ansible_pkg_mgr in ['apt', 'dpkg'] else
+        (_qq_rpm_check.rc == 0) if ansible_pkg_mgr in ['dnf', 'yum', 'zypper'] else
+        false
+      }}
+
+# ---------------------------------------------------------------------
+# Installation
+# ---------------------------------------------------------------------
+
+- name: "qq (Linux): Manage installation"
+  when:
+    - app_state | default('present', true) == 'present'
+    - not qq_is_installed or (qq_force_install | default(false) | bool)
+  block:
+    - name: "qq (Linux): Create temporary directory"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: qq
+      register: _qq_temp_dir
+
+    - name: "qq (Linux): Download Artifact ({{ qq_linux_pkg_ext }})"
+      ansible.builtin.get_url:
+        url: "{{ qq_linux_pkg_url }}"
+        dest: "{{ _qq_temp_dir.path }}/QQ.{{ qq_linux_pkg_ext }}"
+        mode: "0644"
+      register: _linux_download
+      until: _linux_download is succeeded
+      retries: "{{ qq_download_retries | default(5) }}"
+      delay: "{{ qq_download_delay | default(10) }}"
+
+    - name: "qq (Linux/Debian): Install DEB package"
+      ansible.builtin.apt:
+        deb: "{{ _linux_download.dest }}"
+      become: true
+      when: ansible_pkg_mgr in ['apt', 'dpkg']
+
+    - name: "qq (Linux/RedHat): Install RPM package"
+      ansible.builtin.dnf:
+        name: "{{ _linux_download.dest }}"
+        state: present
+        disable_gpg_check: true
+      become: true
+      when: ansible_pkg_mgr in ['dnf', 'yum', 'zypper']
+
+  always:
+    - name: "qq (Linux): Clean up"
+      ansible.builtin.file:
+        path: "{{ _qq_temp_dir.path }}"
+        state: absent
+      when: _qq_temp_dir.path is defined
+
+# ---------------------------------------------------------------------
+# Uninstallation
+# ---------------------------------------------------------------------
+
+- name: "qq (Linux): Uninstall package"
+  ansible.builtin.package:
+    name: "qq"
+    state: absent
+  become: true
+  when:
+    - app_state | default('present', true) == 'absent'
+    - qq_is_installed
