@@ -4,7 +4,7 @@ import re
 import sys
 
 # Paths
-REPO_ROOT = "/Users/snowdream/Workspace/Uniloader"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OS_REF_PATH = os.path.join(REPO_ROOT, "docs/OS_REFERENCE.md")
 CI_TEMPLATE_PATH = os.path.join(REPO_ROOT, ".github/workflows/ci.yml")
 WORKFLOWS_DIR = os.path.join(REPO_ROOT, ".github/workflows")
@@ -25,7 +25,6 @@ DOCKER_MAPPINGS = {
     "ubuntu": "ubuntu:latest",
     "fedora": "fedora:latest",
     "archlinux": "archlinux:latest",
-    "euleros": "euleros:latest",
     "mageia": "mageia:latest",
 }
 
@@ -36,7 +35,6 @@ os_list = [
     "archlinux",
     "centos",
     "debian",
-    "euleros",
     "fedora",
     "kali",
     "mageia",
