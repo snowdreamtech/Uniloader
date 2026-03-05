@@ -1,0 +1,280 @@
+---
+# =====================================================================
+# roles/scripts/tasks/main.yml
+#
+# Purpose:
+#   Cross-platform script deployment and execution engine.
+#   Manages the lifecycle of static scripts, dynamic templates, and
+#   network-based resources with integrated execution and cron scheduling.
+#
+# Simple Usage:
+#   - include_role:
+#       name: scripts
+#     vars:
+#       scripts_files: ["setup.sh"]
+#
+# Comprehensive Usage:
+#   - include_role:
+#       name: scripts
+#     vars:
+#       scripts_files:
+#         - src: "install.sh"
+#           run:
+#             args: "--silent"
+#             creates: "/opt/app/installed.lock"
+#           cron:
+#             name: "Daily Check"
+#             hour: "2"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation & Initialization
+# ---------------------------------------------------------------------
+- name: "Ensure target script directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ scripts_dest_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: "Ensure custom script directories exist {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ (scripts_files | default([], true) + scripts_templates | default([], true) + scripts_urls | default([], true)) | selectattr('dir', 'defined') | map(attribute='dir') | unique }}"
+
+# ---------------------------------------------------------------------
+# 1. Static Files Deployment
+# ---------------------------------------------------------------------
+- name: "Deploy static scripts (files) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    src: "{{ item.src | default(item if item is string else omit, true) }}"
+    content: "{{ item.content | default(omit) }}"
+    dest: "{{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename, true) }}"
+    mode: "{{ item.mode | default('0755', true) }}"
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    force: "{{ item.force | default(scripts_force, true) }}"
+    backup: "{{ item.backup | default(scripts_backup, true) }}"
+    remote_src: "{{ item.remote_src | default(omit) }}"
+    follow: "{{ item.follow | default(omit) }}"
+    local_follow: "{{ item.local_follow | default(omit) }}"
+    unsafe_writes: "{{ item.unsafe_writes | default(omit) }}"
+    directory_mode: "{{ item.directory_mode | default(omit) }}"
+    decrypt: "{{ item.decrypt | default(omit) }}"
+    validate: "{{ item.validate | default(omit) }}"
+    attributes: "{{ item.attributes | default(omit) }}"
+    seuser: "{{ item.seuser | default(omit) }}"
+    serole: "{{ item.serole | default(omit) }}"
+    setype: "{{ item.setype | default(omit) }}"
+    selevel: "{{ item.selevel | default(omit) }}"
+  loop: "{{ scripts_files | default([], true) }}"
+  when: scripts_files is defined
+  register: _scripts_files_result
+
+- name: "Log static file deployment {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Deployed static script: {{ item.dest | default(item.src | default(item, true) | basename, true) }}"
+  loop: "{{ scripts_files | default([], true) }}"
+  when:
+    - scripts_files is defined
+    - _scripts_files_result.results[ansible_loop.index0].changed
+
+- name: "Execute static scripts (if configured) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command:
+    cmd: >-
+      {{ item.run.interpreter | default('', true) }}
+      {{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename, true) }}
+      {{ item.run.args if (item.run is mapping and item.run.args is defined) else (item.run if item.run is string else '') }}
+    creates: "{{ item.run.creates | default(omit) }}"
+    removes: "{{ item.run.removes | default(omit) }}"
+  loop: "{{ scripts_files | default([], true) }}"
+  when:
+    - scripts_files is defined
+    - item.run is defined
+    - item.run
+  changed_when: true
+
+- name: "Schedule cron jobs for static scripts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.cron:
+    name: "{{ item.cron.name | default(item.dest | default(item.src | default(item, true) | basename, true), true) }}"
+    job: >-
+      {{ item.run.interpreter | default('', true) }}
+      {{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename, true) }}
+      {{ item.run.args if (item.run is mapping and item.run.args is defined) else (item.run if item.run is string else '') }}
+    minute: "{{ item.cron.minute | default('*', true) }}"
+    hour: "{{ item.cron.hour | default('*', true) }}"
+    day: "{{ item.cron.day | default('*', true) }}"
+    month: "{{ item.cron.month | default('*', true) }}"
+    weekday: "{{ item.cron.weekday | default('*', true) }}"
+    state: "{{ item.cron.state | default('present', true) }}"
+  loop: "{{ scripts_files | default([], true) }}"
+  when:
+    - scripts_files is defined
+    - item.cron is defined
+
+# ---------------------------------------------------------------------
+# 2. Dynamic Templates Deployment
+# ---------------------------------------------------------------------
+- name: "Deploy dynamic scripts (templates) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "{{ item.src | default(item, true) }}"
+    dest: "{{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename | regex_replace('\\.j2$', ''), true) }}"
+    mode: "{{ item.mode | default('0755', true) }}"
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    force: "{{ item.force | default(scripts_force, true) }}"
+    backup: "{{ item.backup | default(scripts_backup, true) }}"
+    trim_blocks: "{{ item.trim_blocks | default(omit) }}"
+    lstrip_blocks: "{{ item.lstrip_blocks | default(omit) }}"
+    newline_sequence: "{{ item.newline_sequence | default(omit) }}"
+    output_encoding: "{{ item.output_encoding | default(omit) }}"
+    block_start_string: "{{ item.block_start_string | default(omit) }}"
+    block_end_string: "{{ item.block_end_string | default(omit) }}"
+    variable_start_string: "{{ item.variable_start_string | default(omit) }}"
+    variable_end_string: "{{ item.variable_end_string | default(omit) }}"
+    comment_start_string: "{{ item.comment_start_string | default(omit) }}"
+    comment_end_string: "{{ item.comment_end_string | default(omit) }}"
+    unsafe_writes: "{{ item.unsafe_writes | default(omit) }}"
+    validate: "{{ item.validate | default(omit) }}"
+    follow: "{{ item.follow | default(omit) }}"
+    attributes: "{{ item.attributes | default(omit) }}"
+    seuser: "{{ item.seuser | default(omit) }}"
+    serole: "{{ item.serole | default(omit) }}"
+    setype: "{{ item.setype | default(omit) }}"
+    selevel: "{{ item.selevel | default(omit) }}"
+  loop: "{{ scripts_templates | default([], true) }}"
+  when: scripts_templates is defined
+  register: _scripts_templates_result
+
+- name: "Log dynamic template deployment {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Deployed dynamic template: {{ item.dest | default(item.src | default(item, true) | basename | regex_replace('\\.j2$', ''), true) }}"
+  loop: "{{ scripts_templates | default([], true) }}"
+  when:
+    - scripts_templates is defined
+    - _scripts_templates_result.results[ansible_loop.index0].changed
+
+- name: "Execute dynamic scripts (if configured) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command:
+    cmd: >-
+      {{ item.run.interpreter | default('', true) }}
+      {{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename | regex_replace('\\.j2$', ''), true) }}
+      {{ item.run.args if (item.run is mapping and item.run.args is defined) else (item.run if item.run is string else '') }}
+    creates: "{{ item.run.creates | default(omit) }}"
+    removes: "{{ item.run.removes | default(omit) }}"
+  loop: "{{ scripts_templates | default([], true) }}"
+  when:
+    - scripts_templates is defined
+    - item.run is defined
+    - item.run
+  changed_when: true
+
+- name: "Schedule cron jobs for dynamic scripts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.cron:
+    name: "{{ item.cron.name | default(item.dest | default(item.src | default(item, true) | basename | regex_replace('\\.j2$', ''), true), true) }}"
+    job: >-
+      {{ item.run.interpreter | default('', true) }}
+      {{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename | regex_replace('\\.j2$', ''), true) }}
+      {{ item.run.args if (item.run is mapping and item.run.args is defined) else (item.run if item.run is string else '') }}
+    minute: "{{ item.cron.minute | default('*', true) }}"
+    hour: "{{ item.cron.hour | default('*', true) }}"
+    day: "{{ item.cron.day | default('*', true) }}"
+    month: "{{ item.cron.month | default('*', true) }}"
+    weekday: "{{ item.cron.weekday | default('*', true) }}"
+    state: "{{ item.cron.state | default('present', true) }}"
+  loop: "{{ scripts_templates | default([], true) }}"
+  when:
+    - scripts_templates is defined
+    - item.cron is defined
+
+# ---------------------------------------------------------------------
+# 3. Online Scripts (URLs) Deployment
+# ---------------------------------------------------------------------
+
+# WHY: Enforce HTTPS and checksum requirements before downloading
+- name: "Validate strict security requirements for online scripts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.assert:
+    that:
+      - "(item.src | default(item, true)) is regex('^https://')"
+      - "(scripts_security_strict | bool) implies ((item.checksum is defined and item.checksum | length > 0) or (item.allow_unsafe | default(false, true) | bool))"
+    fail_msg: >-
+      [SECURITY FAILURE] Strict security mode is enabled.
+      1. URL must start with 'https://': {{ item.src | default(item, true) }}
+      2. Checksum MUST be provided for all online scripts (unless 'allow_unsafe: true' is explicitly set).
+  loop: "{{ scripts_urls | default([], true) }}"
+  when:
+    - scripts_urls is defined
+    - scripts_security_strict | bool
+  tags: ["always"]
+
+- name: "Deploy online scripts (URLs) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.get_url:
+    url: "{{ item.src | default(item, true) }}"
+    dest: "{{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename, true) }}"
+    mode: "{{ item.mode | default('0755', true) }}"
+    owner: "{{ item.owner | default(omit) }}"
+    group: "{{ item.group | default(omit) }}"
+    checksum: "{{ item.checksum | default(omit) }}"
+    force: "{{ item.force | default(scripts_force, true) }}"
+    backup: "{{ item.backup | default(scripts_backup, true) }}"
+    timeout: "{{ item.timeout | default(scripts_timeout, true) }}"
+    validate_certs: "{{ item.validate_certs | default(scripts_validate_certs, true) }}"
+    url_username: "{{ item.username | default(omit) }}"
+    url_password: "{{ item.password | default(omit) }}"
+    use_proxy: "{{ item.use_proxy | default(omit) }}"
+    headers: "{{ item.headers | default(omit) }}"
+    client_cert: "{{ item.client_cert | default(omit) }}"
+    client_key: "{{ item.client_key | default(omit) }}"
+    http_agent: "{{ item.http_agent | default(omit) }}"
+    unsafe_writes: "{{ item.unsafe_writes | default(omit) }}"
+    force_basic_auth: "{{ item.force_basic_auth | default(omit) }}"
+    unredirected_headers: "{{ item.unredirected_headers | default(omit) }}"
+    decompress: "{{ item.decompress | default(omit) }}"
+    tmp_dest: "{{ item.tmp_dest | default(omit) }}"
+    attributes: "{{ item.attributes | default(omit) }}"
+    seuser: "{{ item.seuser | default(omit) }}"
+    serole: "{{ item.serole | default(omit) }}"
+    setype: "{{ item.setype | default(omit) }}"
+    selevel: "{{ item.selevel | default(omit) }}"
+  loop: "{{ scripts_urls | default([], true) }}"
+  when: scripts_urls is defined
+  register: _scripts_urls_result
+
+- name: "Log online script deployment {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "Downloaded online script: {{ item.dest | default(item.src | default(item, true) | basename, true) }}"
+  loop: "{{ scripts_urls | default([], true) }}"
+  when:
+    - scripts_urls is defined
+    - _scripts_urls_result.results[ansible_loop.index0].changed
+
+- name: "Execute online scripts (if configured) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command:
+    cmd: >-
+      {{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename, true) }}
+      {{ item.run.args if (item.run is mapping and item.run.args is defined) else (item.run if item.run is string else '') }}
+    creates: "{{ item.run.creates | default(omit) }}"
+    removes: "{{ item.run.removes | default(omit) }}"
+  loop: "{{ scripts_urls | default([], true) }}"
+  when:
+    - scripts_urls is defined
+    - item.run is defined
+    - item.run
+  changed_when: true
+
+- name: "Schedule cron jobs for online scripts {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.cron:
+    name: "{{ item.cron.name | default(item.dest | default(item.src | default(item, true) | basename, true), true) }}"
+    job: "{{ item.dir | default(scripts_dest_dir, true) }}/{{ item.dest | default(item.src | default(item, true) | basename, true) }}"
+    minute: "{{ item.cron.minute | default('*', true) }}"
+    hour: "{{ item.cron.hour | default('*', true) }}"
+    day: "{{ item.cron.day | default('*', true) }}"
+    month: "{{ item.cron.month | default('*', true) }}"
+    weekday: "{{ item.cron.weekday | default('*', true) }}"
+    state: "{{ item.cron.state | default('present', true) }}"
+  loop: "{{ scripts_urls | default([], true) }}"
+  when:
+    - scripts_urls is defined
+    - item.cron is defined

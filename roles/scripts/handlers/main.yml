@@ -1,0 +1,9 @@
+---
+# =====================================================================
+# roles/scripts/handlers/main.yml
+#
+# Purpose:
+#   Global notification handlers for the scripts role.
+#   Add service restart/reload handlers here as the role grows.
+#
+# =====================================================================

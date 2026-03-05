@@ -1,0 +1,74 @@
+---
+# =====================================================================
+# roles/scripts/defaults/main.yml
+#
+# Purpose:
+#   Default variable definitions for the scripts role.
+#
+# =====================================================================
+
+# Default destination for scripts
+# Linux/Mac: /usr/local/bin
+scripts_dest_dir: "/usr/local/bin"
+
+# List of static files to copy from roles/scripts/files/
+# Format:
+# scripts_files:
+#   - my_script.sh
+#   - src: my_other_script.sh
+#     dest: renamed_script.sh
+#     mode: '0700'
+#     run: true  # Execute after deployment
+#     cron:      # Add cron job
+#       name: "My Job"
+#       minute: "0"
+scripts_files: []
+
+# List of templates to generate from roles/scripts/templates/
+# Format:
+# scripts_templates:
+#   - my_config_script.sh.j2
+scripts_templates: []
+
+# List of URLs to download scripts from
+# Format:
+# scripts_urls:
+#   - https://example.com/script.sh
+#   - src: https://example.com/script.py
+#     dest: my_script.py
+#     checksum: sha256:xxxx  # REQUIRED if scripts_security_strict is true
+scripts_urls: []
+
+# ---------------------------------------------------------------------
+# Overwrite Configuration
+# ---------------------------------------------------------------------
+
+# Control overwrite behavior for scripts (files, templates, urls)
+# true: Overwrite if content differs (force download for URLs)
+# false: Skip if destination file exists
+scripts_force: true
+
+# Backup existing files before overwriting
+# true: Create a backup file (e.g. script.sh.2023...)
+# false: Do not backup
+scripts_backup: false
+
+# ---------------------------------------------------------------------
+# Network Configuration (get_url)
+# ---------------------------------------------------------------------
+
+# Download timeout in seconds
+scripts_timeout: 30
+
+# Validate SSL certificates for online scripts
+# true: Validate certificates
+# false: Allow self-signed certificates (use with caution)
+scripts_validate_certs: true
+
+# ---------------------------------------------------------------------
+# Security Configuration
+# ---------------------------------------------------------------------
+
+# Enforce strict security for online scripts (HTTPS & Checksum required)
+# Default: false (to maintain backward compatibility)
+scripts_security_strict: false
