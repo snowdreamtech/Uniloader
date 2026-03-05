@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="assets/logo/logo-512x512.png" alt="Uniloader Logo" width="200"/>
+</div>
+
 # Unified Loader System - Enterprise Ansible Framework
 
 [![Compliance](https://img.shields.io/badge/compliance-100%25-brightgreen)](/.aiconfig/AUDIT_REPORT.md)
@@ -139,55 +143,54 @@ Tasks are resolved using a "Specific to General" search to provide the most opti
 
 ### Core Loaders
 
-| Loader | Purpose | Example |
-| :--- | :--- | :--- |
-| `facts_loader` | OS detection, fingerprinting | Auto-detects Alpine/Debian/RHEL |
-| `os_loader` | Distribution-specific dispatch | Routes to alpine.yml/debian.yml/redhat.yml |
-| `package_loader` | Universal package management | Works with apk/apt/dnf |
-| `service_loader` | Service lifecycle control | Handles systemd/openrc/sysvinit |
-| `container_loader` | Container orchestration | Supports Docker/Podman/Containerd |
-| `docker_compose_loader` | Multi-container apps | Docker Compose V2 integration |
+| Loader                  | Purpose                        | Example                                    |
+| :---------------------- | :----------------------------- | :----------------------------------------- |
+| `facts_loader`          | OS detection, fingerprinting   | Auto-detects Alpine/Debian/RHEL            |
+| `os_loader`             | Distribution-specific dispatch | Routes to alpine.yml/debian.yml/redhat.yml |
+| `package_loader`        | Universal package management   | Works with apk/apt/dnf                     |
+| `service_loader`        | Service lifecycle control      | Handles systemd/openrc/sysvinit            |
+| `container_loader`      | Container orchestration        | Supports Docker/Podman/Containerd          |
+| `docker_compose_loader` | Multi-container apps           | Docker Compose V2 integration              |
 
 ### Package Loader Supported Formats
 
 The `package_loader` supports **38+ installation methods** via unified prefix syntax:
 
-| Category | Prefix | Examples |
-| :--- | :--- | :--- |
-| **System Package Managers** | *(none)* | `nginx`, `curl`, `vim` |
-| **Local Files** | *(path)* | `/tmp/app.deb`, `/tmp/app.rpm`, `/tmp/app.apk` |
-| **Remote URLs** | *(https)* | `https://example.com/app.deb` |
-| **macOS Formats** | *(path)* | `.dmg`, `.pkg`, `.mpkg`, `.app`, `.zip`, `.framework`, `.dylib`, `.kext` |
-| **Mac App Store** | `mas:` | `mas:497799835`, `mas:Xcode` |
-| **Windows Winget** | `winget:` | `winget:Microsoft.VisualStudioCode` |
-| **Chocolatey** | `choco:` | `choco:7zip`, `choco:nodejs-lts` |
-| **Scoop** | `scoop:` | `scoop:neovim`, `scoop:fzf` |
-| **MS Store** | `msstore:` | `msstore:9NBLGGH5R558` |
-| **Snap** | `snap:` | `snap:code`, `snap:spotify` |
-| **Flatpak** | `flatpak:` | `flatpak:org.gimp.GIMP` |
-| **Nix** | `nix:` | `nix:ripgrep`, `nix:fd` |
-| **GNU Guix** | `guix:` | `guix:emacs` |
-| **AUR** | `aur:` | `aur:google-chrome` |
-| **Python pip** | `pip:` | `pip:ansible-lint`, `pip:requests==2.28.0` |
-| **Python pipx** | `pipx:` | `pipx:black`, `pipx:poetry` |
-| **Conda** | `conda:` | `conda:numpy`, `conda:pandas` |
-| **npm** | `npm:` | `npm:typescript`, `npm:eslint` |
-| **Yarn** | `yarn:` | `yarn:prettier` |
-| **pnpm** | `pnpm:` | `pnpm:vite` |
-| **Bun** | `bun:` | `bun:elysia` |
-| **Deno** | `deno:` | `deno:fresh` |
-| **Cargo** | `cargo:` | `cargo:ripgrep`, `cargo:bat` |
-| **Go** | `go:` | `go:github.com/junegunn/fzf@latest` |
-| **Ruby gem** | `gem:` | `gem:rails`, `gem:bundler` |
-| **Composer** | `composer:` | `composer:laravel/installer` |
-| **Dart** | `dart:` | `dart:stagehand` |
-| **Nim** | `nim:` | `nim:choosenim` |
-| **.NET** | `dotnet:` | `dotnet:dotnet-ef` |
-| **Coursier** | `cs:` | `cs:scalafmt` |
-| **SDKMAN** | `sdk:` | `sdk:java`, `sdk:gradle` |
+| Category                    | Prefix      | Examples                                                                 |
+| :-------------------------- | :---------- | :----------------------------------------------------------------------- |
+| **System Package Managers** | _(none)_    | `nginx`, `curl`, `vim`                                                   |
+| **Local Files**             | _(path)_    | `/tmp/app.deb`, `/tmp/app.rpm`, `/tmp/app.apk`                           |
+| **Remote URLs**             | _(https)_   | `https://example.com/app.deb`                                            |
+| **macOS Formats**           | _(path)_    | `.dmg`, `.pkg`, `.mpkg`, `.app`, `.zip`, `.framework`, `.dylib`, `.kext` |
+| **Mac App Store**           | `mas:`      | `mas:497799835`, `mas:Xcode`                                             |
+| **Windows Winget**          | `winget:`   | `winget:Microsoft.VisualStudioCode`                                      |
+| **Chocolatey**              | `choco:`    | `choco:7zip`, `choco:nodejs-lts`                                         |
+| **Scoop**                   | `scoop:`    | `scoop:neovim`, `scoop:fzf`                                              |
+| **MS Store**                | `msstore:`  | `msstore:9NBLGGH5R558`                                                   |
+| **Snap**                    | `snap:`     | `snap:code`, `snap:spotify`                                              |
+| **Flatpak**                 | `flatpak:`  | `flatpak:org.gimp.GIMP`                                                  |
+| **Nix**                     | `nix:`      | `nix:ripgrep`, `nix:fd`                                                  |
+| **GNU Guix**                | `guix:`     | `guix:emacs`                                                             |
+| **AUR**                     | `aur:`      | `aur:google-chrome`                                                      |
+| **Python pip**              | `pip:`      | `pip:ansible-lint`, `pip:requests==2.28.0`                               |
+| **Python pipx**             | `pipx:`     | `pipx:black`, `pipx:poetry`                                              |
+| **Conda**                   | `conda:`    | `conda:numpy`, `conda:pandas`                                            |
+| **npm**                     | `npm:`      | `npm:typescript`, `npm:eslint`                                           |
+| **Yarn**                    | `yarn:`     | `yarn:prettier`                                                          |
+| **pnpm**                    | `pnpm:`     | `pnpm:vite`                                                              |
+| **Bun**                     | `bun:`      | `bun:elysia`                                                             |
+| **Deno**                    | `deno:`     | `deno:fresh`                                                             |
+| **Cargo**                   | `cargo:`    | `cargo:ripgrep`, `cargo:bat`                                             |
+| **Go**                      | `go:`       | `go:github.com/junegunn/fzf@latest`                                      |
+| **Ruby gem**                | `gem:`      | `gem:rails`, `gem:bundler`                                               |
+| **Composer**                | `composer:` | `composer:laravel/installer`                                             |
+| **Dart**                    | `dart:`     | `dart:stagehand`                                                         |
+| **Nim**                     | `nim:`      | `nim:choosenim`                                                          |
+| **.NET**                    | `dotnet:`   | `dotnet:dotnet-ef`                                                       |
+| **Coursier**                | `cs:`       | `cs:scalafmt`                                                            |
+| **SDKMAN**                  | `sdk:`      | `sdk:java`, `sdk:gradle`                                                 |
 
-See [roles/native/tasks/package_loader/main.yml](roles/native/tasks/package_loader/main.yml) for complete API reference.
----
+## See [roles/native/tasks/package_loader/main.yml](roles/native/tasks/package_loader/main.yml) for complete API reference.
 
 ## Node Tags
 
@@ -319,7 +322,6 @@ Every new loader MUST include:
 #       become_enabled: true
 #
 # =====================================================================
-
 ```
 
 ### 3. Maintain Dual Examples
@@ -415,27 +417,25 @@ This automatically handles:
 ❌ **Never use `delegate_to` or `run_once` on include directives:**
 
 ```yaml
-
 # WRONG - Will cause parser errors
 
 - name: "Load configuration"
   ansible.builtin.include_role:
     name: "native"
     tasks_from: "log_loader"
-  delegate_to: "localhost"  # ❌ Not allowed
-  run_once: true            # ❌ Not allowed
+  delegate_to: "localhost" # ❌ Not allowed
+  run_once: true # ❌ Not allowed
 ```
 
 ✅ **Correct - Apply attributes to tasks inside the loader:**
 
 ```yaml
-
 # Inside log_loader.yml
 
 - name: "Output log message"
   ansible.builtin.debug:
     msg: "{{ log_message }}"
-  delegate_to: "localhost"  # ✅ Correct
+  delegate_to: "localhost" # ✅ Correct
 ```
 
 ### 10. Reference Existing Loaders
@@ -453,14 +453,14 @@ When creating new loaders, use these as templates:
 
 This project maintains **100% compliance** with the standards defined in [`.aiconfig/`](.aiconfig/):
 
-| Standard | Status | Details |
-| :--- | :--- | :--- |
-| FQCN Usage | ✅ 100% | All modules fully qualified |
-| Task Naming | ✅ 100% | Double quotes + os_fingerprint |
-| Header Documentation | ✅ 95% | Complete API references |
-| Attribute Safety | ✅ 100% | No prohibited patterns |
-| Conditional Logic | ✅ 98% | Safe type checking |
-| Idempotency | ✅ 100% | All mutations marked |
+| Standard             | Status  | Details                        |
+| :------------------- | :------ | :----------------------------- |
+| FQCN Usage           | ✅ 100% | All modules fully qualified    |
+| Task Naming          | ✅ 100% | Double quotes + os_fingerprint |
+| Header Documentation | ✅ 95%  | Complete API references        |
+| Attribute Safety     | ✅ 100% | No prohibited patterns         |
+| Conditional Logic    | ✅ 98%  | Safe type checking             |
+| Idempotency          | ✅ 100% | All mutations marked           |
 
 **Latest Audit**: See [.aiconfig/AUDIT_REPORT.md](.aiconfig/AUDIT_REPORT.md)
 
@@ -502,7 +502,7 @@ This project is **AI-optimized** with strict standards in `.aiconfig/`:
 ### Code Review Checklist
 
 - [ ] File header with Purpose, Simple Usage, and Comprehensive Usage
-- [ ] All modules use FQCN (ansible.builtin.*, community.*, containers.*)
+- [ ] All modules use FQCN (ansible.builtin._, community._, containers.\*)
 - [ ] Task names use double quotes and os_fingerprint suffix
 - [ ] No `delegate_to`/`run_once` on `include_role`/`include_tasks`
 - [ ] Conditionals use `is defined` and explicit `| bool` conversion
