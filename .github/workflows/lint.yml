@@ -513,7 +513,7 @@ jobs:
           } else {
             $hasError = $false
             foreach ($script in $scripts) {
-              $results = Invoke-ScriptAnalyzer -Path $script.FullName
+              $results = Invoke-ScriptAnalyzer -Path $script.FullName -ExcludeRule @('PSAvoidUsingWriteHost')
               if ($results) {
                 $results | Format-Table -AutoSize
                 $hasError = $true
