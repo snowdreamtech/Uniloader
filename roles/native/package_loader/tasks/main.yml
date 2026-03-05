@@ -32,7 +32,7 @@
 - name: Language Ecosystem Router (NPM)
   community.general.npm:
     name: "{{ item.name }}"
-    global: yes
+    global: true
     state: present
   loop: "{{ packages }}"
   when: item.type == 'npm'

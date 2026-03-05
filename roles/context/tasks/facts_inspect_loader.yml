@@ -4,7 +4,7 @@
 #
 # Purpose:
 #   Inspection of Ansible facts for debugging and auditing.
-#   Allows printing either a curated list of common OS facts or the 
+#   Allows printing either a curated list of common OS facts or the
 #   entire ansible_facts dictionary in a readable YAML format.
 #
 # Simple Usage:
