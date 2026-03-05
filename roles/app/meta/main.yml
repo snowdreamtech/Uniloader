@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  author: "snowdreamtech"
+  description: "Advanced application loader for Uniloader, supporting native and containerized delivery."
+  company: "snowdreamtech"
+  license: "MIT"
+  min_ansible_version: "2.10"
+  platforms:
+    - name: "EL"
+      versions: ["8", "9"]
+    - name: "Debian"
+      versions: ["bullseye", "bookworm"]
+    - name: "Ubuntu"
+      versions: ["focal", "jammy", "noble"]
+    - name: "Alpine"
+      versions: ["all"]
+  galaxy_tags:
+    - "application"
+    - "deployment"
+    - "orchestration"
+    - "native"
+    - "container"
+
+dependencies: []

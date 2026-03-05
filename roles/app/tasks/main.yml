@@ -1,0 +1,12 @@
+---
+# =====================================================================
+# roles/app/tasks/main.yml
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1. Unified Loader: Orchestrate the full application lifecycle.
+#    This includes validation, path resolution, variable merging,
+#    task resolution, and final execution/dispatch.
+# ---------------------------------------------------------------------
+- name: "Load application configuration and execute {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_tasks: "app_loader.yml"
