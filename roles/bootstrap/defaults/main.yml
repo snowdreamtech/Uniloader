@@ -21,3 +21,7 @@ os_paths: >-
   {%- else -%}
     /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/bin:/sbin
   {%- endif -%}
+# ---------------------------------------------------------------------
+# Path: Default location for the target virtual environment.
+# ---------------------------------------------------------------------
+python_venv_path: "/opt/venv/ansible"

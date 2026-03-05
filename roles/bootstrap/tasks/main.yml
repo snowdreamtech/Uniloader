@@ -15,9 +15,8 @@
 #      false. We must detect OS type using raw commands to route correctly.
 # ---------------------------------------------------------------------
 - name: "Discovery: Detect OS type (raw probe) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.raw: "uname"
+  ansible.builtin.raw: "uname || printf 'Windows'"
   register: raw_uname_probe
-  ignore_errors: true
   changed_when: false
   tags: ["always"]
 
