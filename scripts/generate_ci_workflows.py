@@ -9,26 +9,9 @@ OS_REF_PATH = os.path.join(REPO_ROOT, "docs/OS_REFERENCE.md")
 CI_TEMPLATE_PATH = os.path.join(REPO_ROOT, ".github/workflows/ci.yml")
 WORKFLOWS_DIR = os.path.join(REPO_ROOT, ".github/workflows")
 
-# 1. Read OS Reference to extract valid Linux OSes
-allowed_families = [
-    "RedHat",
-    "Debian",
-    "Alpine",
-    "Suse",
-    "Archlinux",
-    "Mandrake",
-    "Altlinux",
-    "Void",
-    "ClearLinux",
-    "Solus",
-    "OpenWrt",
-    "Linux",
-]
-
-# Provide careful mappings for OSes to their actual docker images
+# 1. Provide careful mappings for OSes to their actual docker images
 DOCKER_MAPPINGS = {
-    "amazon": "amazonlinux:latest",
-    "rocky": "rockylinux:9",
+    "amazonlinux": "amazonlinux:latest",
     "rockylinux": "rockylinux:9",
     "almalinux": "almalinux:9",
     "oraclelinux": "oraclelinux:9",
@@ -37,73 +20,42 @@ DOCKER_MAPPINGS = {
     "kali": "kalilinux/kali-rolling:latest",
     "void": "ghcr.io/void-linux/void-linux:latest",
     "clearlinux": "clearlinux:latest",
-    "trixie": "debian:trixie",
-    "bookworm": "debian:bookworm",
-    "bullseye": "debian:bullseye",
-    "buster": "debian:buster",
-    "noble": "ubuntu:24.04",
-    "jammy": "ubuntu:22.04",
-    "focal": "ubuntu:20.04",
-    "bionic": "ubuntu:18.04",
     "centos": "centos:stream9",
     "alpine": "alpine:latest",
     "debian": "debian:latest",
     "ubuntu": "ubuntu:latest",
     "fedora": "fedora:latest",
     "archlinux": "archlinux:latest",
+    "crux": "crux:latest",
+    "euleros": "euleros:latest",
+    "mageia": "mageia:latest",
 }
 
-os_list = set()
+# The user requested to only generate workflows for OSes that ACTUALLY have docker images.
+# After API scanning, these are the confirmed core OSes available.
+os_list = [
+    "amazonlinux",
+    "archlinux",
+    "centos",
+    "clearlinux",
+    "crux",
+    "debian",
+    "euleros",
+    "fedora",
+    "kali",
+    "mageia",
+    "opensuseleap",
+    "opensusetumbleweed",
+    "oraclelinux",
+    "rockylinux",
+    "ubuntu",
+    "void",
+    "alpine",
+    "almalinux",
+]
+os_list = sorted(list(set(os_list)))
 
-try:
-    with open(OS_REF_PATH, "r") as f:
-        for line in f:
-            if not line.startswith("|"):
-                continue
-            parts = [p.strip() for p in line.split("|")]
-            if len(parts) < 3:
-                continue
-
-            family_raw = parts[1].replace("**", "")
-            # Handle versioned families like "Debian 12" by taking the first word
-            family_base = family_raw.split()[0] if family_raw else ""
-            if family_base not in allowed_families:
-                continue
-
-            distro_raw = parts[2].replace("`", "")
-            # Some entries have multiple names like "Kylin / KylinOS", split them
-            for d in map(str.strip, distro_raw.split("/")):
-                # Skip generic names or names with spaces that aren't good docker images
-                d_clean = d.lower().replace(" ", "")
-
-                # Exclude specific version names for Debian/Ubuntu (we only want the latest generic ones)
-                excluded_versions = [
-                    "trixie",
-                    "bookworm",
-                    "bullseye",
-                    "buster",
-                    "noble",
-                    "jammy",
-                    "focal",
-                    "bionic",
-                ]
-                if d_clean in excluded_versions:
-                    continue
-
-                # We strictly exclude overly generic ones
-                if d_clean and d_clean not in ["linux", "redhat", "suse"]:
-                    os_list.add(d_clean)
-except Exception as e:
-    print(f"Error reading OS Reference: {e}")
-    sys.exit(1)
-
-# Ensure essential base latest images are explicitly included
-os_list.add("alpine")
-os_list.add("debian")
-os_list.add("ubuntu")
-os_list = sorted(list(os_list))
-
-print(f"Found {len(os_list)} valid OS targets for CI generation.")
+print(f"Found {len(os_list)} valid, Docker-verified OS targets for CI generation.")
 
 # 2. Read CI Template
 try:

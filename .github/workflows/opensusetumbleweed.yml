@@ -1,5 +1,5 @@
 ---
-name: CI (Osmc)
+name: CI (Opensusetumbleweed)
 
 "on":
   push:
@@ -58,12 +58,12 @@ jobs:
         run: |
           source ./scripts/setup_venv.sh
 
-      - name: Start Docker Container for osmc
+      - name: Start Docker Container for opensusetumbleweed
         run: |
           # Try to pull and run the image, if it fails, the workflow just fails
           # (which is expected for unsupported ones natively)
-          docker run -d --name uls_osmc --privileged osmc \
-            sleep 86400 || echo "WARNING: Image osmc not found or failed to start."
+          docker run -d --name uls_opensusetumbleweed --privileged opensuse/tumbleweed:latest \
+            sleep 86400 || echo "WARNING: Image opensuse/tumbleweed:latest not found or failed to start."
 
           # Create a dynamic inventory file for this run
           cat << 'INV' > inventory/dynamic_docker.yml
@@ -71,8 +71,8 @@ jobs:
             vars:
               become_enabled: false
             hosts:
-              osmc:
-                ansible_host: uls_osmc
+              opensusetumbleweed:
+                ansible_host: uls_opensusetumbleweed
                 ansible_connection: "docker"
                 node_tags: ["open", "container", "docker_container"]
           INV
@@ -85,4 +85,4 @@ jobs:
       - name: Cleanup Docker Containers
         if: always()
         run: |
-          docker rm -f uls_osmc || true
+          docker rm -f uls_opensusetumbleweed || true
