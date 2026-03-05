@@ -11,26 +11,7 @@
 # ---------------------------------------------------------------------
 - name: "Detect installed language tools {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.command: "command -v {{ item }}"
-  loop:
-    [
-      python3,
-      pip,
-      pip3,
-      npm,
-      yarn,
-      pnpm,
-      cargo,
-      go,
-      gem,
-      pod,
-      rustup,
-      flutter,
-      nvm,
-      conda,
-      ghcup,
-      mvn,
-      gradle,
-    ]
+  loop: [python3, pip, pip3, npm, yarn, pnpm, cargo, go, gem, pod, rustup, flutter, nvm, conda, ghcup, mvn, gradle]
   register: _lang_tools_check
   changed_when: false
   failed_when: false

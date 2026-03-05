@@ -6,7 +6,7 @@
 
 #### Tier 1: Foundational Ops (The Grounding)
 
-- [-] **Security**: Active defense (Firewall, Fail2ban, WAF) - *Initial Draft / hardening needed*.
+- [-] **Security**: Active defense (Firewall, Fail2ban, WAF) - _Initial Draft / hardening needed_.
 - [ ] **Monitoring**: Full Observability Stack.
   - Agents: Node Exporter (Metrics), Promtail (Logs).
   - Features: Auto-discovery, Dashboard integration.

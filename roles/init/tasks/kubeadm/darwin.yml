@@ -15,10 +15,7 @@
     app_name: "kubectl"
     app_delivery_mode: "native"
     # Map to specialized port names if using MacPorts
-    app_packages:
-      [
-        "{{ 'kubectl-1.35' if (os_pkg_mgr | default('', true) == 'macports') else 'kubectl' }}",
-      ]
+    app_packages: ["{{ 'kubectl-1.35' if (os_pkg_mgr | default('', true) == 'macports') else 'kubectl' }}"]
     app_desc: "Kubernetes cluster CLI"
     app_state: "present"
 
