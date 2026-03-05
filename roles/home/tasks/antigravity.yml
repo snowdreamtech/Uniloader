@@ -42,7 +42,7 @@
   ansible.builtin.file:
     path: "{{ home_dest_path }}/{{ home_antigravity_user_rel_path }}/{{ antigravity_item.antigravity_item | dirname }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
   loop: "{{ home_antigravity_source_stats.results }}"
   loop_control:
     loop_var: antigravity_item
@@ -55,7 +55,7 @@
   ansible.builtin.copy:
     src: "{{ home_src_path }}/.antigravity/{{ antigravity_item.antigravity_item }}"
     dest: "{{ home_dest_path }}/{{ home_antigravity_user_rel_path }}/{{ antigravity_item.antigravity_item }}"
-    mode: '0644'
+    mode: "0644"
   loop: "{{ home_antigravity_source_stats.results }}"
   loop_control:
     loop_var: antigravity_item
@@ -68,7 +68,7 @@
   ansible.builtin.copy:
     src: "{{ home_src_path }}/.antigravity/{{ antigravity_item.antigravity_item }}/"
     dest: "{{ home_dest_path }}/{{ home_antigravity_user_rel_path }}/{{ antigravity_item.antigravity_item }}"
-    mode: '0644'
+    mode: "0644"
   loop: "{{ home_antigravity_source_stats.results }}"
   loop_control:
     loop_var: antigravity_item

@@ -42,7 +42,7 @@
   ansible.builtin.file:
     path: "{{ home_dest_path }}/{{ home_vscode_user_rel_path }}/{{ vscode_item.vscode_item | dirname }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
   loop: "{{ home_vscode_source_stats.results }}"
   loop_control:
     loop_var: vscode_item
@@ -55,7 +55,7 @@
   ansible.builtin.copy:
     src: "{{ home_src_path }}/.vscode/{{ vscode_item.vscode_item }}"
     dest: "{{ home_dest_path }}/{{ home_vscode_user_rel_path }}/{{ vscode_item.vscode_item }}"
-    mode: '0644'
+    mode: "0644"
   loop: "{{ home_vscode_source_stats.results }}"
   loop_control:
     loop_var: vscode_item
@@ -68,7 +68,7 @@
   ansible.builtin.copy:
     src: "{{ home_src_path }}/.vscode/{{ vscode_item.vscode_item }}/"
     dest: "{{ home_dest_path }}/{{ home_vscode_user_rel_path }}/{{ vscode_item.vscode_item }}"
-    mode: '0644'
+    mode: "0644"
   loop: "{{ home_vscode_source_stats.results }}"
   loop_control:
     loop_var: vscode_item
