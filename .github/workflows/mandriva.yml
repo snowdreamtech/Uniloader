@@ -60,8 +60,10 @@ jobs:
 
       - name: Start Docker Container for mandriva
         run: |
-          # Try to pull and run the image, if it fails, the workflow just fails (which is expected for unsupported ones natively)
-          docker run -d --name uls_mandriva --privileged mandriva sleep 86400 || echo "WARNING: Image mandriva not found or failed to start."
+          # Try to pull and run the image, if it fails, the workflow just fails
+          # (which is expected for unsupported ones natively)
+          docker run -d --name uls_mandriva --privileged mandriva \
+            sleep 86400 || echo "WARNING: Image mandriva not found or failed to start."
 
           # Create a dynamic inventory file for this run
           cat << 'INV' > inventory/dynamic_docker.yml
