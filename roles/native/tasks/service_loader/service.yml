@@ -1,0 +1,6 @@
+---
+# roles/native/tasks/service_loader/service.yml
+# This is a no-op file to satisfy ansible-lint's static analysis
+# of the dynamic inclusion in default.yml.
+# The actual logic for 'service' is handled via the universal fallback
+# in default.yml.
