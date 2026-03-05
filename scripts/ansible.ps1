@@ -3,8 +3,8 @@ param(
     [string]$Inventory = "localhost",
     [string]$Playbook = "orchestrator",
     [string]$Verbosity = "",
-    [string]$VaultVars = "@$HOME\.vault.yml",
-    [string]$VaultPass = "$HOME\.vault_pass",
+    [string]$VaultVars = "@$HOME\.uniloader\.vault.yml",
+    [string]$VaultPass = "$HOME\.uniloader\.vault_pass",
     [string[]]$ExtraVars,
     [string]$HomeAction,
     [string]$HomeFiles,
@@ -18,8 +18,8 @@ if ($Help) {
     Write-Host "  -Inventory <name>     Inventory name (default: localhost -> inventory\localhost.yml)"
     Write-Host "  -Playbook <name>      Playbook name (default: orchestrator -> playbooks\orchestrator.yml)"
     Write-Host "  -Verbosity <level>    Verbosity level (default: none, supports -v, -vv, -vvv, etc.)"
-    Write-Host "  -VaultVars <file>     Path to vault vars file (default: ~\.vault.yml)"
-    Write-Host "  -VaultPass <file>     Path to vault password file (default: ~\.vault_pass)"
+    Write-Host "  -VaultVars <file>     Path to vault vars file (default: ~\.uniloader\.vault.yml)"
+    Write-Host "  -VaultPass <file>     Path to vault password file (default: ~\.uniloader\.vault_pass)"
     Write-Host "  -ExtraVars <vars>     Additional extra vars"
     Write-Host "  -HomeAction <action>  Home role action (encrypt, decrypt, restore). Sets playbook to 'home'."
     Write-Host "  -HomeFiles <files>    Comma-separated list of files for home role action."

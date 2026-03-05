@@ -1,12 +1,12 @@
 #!/bin/sh
 
 # vault.sh
-# 
+#
 # A smart wrapper for ansible-vault commands.
 # Features:
 # - Auto-detects project virtual environment (.venv/venv).
-# - Auto-mounts vault password file (~/.vault_pass).
-# - Smart default target file (~/.vault.yml) for edit/view/rekey/decrypt/encrypt.
+# - Auto-mounts vault password file (~/.uniloader/.vault_pass).
+# - Smart default target file (~/.uniloader/.vault.yml) for edit/view/rekey/decrypt/encrypt.
 # - Compatible with macOS, Linux, and Windows (via WSL/Git Bash).
 
 set -e
@@ -23,8 +23,8 @@ fi
 # --- Configuration ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-VAULT_FILE="${HOME}/.vault.yml"
-VAULT_PASS_FILE="${HOME}/.vault_pass"
+VAULT_FILE="${HOME}/.uniloader/.vault.yml"
+VAULT_PASS_FILE="${HOME}/.uniloader/.vault_pass"
 
 # --- Virtual Environment Auto-Detection ---
 if [ -d "${PROJECT_ROOT}/.venv" ]; then

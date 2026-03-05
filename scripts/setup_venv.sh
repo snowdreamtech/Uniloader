@@ -15,7 +15,7 @@
 #   DEBUG=1 . scripts/setup_venv.sh
 #
 # Note:
-#   This script MUST be sourced to ensure the environment variables 
+#   This script MUST be sourced to ensure the environment variables
 #   (PATH, VIRTUAL_ENV) carry over to your current shell session.
 # =====================================================================
 
@@ -39,7 +39,7 @@ VENV_DIR="$PROJECT_ROOT/.venv"
 # ---------------------------------------------------------------------
 # Creation: Create the virtual environment if it does not already exist.
 # ---------------------------------------------------------------------
-if [ ! -d "$VENV_DIR" ]; then
+if [ ! -f "$VENV_DIR/bin/activate" ]; then
     echo "Creating virtual environment in $VENV_DIR..."
     python3 -m venv "$VENV_DIR"
 fi
@@ -68,6 +68,6 @@ pip install -r "$PROJECT_ROOT/requirements.txt"
 # ---------------------------------------------------------------------
 # Cleanup & Feedback: Clear screen and provide confirmation.
 # ---------------------------------------------------------------------
-clear 
+clear
 echo "Virtual environment setup completed."
 echo "Venv is located at: $VENV_DIR"
