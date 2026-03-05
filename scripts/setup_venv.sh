@@ -25,8 +25,8 @@ set -e
 # Guard: Ensure the script is being sourced, not executed directly.
 # ---------------------------------------------------------------------
 if [ -n "$BASH_VERSION" ]; then
-    # shellcheck disable=SC3028,SC3054
-    if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+    # shellcheck disable=SC3028,SC2128
+    if [ "${BASH_SOURCE:-}" = "${0}" ]; then
         echo "Usage: . scripts/setup_venv.sh"
         exit 1
     fi

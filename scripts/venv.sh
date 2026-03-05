@@ -21,7 +21,8 @@
 # Validation: Ensure the script is sourced into the current shell.
 # Direct execution will not affect the environment.
 # ---------------------------------------------------------------------
-if [ "$0" = "$BASH_SOURCE" ] 2>/dev/null || [ "$0" = "$ZSH_NAME" ] 2>/dev/null; then
+# shellcheck disable=SC3028,SC2128
+if [ "$0" = "${BASH_SOURCE:-}" ] 2>/dev/null || [ "$0" = "${ZSH_NAME:-}" ] 2>/dev/null; then
     echo "Usage: . scripts/venv.sh <command>"
     exit 1
 fi

@@ -172,4 +172,4 @@ fi
 echo "Running: ansible-playbook -i \"$INVENTORY_PATH\" \"$PLAYBOOK_PATH\" $VERBOSITY $VAULT_ARGS $EXTRA_ARGS"
 echo "----------------------------------------------------------------"
 
-eval ansible-playbook -i \""$INVENTORY_PATH"\" \""$PLAYBOOK_PATH"\" "$VERBOSITY" $VAULT_ARGS "$EXTRA_ARGS"
+eval ansible-playbook -i \""$INVENTORY_PATH"\" \""$PLAYBOOK_PATH"\" "$VERBOSITY" "$VAULT_ARGS" "$EXTRA_ARGS"

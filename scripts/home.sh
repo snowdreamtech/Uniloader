@@ -10,7 +10,8 @@ set -e
 
 # Prevent sourcing (POSIX-compatible check)
 if [ -n "$BASH_VERSION" ]; then
-    if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
+    # shellcheck disable=SC3028,SC2128
+    if [ "${BASH_SOURCE:-}" != "${0}" ]; then
         echo "Error: This script is meant to be executed, not sourced."
         echo "Run it as: $0 <args>"
         return 1
@@ -41,9 +42,9 @@ NC='\033[0m' # No Color
 
 # --- Helper Functions ---
 
-log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+log_info() { printf "%b[INFO]%b %s\n" "${GREEN}" "${NC}" "$1"; }
+log_warn() { printf "%b[WARN]%b %s\n" "${YELLOW}" "${NC}" "$1"; }
+log_error() { printf "%b[ERROR]%b %s\n" "${RED}" "${NC}" "$1"; }
 
 usage() {
     echo "Usage: $0 [action] [options]"
@@ -66,7 +67,7 @@ usage() {
 }
 
 ensure_gpg_unlocked() {
-    local action="$1"
+    action="$1"
 
     # Encryption usually only needs the public key, so we can skip unlocking for 'encrypt'
     if [ "$action" = "encrypt" ]; then

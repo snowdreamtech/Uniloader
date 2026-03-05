@@ -20,7 +20,8 @@ set -e
 # Prevent sourcing (POSIX-compatible check)
 # Note: This check works in bash; in pure sh it may not detect sourcing
 if [ -n "$BASH_VERSION" ]; then
-    if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
+    # shellcheck disable=SC3028,SC2128
+    if [ "${BASH_SOURCE:-}" != "${0}" ]; then
         echo "Error: This script is meant to be executed, not sourced."
         echo "Run it as: $0 <pkgs>"
         return 1
@@ -62,7 +63,7 @@ fi
 # Execution: Install the requested packages and freeze the result to
 # requirements.txt.
 # ---------------------------------------------------------------------
-echo "Installing dependencies: $@"
+echo "Installing dependencies: $*"
 pip install "$@"
 
 echo "Updating requirements.txt..."
