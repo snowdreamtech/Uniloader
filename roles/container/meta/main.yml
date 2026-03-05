@@ -1,0 +1,34 @@
+---
+# =====================================================================
+# roles/container/meta/main.yml
+# =====================================================================
+
+# roles/container/meta/main.yml
+#
+# Purpose:
+#   Metadata and dependency configuration for the container role.
+#   Supports Docker, Podman, Containerd, and CRI-O across Linux platforms.
+#
+# =====================================================================
+
+galaxy_info:
+  author: "Hui"
+  description: "Advanced container engine and orchestration primitive manager."
+  license: "MIT"
+  min_ansible_version: "2.14"
+  platforms:
+    - name: "EL"
+      versions: ["8", "9"]
+    - name: "Debian"
+      versions: ["bullseye", "bookworm"]
+    - name: "Ubuntu"
+      versions: ["focal", "jammy", "noble"]
+    - name: "Alpine"
+      versions: ["all"]
+  galaxy_tags:
+    - "container"
+    - "docker"
+    - "podman"
+    - "kubernetes"
+
+dependencies: []

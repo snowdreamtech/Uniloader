@@ -1,0 +1,49 @@
+---
+# =====================================================================
+# roles/container/tasks/main.yml
+# =====================================================================
+
+---
+# =====================================================================
+# roles/container/tasks/main.yml
+#
+# Purpose:
+#   Entry point for the containerized deployment layer.
+#   This file routes the application state to the container_loader
+#   for execution and logs the routing event for audit purposes.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: "container"
+#     vars:
+#       container_app_name: "helloworld"
+#       container_app_image: "nginx:latest"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: "container"
+#     vars:
+#       container_app_name: "web-server"
+#       container_app_image: "nginx:alpine"
+#       container_app_state: "started"
+#       container_app_ports: ["80:80"]
+#       container_app_volumes: ["/data:/usr/share/nginx/html"]
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Route the application state to the container_loader to handle
+# the actual deployment or removal logic.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "container_loader.yml"
+
+# ---------------------------------------------------------------------
+# Audit Trail: Log the container routing operation with key parameters.
+# ---------------------------------------------------------------------
+- name: "Audit Log: {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: |
+      name={{ container_app_name }}
+      state={{ container_app_state }}
+      image={{ container_app_image }}
+      homepage={{ container_app_homepage | default('', true) }}
