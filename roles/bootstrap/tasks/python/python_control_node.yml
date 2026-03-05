@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/common/bootstrap/tasks/python/python_control_node.yml
+# roles/bootstrap/tasks/python/python_control_node.yml
 #
 # Purpose:
 #   Detection, installation, and environment setup for the Ansible

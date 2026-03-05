@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/native/tasks/python_runtime_loader.yml
+# roles/bootstrap/tasks/python/python_runtime_loader.yml
 #
 # Purpose:
 #   Installation of Python runtime packages into a virtual environment.
@@ -9,12 +9,12 @@
 #
 # Simple Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: python_runtime_loader
 #
 # Comprehensive Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: python_runtime_loader
 #     vars:
 #       python_runtime_packages: ["requests", "pyyaml"]

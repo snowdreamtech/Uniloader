@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/native/tasks/requirements_loader.yml
+# roles/bootstrap/tasks/python/requirements_loader.yml
 #
 # Purpose:
 #   Automatic generation of the 'requirements.yml' file for Ansible
@@ -9,7 +9,7 @@
 #
 # Simple Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: requirements_loader
 #     vars:
 #       python_venv_path: "/opt/ansible-venv"
@@ -17,7 +17,7 @@
 #
 # Comprehensive Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: requirements_loader
 #     vars:
 #       python_venv_path: "/home/deploy/venv"

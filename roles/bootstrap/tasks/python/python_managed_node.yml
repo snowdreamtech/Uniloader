@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/common/bootstrap/tasks/python/python_managed_node.yml
+# roles/bootstrap/tasks/python/python_managed_node.yml
 #
 # Purpose:
 #   Detection and installation of Python on standard managed nodes.

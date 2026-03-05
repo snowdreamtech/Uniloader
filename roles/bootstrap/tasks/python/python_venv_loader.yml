@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/native/tasks/python_venv_loader.yml
+# roles/bootstrap/tasks/python/python_venv_loader.yml
 #
 # Purpose:
 #   Creation and configuration of a Python virtual environment.
@@ -9,14 +9,14 @@
 #
 # Simple Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: python_venv_loader
 #     vars:
 #       python_venv_path: "/opt/ansible-venv"
 #
 # Comprehensive Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: python_venv_loader
 #     vars:
 #       python_venv_path: "/home/deploy/venv"
@@ -64,24 +64,19 @@
 
 # ---------------------------------------------------------------------
 # Preparation: Ensure the parent directory for the virtual
-# environment exists with correct permissions.
+# environment exists (raw).
 # ---------------------------------------------------------------------
 - name: "Ensure venv parent directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.file:
-    path: "{{ python_venv_path | dirname }}"
-    state: "directory"
-    mode: "0755"
+  ansible.builtin.raw: "mkdir -p {{ python_venv_path | dirname }} && chmod 0755 {{ python_venv_path | dirname }}"
   become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
 # ---------------------------------------------------------------------
-# Environment Setup: Create the Python virtual environment.
+# Environment Setup: Create the Python virtual environment (raw).
 # This task is idempotent and only runs if the 'activate' script is missing.
 # ---------------------------------------------------------------------
 - name: "Create python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.command: "{{ ansible_python_interpreter }} -m venv {{ python_venv_path }}"
-  args:
-    creates: "{{ python_venv_path }}/bin/activate"
+  ansible.builtin.raw: "test -f {{ python_venv_path }}/bin/activate || {{ ansible_python_interpreter }} -m venv {{ python_venv_path }}"
   become: "{{ become_enabled | default(true) }}"
   changed_when: false
 

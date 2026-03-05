@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/native/tasks/python_detector_loader.yml
+# roles/bootstrap/tasks/python/python_detector_loader.yml
 #
 # Purpose:
 #   Detection of the Python interpreter path on managed hosts.
@@ -9,12 +9,12 @@
 #
 # Simple Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: python_detector_loader
 #
 # Comprehensive Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: python_detector_loader
 #     vars:
 #       python_required: true

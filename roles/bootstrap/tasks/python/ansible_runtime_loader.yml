@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/native/tasks/ansible_runtime_loader.yml
+# roles/bootstrap/tasks/python/ansible_runtime_loader.yml
 #
 # Purpose:
 #   Installation and maintenance of the Ansible core and collections.
@@ -10,12 +10,12 @@
 #
 # Simple Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: ansible_runtime_loader
 #
 # Comprehensive Usage:
 #   - ansible.builtin.include_role:
-#       name: native
+#       name: bootstrap
 #       tasks_from: ansible_runtime_loader
 #     vars:
 #       ansible_core_version: "2.14.0"
@@ -63,7 +63,7 @@
 # ---------------------------------------------------------------------
 - name: "Install ansible collections {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.command: >-
-    {{ ansible_python_interpreter }} -m ansible_galaxy collection install {{ collection_name }}
+    {{ python_venv_path }}/bin/ansible-galaxy collection install {{ collection_name }}
   loop: "{{ ansible_collections }}"
   loop_control:
     loop_var: collection_name

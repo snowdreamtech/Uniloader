@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/common/bootstrap/tasks/bootstrap_posix.yml
+# roles/bootstrap/tasks/bootstrap_posix.yml
 #
 # Purpose:
 #   POSIX-only bootstrap logic (Linux + macOS).
