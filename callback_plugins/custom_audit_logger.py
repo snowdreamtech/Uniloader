@@ -5,8 +5,10 @@ from ansible.plugins.callback import CallbackBase
 
 class CallbackModule(CallbackBase):
     """
-    Custom Ansible audit logger callback plugin.
-    Silently records the duration and result of each task into a unified log file.
+    Environment-aware Custom Ansible audit logger callback plugin.
+    - Uses the Ansible inventory variable `env` to determine the environment dynamically.
+    - DEV/DEFAULT Environment: Writes human-readable plaintext logs to logs/ansible_dev.log
+    - PROD Environment: Writes strictly formatted JSON lines to logs/ansible_audit.log
     """
 
     CALLBACK_VERSION = 2.0
@@ -15,20 +17,53 @@ class CallbackModule(CallbackBase):
 
     def __init__(self):
         super(CallbackModule, self).__init__()
-        self.log_file = "logs/ansible_audit.log"
+        self.dev_log_file = "logs/ansible_dev.log"
+        self.prod_log_file = "logs/ansible_audit.log"
         self.task_start_times = {}
+        self.play = None
+        self.vm = None
 
-    def _log_event(self, task_name, host, status, duration=0, msg=""):
-        log_entry = {
-            "timestamp": datetime.now().isoformat(),
-            "host": host,
-            "task": task_name,
-            "status": status,
-            "duration_seconds": round(duration, 3),
-            "message": msg
-        }
-        with open(self.log_file, "a") as f:
-            f.write(json.dumps(log_entry) + "\n")
+    def v2_playbook_on_play_start(self, play):
+        self.play = play
+        self.vm = play.get_variable_manager()
+
+    def _get_host_env(self, host, task):
+        # Attempt to dynamically resolve the 'env' variable from group_vars/host_vars
+        if self.vm and self.play:
+            try:
+                variables = self.vm.get_vars(play=self.play, host=host, task=task)
+                return variables.get('env', 'dev').lower()
+            except Exception:
+                pass
+        return 'dev'
+
+    def _log_event(self, task_name, host_obj, status, duration=0, msg="", task_obj=None):
+        time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        host_name = host_obj.get_name() if host_obj else "unknown"
+
+        # Dynamically determine the environment per host!
+        env = self._get_host_env(host_obj, task_obj)
+
+        if env == 'prod':
+            # PROD: Strict JSON Line format suitable for Fluentd/ELK/Datadog
+            log_entry = {
+                "timestamp": datetime.now().isoformat(),
+                "environment": env,
+                "host": host_name,
+                "task": task_name,
+                "status": status,
+                "duration_seconds": round(duration, 3),
+                "message": msg
+            }
+            with open(self.prod_log_file, "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
+        else:
+            # DEV / DEFAULT: Human-readable plaintext format
+            msg_part = f" | {msg}" if msg else ""
+            log_line = f"[{time_str}] [{host_name}] [ENV:{env.upper()}] [{status}] ({round(duration, 3)}s) - {task_name}{msg_part}\n"
+
+            with open(self.dev_log_file, "a") as f:
+                f.write(log_line)
 
     def v2_playbook_on_task_start(self, task, is_conditional):
         self.task_start_times[task._uuid] = time.time()
@@ -42,9 +77,10 @@ class CallbackModule(CallbackBase):
 
         self._log_event(
             task_name=result._task.get_name(),
-            host=result._host.get_name(),
+            host_obj=result._host,
             status=status,
-            duration=duration
+            duration=duration,
+            task_obj=result._task
         )
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
@@ -57,8 +93,9 @@ class CallbackModule(CallbackBase):
 
         self._log_event(
             task_name=result._task.get_name(),
-            host=result._host.get_name(),
+            host_obj=result._host,
             status=status,
             duration=duration,
-            msg=error_msg
+            msg=error_msg,
+            task_obj=result._task
         )
