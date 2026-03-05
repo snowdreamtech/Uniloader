@@ -1,5 +1,4 @@
 ---
-
 # ---------------------------------------------------------------------
 # Path: Default location for the target virtual environment.
 # ---------------------------------------------------------------------
@@ -14,7 +13,6 @@ python_runtime_packages:
   - pyyaml
   - passlib
   - kubernetes
-
 
 # ---------------------------------------------------------------------
 # Mirror: Default pip mirror configuration.
