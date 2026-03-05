@@ -62,8 +62,8 @@ jobs:
         run: |
           # Try to pull and run the image, if it fails, the workflow just fails
           # (which is expected for unsupported ones natively)
-          docker run -d --name uls_void --privileged ghcr.io/void-linux/void-linux:latest \
-            sleep 86400 || echo "WARNING: Image ghcr.io/void-linux/void-linux:latest not found or failed to start."
+          docker run -d --name uls_void --privileged ghcr.io/void-linux/void-glibc-full:latest \
+            sleep 86400 || echo "WARNING: Image ghcr.io/void-linux/void-glibc-full:latest not found or failed to start."
 
           # Create a dynamic inventory file for this run
           cat << 'INV' > inventory/dynamic_docker.yml
