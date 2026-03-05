@@ -170,7 +170,7 @@
 
 - name: Encrypt files in local home directory
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     ENCRYPTED_FILE="{{ encrypt_item.path }}.gpg"
     gpg --quiet --batch --yes --encrypt --recipient {{ home_gpg_recipient }} --trust-model always -o "${ENCRYPTED_FILE}" "{{ encrypt_item.path }}"
     if [ ! -s "${ENCRYPTED_FILE}" ]; then

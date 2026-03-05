@@ -142,7 +142,7 @@
 - name: "Cleanup deprecated Homebrew mirror script from .zshrc {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.lineinfile:
     path: "{{ ansible_user_home }}/.zshrc"
-    line: "[[ -f ~/.brew_mirror.sh ]] && source ~/.brew_mirror.sh"
+    line: "[ -f ~/._brew_mirror.sh ] && source ~/.brew_mirror.sh"
     state: absent
   become: "{{ become_enabled }}"
 
@@ -151,7 +151,7 @@
 
   ansible.builtin.lineinfile:
     path: "{{ ansible_user_home }}/.zshrc"
-    line: "[[ -f ~/.darwin_mirror.sh ]] && source ~/.darwin_mirror.sh"
+    line: "[ -f ~/._darwin_mirror.sh ] && source ~/.darwin_mirror.sh"
     create: true
     owner: "{{ ansible_user_name }}"
     group: "{{ ansible_user_name }}"

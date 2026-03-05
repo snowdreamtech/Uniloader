@@ -74,7 +74,7 @@
     - name: "Execute Build and Install: {{ src_item | basename }} {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
       ansible.builtin.shell: |
         PATH={{ os_paths }}
-        set -euo pipefail
+        set -eu
         {{ package_src_configure_cmd | default('./configure', true) }}
         {{ package_src_make_cmd | default('make -j $(nproc)', true) }}
         {{ package_src_install_cmd | default('make install', true) }}

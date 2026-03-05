@@ -32,7 +32,7 @@
 
 - name: Attempt to unlock GPG key using provided passphrase
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     echo "" | gpg --batch --no-tty --pinentry-mode loopback --passphrase "{{ home_gpg_passphrase }}" --clearsign --local-user "{{ home_gpg_recipient }}" --output /dev/null
   environment:
     PATH: "{{ os_paths }}"

@@ -54,7 +54,7 @@
 
 - name: "Download Kubernetes GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     curl -fsSL https://pkgs.k8s.io/core:/stable:/{{ k8s_version | default('v1.30', true) }}/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   when: not (k8s_gpg_stat.stat.exists | default(false, true))
   changed_when: true

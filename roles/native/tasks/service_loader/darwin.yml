@@ -48,7 +48,7 @@
 # WHY: Detect if the service is installed via MacPorts.
 - name: "Service (macOS): Detect MacPorts port {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     PATH={{ os_paths | default('/opt/local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin') }}
     port -q installed {{ service_name }} | grep -q {{ service_name }}
   register: _service_check_port
@@ -92,7 +92,7 @@
 # 2. MacPorts Execution
 - name: "Service (macOS): Execute MacPorts control {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     PATH={{ os_paths | default('/opt/local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin') }}
 
     ACTION="{{ service_state | default('started', true) }}"

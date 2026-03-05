@@ -425,7 +425,7 @@
       always:
         - name: "Package (Darwin): Unmount DMG volumes {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
           ansible.builtin.shell: |
-            set -euo pipefail
+            set -eu
             hdiutil info | grep '/Volumes/' | awk '{print $1}' | xargs -I {} hdiutil detach {} -quiet
           failed_when: false
           changed_when: false

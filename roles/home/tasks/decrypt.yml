@@ -145,7 +145,7 @@
 
 - name: Decrypt files in local home directory
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     INPUT_FILE="{{ decrypt_item.path }}"
     DECRYPTED_FILE="${INPUT_FILE%.gpg}"
 

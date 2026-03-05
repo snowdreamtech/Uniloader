@@ -132,7 +132,7 @@
   ansible.builtin.shell: |-
     PATH={{ os_paths }}
     PATH={{ os_paths }}
-    set -euo pipefail
+    set -eu
     curl -fsSL "{{ 'https://mirrors.aliyun.com/docker-ce/linux/debian/gpg' if is_restricted_network | default(false, true) else 'https://download.docker.com/linux/debian/gpg' }}" \
       | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
@@ -199,7 +199,7 @@
 - name: "Provision Docker repository (legacy list format)"
   ansible.builtin.shell: |-
     PATH={{ os_paths }}
-    set -euo pipefail
+    set -eu
     codename="$(. /etc/os-release && echo "${VERSION_CODENAME}")"
     arch="$(dpkg --print-architecture)"
     repo_url="{{ 'https://mirrors.aliyun.com/docker-ce/linux/debian' if is_restricted_network | default(false, true) else 'https://download.docker.com/linux/debian' }}"

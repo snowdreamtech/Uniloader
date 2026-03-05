@@ -14,7 +14,7 @@
     - name: "Package (AUR): Clone and build yay {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
       ansible.builtin.shell: |
         PATH={{ os_paths }}
-        set -euo pipefail
+        set -eu
         git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
         cd /tmp/yay-bin && makepkg -si --noconfirm
         rm -rf /tmp/yay-bin

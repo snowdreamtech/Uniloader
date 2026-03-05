@@ -54,7 +54,7 @@
     - name: "antigravity (Debian/Native): De-armor GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
       ansible.builtin.shell: |
         PATH={{ os_paths }}
-        set -euo pipefail
+        set -eu
         gpg --dearmor < /tmp/antigravity.asc > /etc/apt/keyrings/antigravity-repo-key.gpg
       become: "{{ become_enabled }}"
       changed_when: false

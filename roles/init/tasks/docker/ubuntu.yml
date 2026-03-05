@@ -104,7 +104,7 @@
 
 - name: "Download and install Docker GPG key {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     curl -fsSL "{{ 'https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg' if is_restricted_network | default(false, true) else 'https://download.docker.com/linux/ubuntu/gpg' }}" \
       | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg

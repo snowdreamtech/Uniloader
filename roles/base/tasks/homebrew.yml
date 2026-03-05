@@ -133,7 +133,7 @@
 # Skips if MacPorts is already installed (avoid conflicts)
 - name: "Homebrew: Install via official script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     PATH={{ os_paths }} /bin/bash -c "$(curl -fsSL --retry 5 --retry-delay 10 --connect-timeout 60 {{ github_proxy | default('', true) }}https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   environment:
     NONINTERACTIVE: "1" # Skip interactive prompts

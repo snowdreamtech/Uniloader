@@ -48,7 +48,7 @@
 - name: "Cleanup containerd unused snapshots {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
     PATH={{ os_paths }}
-    set -o pipefail
+    set -e
     ctr snapshot ls -q | xargs -r ctr snapshot rm
   register: ctr_cleanup_snapshots
   changed_when: "'removed' in ctr_cleanup_snapshots.stdout"

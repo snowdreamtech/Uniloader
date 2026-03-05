@@ -363,7 +363,7 @@ All `shell` and `command` tasks MUST define:
 ```yaml
 - name: "Execute script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     ./my-script.sh
   changed_when: "'Updated' in script_result.stdout"
   failed_when: script_result.rc != 0

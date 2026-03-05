@@ -37,7 +37,7 @@
 - name: "nvm (Native): Download and install nvm {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
     PATH={{ os_paths }}
-    set -euo pipefail
+    set -eu
     {% if app_version | default('latest', true) == 'latest' %}
     curl -o- {{ github_proxy }}https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
     {% else %}

@@ -20,7 +20,7 @@
 - name: "Package (Android): pkg execution {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
 
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     pkg install -y {{ pkg_item }}
   loop: "{{ pkg_repo_list }}"
   loop_control:

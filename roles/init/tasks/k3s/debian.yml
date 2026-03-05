@@ -48,7 +48,7 @@
 
 - name: "Install K3s via script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |
-    set -euo pipefail
+    set -eu
     curl -sfL https://get.k3s.io | sh -
   environment:
     INSTALL_K3S_SKIP_START: "true"
