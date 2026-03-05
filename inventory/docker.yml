@@ -18,18 +18,21 @@
 all:
   hosts:
     alpine:
+      ansible_host: uls_alpine
       ansible_connection: "docker"
       node_tags:
         - "open"
         - "container"
         - "docker_container"
     debian:
+      ansible_host: uls_debian
       ansible_connection: "docker"
       node_tags:
         - "open"
         - "container"
         - "docker_container"
-    redhat:
+    rhel:
+      ansible_host: uls_rhel
       ansible_connection: "docker"
       node_tags:
         - "open"
