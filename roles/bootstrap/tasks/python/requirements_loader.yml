@@ -63,7 +63,7 @@
     path: "{{ python_venv_path }}"
     state: "directory"
     mode: "0755"
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
 # ---------------------------------------------------------------------
@@ -79,4 +79,4 @@
       {% for item in ansible_collections %}
         - name: "{{ item }}"
       {% endfor %}
-  become: true
+  become: "{{ become_enabled | default(true) }}"

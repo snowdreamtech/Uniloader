@@ -214,7 +214,7 @@
     fi
 
     echo "[PYTHON_INSTALLER_LOADER] Python bootstrap completed successfully"
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false
   args:
     executable: "/bin/sh"

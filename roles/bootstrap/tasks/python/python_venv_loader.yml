@@ -71,7 +71,7 @@
     path: "{{ python_venv_path | dirname }}"
     state: "directory"
     mode: "0755"
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
 # ---------------------------------------------------------------------
@@ -82,7 +82,7 @@
   ansible.builtin.command: "{{ ansible_python_interpreter }} -m venv {{ python_venv_path }}"
   args:
     creates: "{{ python_venv_path }}/bin/activate"
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
 # ---------------------------------------------------------------------
@@ -112,4 +112,4 @@
   when:
     - pip_index_url is defined
     - pip_trusted_host is defined
-  become: true
+  become: "{{ become_enabled | default(true) }}"

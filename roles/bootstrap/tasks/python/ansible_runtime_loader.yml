@@ -46,7 +46,7 @@
   when:
     - ansible_core_version is not defined
       or ansible_core_version | trim | length == 0
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
 - name: "Install ansible-core (specific version) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -54,7 +54,7 @@
   when:
     - ansible_core_version is defined
       and ansible_core_version | trim | length > 0
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
 # ---------------------------------------------------------------------
@@ -70,5 +70,5 @@
   when:
     - ansible_collections is defined
     - ansible_collections | length > 0
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false

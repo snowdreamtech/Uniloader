@@ -25,22 +25,22 @@
 # Detection: Check for the 'python3' binary in the system path.
 # ---------------------------------------------------------------------
 - name: "Detect python3 {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.shell: '/bin/sh -c "PATH={{ os_paths }} command -v python3 2>/dev/null || true"'
+  ansible.builtin.raw: "PATH={{ os_paths }} command -v python3 || true"
   register: python3_check
   changed_when: false
   failed_when: false
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   tags: ["always"]
 
 # ---------------------------------------------------------------------
 # Detection: Fallback check for the legacy 'python' binary.
 # ---------------------------------------------------------------------
 - name: "Detect python {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.shell: '/bin/sh -c "PATH={{ os_paths }} command -v python 2>/dev/null || true"'
+  ansible.builtin.raw: "PATH={{ os_paths }} command -v python || true"
   register: python_check
   changed_when: false
   failed_when: false
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   tags: ["always"]
 
 # ---------------------------------------------------------------------

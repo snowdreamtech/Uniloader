@@ -46,12 +46,14 @@
 # Tag Initialization & Derivation: Bulk fact generation
 # ---------------------------------------------------------------------
 - name: "Initialize and derive tag variables (Bulk) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.set_fact: >-
-    {%- set bulk_facts = {} -%}
-    {%- for tag_name, tag_var in tag_map.items() -%}
-      {%- set _ = bulk_facts.update({tag_var: tag_name in (node_tags | default([], true))}) -%}
-    {%- endfor -%}
-    {{ bulk_facts }}
+  ansible.builtin.set_fact: "{{ derived_tags }}"
+  vars:
+    derived_tags: >-
+      {%- set results = {} -%}
+      {%- for tag_name, tag_var in tag_map.items() -%}
+        {%- set _ = results.update({tag_var: tag_name in (node_tags | default([], true))}) -%}
+      {%- endfor -%}
+      {{ results }}
   tags: ["always"]
 
 # ---------------------------------------------------------------------
@@ -84,6 +86,18 @@
     is_root_user: "{{ (ansible_user_name | default(ansible_env.USER | default('root', true), true)) == 'root' }}"
   tags: ["always"]
 
+# ---------------------------------------------------------------------
+# Permission Strategy
+# ---------------------------------------------------------------------
+- name: "Build become_enabled {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    become_enabled: >-
+      {{
+        (not (is_container | default(false, true)))
+        and (not (is_root_user | default(false, true)))
+      }}
+  tags: ["always"]
+
 - name: "Derive user home directory path {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     ansible_user_home: >-
@@ -93,6 +107,9 @@
       {{- root_path if is_root_user else base_path ~ '/' ~ ansible_user -}}
   tags: ["always"]
 
+# ---------------------------------------------------------------------
+# Path Discovery
+# ---------------------------------------------------------------------
 - name: "Scan for canonical binary directories (Bulk) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.shell: |-
     set -eu
@@ -143,16 +160,4 @@
 - name: "Build canonical os_paths fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
     os_paths: "{{ _os_paths_probe.stdout_lines | join(':') }}"
-  tags: ["always"]
-
-# ---------------------------------------------------------------------
-# Permission Strategy
-# ---------------------------------------------------------------------
-- name: "Build become_enabled {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.set_fact:
-    become_enabled: >-
-      {{
-        (not (is_container | default(false, true)))
-        and (not (is_root_user | default(false, true)))
-      }}
   tags: ["always"]

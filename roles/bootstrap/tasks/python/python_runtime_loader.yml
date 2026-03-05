@@ -45,7 +45,7 @@
 # ---------------------------------------------------------------------
 - name: "Upgrade pip in venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install --upgrade pip"
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
 # ---------------------------------------------------------------------
@@ -53,7 +53,7 @@
 # ---------------------------------------------------------------------
 - name: "Install wheel and setuptools {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install --upgrade wheel setuptools"
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false
 
 # ---------------------------------------------------------------------
@@ -67,5 +67,5 @@
   when:
     - python_runtime_packages is defined
     - python_runtime_packages | length > 0
-  become: true
+  become: "{{ become_enabled | default(true) }}"
   changed_when: false

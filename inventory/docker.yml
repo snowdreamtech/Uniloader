@@ -16,6 +16,8 @@
 # =====================================================================
 
 all:
+  vars:
+    become_enabled: false
   hosts:
     alpine:
       ansible_host: uls_alpine

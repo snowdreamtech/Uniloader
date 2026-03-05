@@ -76,7 +76,7 @@
     path: "{{ bootstrap_flag_path }}"
     state: absent
   when: force | default(false, true) | bool
-  become: true
+  become: "{{ become_enabled | default(true) }}"
 
 # WHY: Remove python venv when force override is requested.
 - name: "Force override: remove python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -84,26 +84,28 @@
     path: "{{ python_venv_path }}"
     state: absent
   when: force | default(false, true) | bool
-  become: true
+  become: "{{ become_enabled | default(true) }}"
 
 # =====================================================================
 #  CHECK FLAG + VENV STATUS
 # =====================================================================
 
-# WHY: Check bootstrap flag existence.
+# WHY: Check bootstrap flag existence using raw module (no python required).
 - name: "Check bootstrap flag {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.stat:
-    path: "{{ bootstrap_flag_path }}"
-  register: bootstrap_flag
-  become: true
+  ansible.builtin.raw: "test -f {{ bootstrap_flag_path }}"
+  register: bootstrap_flag_raw
+  ignore_errors: true
+  changed_when: false
+  become: "{{ become_enabled | default(true) }}"
   tags: ["always"]
 
-# WHY: Check python venv existence.
+# WHY: Check python venv existence using raw module (no python required).
 - name: "Check python venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.stat:
-    path: "{{ python_venv_path }}"
-  register: python_venv_flag
-  become: true
+  ansible.builtin.raw: "test -d {{ python_venv_path }}"
+  register: python_venv_flag_raw
+  ignore_errors: true
+  changed_when: false
+  become: "{{ become_enabled | default(true) }}"
   tags: ["always"]
 
 # # WHY: Log status for audit/debug.
@@ -117,16 +119,22 @@
 #     msg: "{{ python_venv_flag | to_nice_yaml(indent=2) }}"
 #   tags: ["always"]
 
+# WHY: Set results of raw probes into normalized facts.
+- name: "Set bootstrap probe results {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    bootstrap_flag_exists: "{{ (bootstrap_flag_raw.rc | default(1)) == 0 }}"
+    python_venv_exists: "{{ (python_venv_flag_raw.rc | default(1)) == 0 }}"
+  tags: ["always"]
+
 # =====================================================================
-#  RUN BOOTSTRAP (ONLY WHEN FLAG DOES NOT EXIST)
+#  EXECUTE BOOTSTRAP LOGIC
 # =====================================================================
 
-# WHY: Run Python initialization only when bootstrap flag is missing.
+# WHY: Run python bootstrap if flag is missing.
 - name: "Run Python bootstrap {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.include_tasks: "python/main.yml"
   when:
-    - bootstrap_flag.stat is defined
-    - not bootstrap_flag.stat.exists
+    - not bootstrap_flag_exists | bool
 
 # =====================================================================
 #  CREATE FLAG AFTER SUCCESSFUL BOOTSTRAP
@@ -138,9 +146,8 @@
     path: "{{ bootstrap_flag_path }}"
     state: touch
   when:
-    - bootstrap_flag.stat is defined
-    - not bootstrap_flag.stat.exists
-  become: true
+    - not bootstrap_flag_exists | bool
+  become: "{{ become_enabled | default(true) }}"
 
 # =====================================================================
 #  ALWAYS ACTIVATE PYTHON INTERPRETER
