@@ -2,10 +2,7 @@
 name: Uniloader CD
 
 "on":
-  push:
-    branches:
-      - main
-  workflow_dispatch: # Enable manual triggering from UI
+  workflow_dispatch: # Disabled: manual trigger only
 
 # Prevent multiple deployments from stomping on each other
 concurrency:

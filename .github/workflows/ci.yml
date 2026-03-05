@@ -2,18 +2,7 @@
 name: Uniloader CI
 
 "on":
-  push:
-    branches:
-      - main
-      - develop
-    paths:
-      - "**.yml"
-      - "**.yaml"
-      - "**.sh"
-  pull_request:
-    branches:
-      - main
-      - develop
+  workflow_dispatch: # Disabled: manual trigger only
 
 jobs:
   lint:
