@@ -45,7 +45,7 @@ if [ -z "$PROJECT_ROOT" ] || [ ! -f "$PROJECT_ROOT/requirements.txt" ]; then
         echo "Error: Cannot determine project root."
         echo "Please source this script from the root of the repository."
         echo "Example: . scripts/setup_venv.sh"
-        return 1 2>/dev/null || exit 1
+        return 1 2>/dev/null
     fi
 fi
 
