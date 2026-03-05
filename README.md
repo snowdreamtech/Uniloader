@@ -41,6 +41,11 @@ A production-grade, cross-distribution Ansible framework implementing the **Unif
 
 ### Prerequisites
 
+- **Python Requirements**:
+  - **Control Node**: Python 3.10+ (for modern dev-tooling support).
+  - **Managed Nodes**: Python 3.7+ (Physical minimum).
+    - _Note: For older systems (e.g., OpenSUSE Leap 15.x with Python 3.6), the system automatically side-loads Python 3.11 during initialization._
+
 ```bash
 # Install Ansible and required collections
 pip install ansible
