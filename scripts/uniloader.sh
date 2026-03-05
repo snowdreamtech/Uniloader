@@ -11,110 +11,110 @@ USER_PROVIDED_VAULT_PASS="false"
 
 # Function to show usage
 usage() {
-    echo "Usage: $0 [OPTIONS]"
-    echo ""
-    echo "Options:"
-    echo "  -i, --inventory <name>    Inventory name (default: localhost -> inventory/localhost.yml)"
-    echo "  -p, --playbook <name>     Playbook name (default: orchestrator -> playbooks/orchestrator.yml)"
-    echo "  -v                        Verbosity level (default: none, supports -v, -vv, -vvv, etc.)"
-    echo "  --vault-vars <file>       Path to vault vars file (default: ~/.uniloader/.vault.yml)"
-    echo "  --vault-pass <file>       Path to vault password file (default: ~/.uniloader/.vault_pass)"
-    echo "  -e, --extra-vars <vars>   Additional extra vars"
-    echo "  --home-action <action>    Home role action (encrypt, decrypt, restore). Sets playbook to 'home'."
-    echo "  --home-files <files>      Comma-separated list of files for home role action."
-    echo "  -h, --help                Show this help message"
-    echo ""
-    echo "Example:"
-    echo "  $0 -i staging -p deploy -vv"
+  echo "Usage: $0 [OPTIONS]"
+  echo ""
+  echo "Options:"
+  echo "  -i, --inventory <name>    Inventory name (default: localhost -> inventory/localhost.yml)"
+  echo "  -p, --playbook <name>     Playbook name (default: orchestrator -> playbooks/orchestrator.yml)"
+  echo "  -v                        Verbosity level (default: none, supports -v, -vv, -vvv, etc.)"
+  echo "  --vault-vars <file>       Path to vault vars file (default: ~/.uniloader/.vault.yml)"
+  echo "  --vault-pass <file>       Path to vault password file (default: ~/.uniloader/.vault_pass)"
+  echo "  -e, --extra-vars <vars>   Additional extra vars"
+  echo "  --home-action <action>    Home role action (encrypt, decrypt, restore). Sets playbook to 'home'."
+  echo "  --home-files <files>      Comma-separated list of files for home role action."
+  echo "  -h, --help                Show this help message"
+  echo ""
+  echo "Example:"
+  echo "  $0 -i staging -p deploy -vv"
 }
 
 # Parse arguments and store extra args
 EXTRA_ARGS=""
 while [ $# -gt 0 ]; do
-    case $1 in
-        -i|--inventory)
-            INVENTORY="$2"
-            shift 2
-            ;;
-        -p|--playbook)
-            PLAYBOOK="$2"
-            shift 2
-            ;;
-        -v|-vv|-vvv|-vvvv)
-            VERBOSITY="$1"
-            shift
-            ;;
-        --vault-vars)
-            VAULT_VARS="$2"
-            USER_PROVIDED_VAULT_VARS="true"
-            shift 2
-            ;;
-        --vault-pass)
-            VAULT_PASS="$2"
-            USER_PROVIDED_VAULT_PASS="true"
-            shift 2
-            ;;
-        -e|--extra-vars)
-            EXTRA_ARGS="$EXTRA_ARGS -e \"$2\""
-            shift 2
-            ;;
-        --home-action)
-            HOME_ACTION="$2"
-            PLAYBOOK="home"
-            shift 2
-            ;;
-        --home-files)
-            HOME_FILES_RAW="$2"
-            shift 2
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        *)
-            # Pass through any other arguments
-            EXTRA_ARGS="$EXTRA_ARGS \"$1\""
-            shift
-            ;;
-    esac
+  case $1 in
+  -i | --inventory)
+    INVENTORY="$2"
+    shift 2
+    ;;
+  -p | --playbook)
+    PLAYBOOK="$2"
+    shift 2
+    ;;
+  -v | -vv | -vvv | -vvvv)
+    VERBOSITY="$1"
+    shift
+    ;;
+  --vault-vars)
+    VAULT_VARS="$2"
+    USER_PROVIDED_VAULT_VARS="true"
+    shift 2
+    ;;
+  --vault-pass)
+    VAULT_PASS="$2"
+    USER_PROVIDED_VAULT_PASS="true"
+    shift 2
+    ;;
+  -e | --extra-vars)
+    EXTRA_ARGS="$EXTRA_ARGS -e \"$2\""
+    shift 2
+    ;;
+  --home-action)
+    HOME_ACTION="$2"
+    PLAYBOOK="home"
+    shift 2
+    ;;
+  --home-files)
+    HOME_FILES_RAW="$2"
+    shift 2
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    # Pass through any other arguments
+    EXTRA_ARGS="$EXTRA_ARGS \"$1\""
+    shift
+    ;;
+  esac
 done
 
 # Resolve inventory path
 case "$INVENTORY" in
-    */*)
-        INVENTORY_PATH="$INVENTORY"
-        ;;
-    *)
-        INVENTORY_PATH="inventory/${INVENTORY}.yml"
-        ;;
+*/*)
+  INVENTORY_PATH="$INVENTORY"
+  ;;
+*)
+  INVENTORY_PATH="inventory/${INVENTORY}.yml"
+  ;;
 esac
 
 # Resolve playbook path
 case "$PLAYBOOK" in
-    */*)
-        PLAYBOOK_PATH="$PLAYBOOK"
-        ;;
-    *)
-        case "$PLAYBOOK" in
-            *.yml)
-                PLAYBOOK_PATH="playbooks/${PLAYBOOK}"
-                ;;
-            *)
-                PLAYBOOK_PATH="playbooks/${PLAYBOOK}.yml"
-                ;;
-        esac
-        ;;
+*/*)
+  PLAYBOOK_PATH="$PLAYBOOK"
+  ;;
+*)
+  case "$PLAYBOOK" in
+  *.yml)
+    PLAYBOOK_PATH="playbooks/${PLAYBOOK}"
+    ;;
+  *)
+    PLAYBOOK_PATH="playbooks/${PLAYBOOK}.yml"
+    ;;
+  esac
+  ;;
 esac
 
 # Ensure paths exist
 if [ ! -f "$INVENTORY_PATH" ]; then
-    echo "Error: Inventory file '$INVENTORY_PATH' not found."
-    exit 1
+  echo "Error: Inventory file '$INVENTORY_PATH' not found."
+  exit 1
 fi
 
 if [ ! -f "$PLAYBOOK_PATH" ]; then
-    echo "Error: Playbook file '$PLAYBOOK_PATH' not found."
-    exit 1
+  echo "Error: Playbook file '$PLAYBOOK_PATH' not found."
+  exit 1
 fi
 
 # Ensure virtual environment is activated
@@ -122,49 +122,49 @@ SCRIPT_DIR="$(dirname "$0")"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 if [ -f "$PROJECT_ROOT/.venv/bin/activate" ]; then
-    . "$PROJECT_ROOT/.venv/bin/activate"
+  . "$PROJECT_ROOT/.venv/bin/activate"
 else
-    if [ -f "$PROJECT_ROOT/scripts/setup_venv.sh" ]; then
-        echo "Virtual environment not found. Attempting to create one..."
-        . "$PROJECT_ROOT/scripts/setup_venv.sh"
-    else
-        echo "Error: Virtual environment not found and setup script missing."
-        exit 1
-    fi
+  if [ -f "$PROJECT_ROOT/scripts/setup_venv.sh" ]; then
+    echo "Virtual environment not found. Attempting to create one..."
+    . "$PROJECT_ROOT/scripts/setup_venv.sh"
+  else
+    echo "Error: Virtual environment not found and setup script missing."
+    exit 1
+  fi
 fi
 
 # Process Home Role arguments if present
 if [ -n "$HOME_ACTION" ]; then
-    EXTRA_ARGS="$EXTRA_ARGS -e \"home_action=$HOME_ACTION\""
+  EXTRA_ARGS="$EXTRA_ARGS -e \"home_action=$HOME_ACTION\""
 fi
 
 if [ -n "$HOME_FILES_RAW" ]; then
-    # Convert comma-separated to JSON list: "file1,file2" -> "file1","file2"
-    # We use sed to replace commas with quote-comma-quote
-    FORMATTED_FILES=$(echo "$HOME_FILES_RAW" | sed 's/,/","/g')
-    # Wrap in JSON array syntax and single quotes for the complex argument
-    EXTRA_ARGS="$EXTRA_ARGS -e '{\"home_files\": [\"$FORMATTED_FILES\"]}'"
+  # Convert comma-separated to JSON list: "file1,file2" -> "file1","file2"
+  # We use sed to replace commas with quote-comma-quote
+  FORMATTED_FILES=$(echo "$HOME_FILES_RAW" | sed 's/,/","/g')
+  # Wrap in JSON array syntax and single quotes for the complex argument
+  EXTRA_ARGS="$EXTRA_ARGS -e '{\"home_files\": [\"$FORMATTED_FILES\"]}'"
 fi
 
 # Process Vault arguments conditionally
 VAULT_ARGS=""
 
 if [ "$USER_PROVIDED_VAULT_VARS" = "true" ]; then
-    VAULT_ARGS="-e \"$VAULT_VARS\""
+  VAULT_ARGS="-e \"$VAULT_VARS\""
 else
-    # Strip the '@' prefix if present to check file existence
-    VARS_FILE="${VAULT_VARS#@}"
-    if [ -f "$VARS_FILE" ]; then
-        VAULT_ARGS="-e \"$VAULT_VARS\""
-    fi
+  # Strip the '@' prefix if present to check file existence
+  VARS_FILE="${VAULT_VARS#@}"
+  if [ -f "$VARS_FILE" ]; then
+    VAULT_ARGS="-e \"$VAULT_VARS\""
+  fi
 fi
 
 if [ "$USER_PROVIDED_VAULT_PASS" = "true" ]; then
-    VAULT_ARGS="$VAULT_ARGS --vault-password-file \"$VAULT_PASS\""
+  VAULT_ARGS="$VAULT_ARGS --vault-password-file \"$VAULT_PASS\""
 else
-    if [ -f "$VAULT_PASS" ]; then
-        VAULT_ARGS="$VAULT_ARGS --vault-password-file \"$VAULT_PASS\""
-    fi
+  if [ -f "$VAULT_PASS" ]; then
+    VAULT_ARGS="$VAULT_ARGS --vault-password-file \"$VAULT_PASS\""
+  fi
 fi
 
 # Execute ansible-playbook with all arguments

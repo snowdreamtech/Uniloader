@@ -25,11 +25,11 @@ set -e
 # Guard: Ensure the script is being sourced, not executed directly.
 # ---------------------------------------------------------------------
 if [ -n "$BASH_VERSION" ]; then
-    # shellcheck disable=SC3028,SC2128
-    if [ "${BASH_SOURCE:-}" = "${0}" ]; then
-        echo "Usage: . scripts/setup_venv.sh"
-        exit 1
-    fi
+  # shellcheck disable=SC3028,SC2128
+  if [ "${BASH_SOURCE:-}" = "${0}" ]; then
+    echo "Usage: . scripts/setup_venv.sh"
+    exit 1
+  fi
 fi
 
 # ---------------------------------------------------------------------
@@ -39,14 +39,14 @@ fi
 # a temporary runner script path, breaking `dirname "$0"`.
 # We fallback to using the caller's $PROJECT_ROOT or $PWD as the root if applicable.
 if [ -z "$PROJECT_ROOT" ] || [ ! -f "$PROJECT_ROOT/requirements.txt" ]; then
-    if [ -f "requirements.txt" ] && [ -d "scripts" ]; then
-        PROJECT_ROOT="$PWD"
-    else
-        echo "Error: Cannot determine project root."
-        echo "Please source this script from the root of the repository."
-        echo "Example: . scripts/setup_venv.sh"
-        return 1 2>/dev/null
-    fi
+  if [ -f "requirements.txt" ] && [ -d "scripts" ]; then
+    PROJECT_ROOT="$PWD"
+  else
+    echo "Error: Cannot determine project root."
+    echo "Please source this script from the root of the repository."
+    echo "Example: . scripts/setup_venv.sh"
+    return 1 2>/dev/null
+  fi
 fi
 
 VENV_DIR="$PROJECT_ROOT/.venv"
@@ -55,8 +55,8 @@ VENV_DIR="$PROJECT_ROOT/.venv"
 # Creation: Create the virtual environment if it does not already exist.
 # ---------------------------------------------------------------------
 if [ ! -f "$VENV_DIR/bin/activate" ]; then
-    echo "Creating virtual environment in $VENV_DIR..."
-    python3 -m venv "$VENV_DIR"
+  echo "Creating virtual environment in $VENV_DIR..."
+  python3 -m venv "$VENV_DIR"
 fi
 
 # ---------------------------------------------------------------------
@@ -69,7 +69,7 @@ fi
 # Configuration: Point pip to the Tsinghua mirror for faster downloads
 # within China.
 # ---------------------------------------------------------------------
-cat > "$VENV_DIR/pip.conf" << 'EOF'
+cat >"$VENV_DIR/pip.conf" <<'EOF'
 [global]
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple
 trusted-host = pypi.tuna.tsinghua.edu.cn

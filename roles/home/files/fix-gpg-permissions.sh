@@ -13,8 +13,8 @@ set -eu
 TARGET_DIR="${1:-$HOME/.gnupg}"
 
 if [ ! -d "$TARGET_DIR" ]; then
-    echo "Directory $TARGET_DIR does not exist. Skipping."
-    exit 0
+  echo "Directory $TARGET_DIR does not exist. Skipping."
+  exit 0
 fi
 
 # 1. Main Directory
@@ -26,8 +26,8 @@ find "$TARGET_DIR" -maxdepth 1 -type f -exec chmod 600 {} +
 
 # 3. private-keys-v1.d Directory
 if [ -d "$TARGET_DIR/private-keys-v1.d" ]; then
-    chmod 700 "$TARGET_DIR/private-keys-v1.d"
-    find "$TARGET_DIR/private-keys-v1.d" -type f -exec chmod 600 {} +
+  chmod 700 "$TARGET_DIR/private-keys-v1.d"
+  find "$TARGET_DIR/private-keys-v1.d" -type f -exec chmod 600 {} +
 fi
 
 echo "Fixed permissions for $TARGET_DIR"

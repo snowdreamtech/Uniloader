@@ -20,12 +20,12 @@ set -e
 # Prevent sourcing (POSIX-compatible check)
 # Note: This check works in bash; in pure sh it may not detect sourcing
 if [ -n "$BASH_VERSION" ]; then
-    # shellcheck disable=SC3028,SC2128
-    if [ "${BASH_SOURCE:-}" != "${0}" ]; then
-        echo "Error: This script is meant to be executed, not sourced."
-        echo "Run it as: $0 <pkgs>"
-        return 1
-    fi
+  # shellcheck disable=SC3028,SC2128
+  if [ "${BASH_SOURCE:-}" != "${0}" ]; then
+    echo "Error: This script is meant to be executed, not sourced."
+    echo "Run it as: $0 <pkgs>"
+    return 1
+  fi
 fi
 
 # ---------------------------------------------------------------------
@@ -39,24 +39,24 @@ VENV_DIR="$PROJECT_ROOT/.venv"
 # Validation: Ensure the virtual environment is already initialized.
 # ---------------------------------------------------------------------
 if [ ! -d "$VENV_DIR" ]; then
-    echo "Error: Virtual environment not found. Please run setup_venv.sh first."
-    exit 1
+  echo "Error: Virtual environment not found. Please run setup_venv.sh first."
+  exit 1
 fi
 
 # ---------------------------------------------------------------------
 # Execution: Automatically activate the venv if it isn't already.
 # ---------------------------------------------------------------------
 if [ -z "$VIRTUAL_ENV" ]; then
-    # shellcheck disable=SC1091
-    . "$VENV_DIR/bin/activate"
+  # shellcheck disable=SC1091
+  . "$VENV_DIR/bin/activate"
 fi
 
 # ---------------------------------------------------------------------
 # Validation: Ensure at least one package name was provided as an argument.
 # ---------------------------------------------------------------------
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 <pkg1> <pkg2> ..."
-    exit 1
+  echo "Usage: $0 <pkg1> <pkg2> ..."
+  exit 1
 fi
 
 # ---------------------------------------------------------------------
@@ -67,6 +67,6 @@ echo "Installing dependencies: $*"
 pip install "$@"
 
 echo "Updating requirements.txt..."
-pip freeze > "$PROJECT_ROOT/requirements.txt"
+pip freeze >"$PROJECT_ROOT/requirements.txt"
 
 echo "Done! Packages installed and requirements.txt updated."

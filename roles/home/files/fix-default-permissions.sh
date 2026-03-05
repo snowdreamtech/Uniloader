@@ -8,8 +8,8 @@ set -eu
 TARGET_DIR="${1:-$HOME}"
 
 if [ ! -d "$TARGET_DIR" ]; then
-    echo "Directory $TARGET_DIR does not exist. Skipping."
-    exit 0
+  echo "Directory $TARGET_DIR does not exist. Skipping."
+  exit 0
 fi
 
 # ==========================================
@@ -33,22 +33,22 @@ FILES_664=""
 # ==========================================
 
 apply_permissions() {
-    perm="$1"
-    # In POSIX sh, we rely on word splitting of the variable passed as $2
-    # So we do NOT quote the second argument in the for loop list.
-    file_list="$2"
+  perm="$1"
+  # In POSIX sh, we rely on word splitting of the variable passed as $2
+  # So we do NOT quote the second argument in the for loop list.
+  file_list="$2"
 
-    for file in $file_list; do
-        if [ -z "$file" ]; then continue; fi
+  for file in $file_list; do
+    if [ -z "$file" ]; then continue; fi
 
-        filepath="$TARGET_DIR/$file"
+    filepath="$TARGET_DIR/$file"
 
-        # Only process if it is a regular file
-        if [ -f "$filepath" ]; then
-            chmod "$perm" "$filepath"
-            # echo "Fixed $filepath -> $perm"
-        fi
-    done
+    # Only process if it is a regular file
+    if [ -f "$filepath" ]; then
+      chmod "$perm" "$filepath"
+      # echo "Fixed $filepath -> $perm"
+    fi
+  done
 }
 
 # Apply permissions
