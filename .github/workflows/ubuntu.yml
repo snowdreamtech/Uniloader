@@ -62,8 +62,8 @@ jobs:
         run: |
           # Try to pull and run the image, if it fails, the workflow just fails
           # (which is expected for unsupported ones natively)
-          docker run -d --name uls_ubuntu --privileged ubuntu \
-            sleep 86400 || echo "WARNING: Image ubuntu not found or failed to start."
+          docker run -d --name uls_ubuntu --privileged ubuntu:latest \
+            sleep 86400 || echo "WARNING: Image ubuntu:latest not found or failed to start."
 
           # Create a dynamic inventory file for this run
           cat << 'INV' > inventory/dynamic_docker.yml

@@ -1,5 +1,5 @@
 ---
-name: CI (Kali)
+name: CI (Bullseye)
 
 "on":
   push:
@@ -58,12 +58,12 @@ jobs:
         run: |
           source ./scripts/setup_venv.sh
 
-      - name: Start Docker Container for kali
+      - name: Start Docker Container for bullseye
         run: |
           # Try to pull and run the image, if it fails, the workflow just fails
           # (which is expected for unsupported ones natively)
-          docker run -d --name uls_kali --privileged kalilinux/kali-rolling:latest \
-            sleep 86400 || echo "WARNING: Image kalilinux/kali-rolling:latest not found or failed to start."
+          docker run -d --name uls_bullseye --privileged debian:bullseye \
+            sleep 86400 || echo "WARNING: Image debian:bullseye not found or failed to start."
 
           # Create a dynamic inventory file for this run
           cat << 'INV' > inventory/dynamic_docker.yml
@@ -71,8 +71,8 @@ jobs:
             vars:
               become_enabled: false
             hosts:
-              kali:
-                ansible_host: uls_kali
+              bullseye:
+                ansible_host: uls_bullseye
                 ansible_connection: "docker"
                 node_tags: ["open", "container", "docker_container"]
           INV
@@ -85,4 +85,4 @@ jobs:
       - name: Cleanup Docker Containers
         if: always()
         run: |
-          docker rm -f uls_kali || true
+          docker rm -f uls_bullseye || true
