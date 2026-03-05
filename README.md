@@ -190,7 +190,7 @@ The `package_loader` supports **38+ installation methods** via unified prefix sy
 | **Coursier**                | `cs:`       | `cs:scalafmt`                                                            |
 | **SDKMAN**                  | `sdk:`      | `sdk:java`, `sdk:gradle`                                                 |
 
-## See [roles/native/tasks/package_loader/main.yml](roles/native/tasks/package_loader/main.yml) for complete API reference.
+## See [roles/native/tasks/package_loader/main.yml](roles/native/tasks/package_loader/main.yml) for complete API reference
 
 ## Node Tags
 
