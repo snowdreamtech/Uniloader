@@ -42,13 +42,16 @@
   when: node_tags is defined and node_tags | length > 0
   tags: ["always"]
 
-- name: "Initialize all tag variables to false {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.set_fact:
-    "{{ tag_item.value }}": false
-  loop: "{{ tag_map | dict2items }}"
-  loop_control:
-    loop_var: tag_item
-    label: "{{ tag_item.key }}"
+# ---------------------------------------------------------------------
+# Tag Initialization & Derivation: Bulk fact generation
+# ---------------------------------------------------------------------
+- name: "Initialize and derive tag variables (Bulk) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact: >-
+    {%- set bulk_facts = {} -%}
+    {%- for tag_name, tag_var in tag_map.items() -%}
+      {%- set _ = bulk_facts.update({tag_var: tag_name in (node_tags | default([], true))}) -%}
+    {%- endfor -%}
+    {{ bulk_facts }}
   tags: ["always"]
 
 # ---------------------------------------------------------------------
@@ -64,18 +67,6 @@
     - tag_metadata is defined
     - tag_metadata.deprecated is defined
     - deprecated_tag in tag_metadata.deprecated
-  tags: ["always"]
-
-# ---------------------------------------------------------------------
-# Derivation: Auto-derive boolean variables from tags
-# ---------------------------------------------------------------------
-- name: "Auto-derive tag variables {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.set_fact:
-    "{{ tag_map[active_tag] }}": true
-  loop: "{{ node_tags }}"
-  loop_control:
-    loop_var: active_tag
-  when: active_tag in tag_map
   tags: ["always"]
 
 - name: "Default to managed node when no control tag is present {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -102,54 +93,56 @@
       {{- root_path if is_root_user else base_path ~ '/' ~ ansible_user -}}
   tags: ["always"]
 
-- name: "Scan for canonical binary directories {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.stat:
-    path: "{{ scanning_dir }}"
-  loop_control:
-    loop_var: scanning_dir
-  loop:
-    # 1. Version Managers (Should have high priority)
-    - "{{ ansible_user_home }}/.pyenv/bin"
-    - "{{ ansible_user_home }}/.rbenv/bin"
-    - "{{ ansible_user_home }}/.nodenv/bin"
-    - "{{ ansible_user_home }}/.ghcup/bin"
-
-    # 2. User-level & Modern Language Ecosystems
-    - "{{ ansible_user_home }}/.local/bin"
-    - "{{ ansible_user_home }}/go/bin"
-    - "{{ ansible_user_home }}/.cargo/bin"
-    - "{{ ansible_user_home }}/.bun/bin"
-    - "{{ ansible_user_home }}/.deno/bin"
-    - "{{ ansible_user_home }}/.npm-global/bin"
-    - "{{ ansible_user_home }}/.yarn/bin"
-    - "{{ ansible_user_home }}/.pnpm-bin"
-    - "{{ ansible_user_home }}/.krew/bin"
-    - "{{ ansible_user_home }}/.composer/vendor/bin"
-    - "{{ ansible_user_home }}/.config/composer/vendor/bin"
-    - "{{ ansible_user_home }}/.dotnet/tools"
-    - "{{ ansible_user_home }}/.cabal/bin"
-
-    # 3. macOS Specific (Homebrew / MacPorts)
-    - "/opt/homebrew/bin"
-    - "/opt/homebrew/sbin"
-    - "/opt/local/bin"
-    - "/opt/local/sbin"
-
-    # 4. Standard Unix / Linux (Baseline)
-    - "/usr/local/bin"
-    - "/usr/local/sbin"
-    - "/usr/local/go/bin"
-    - "/usr/bin"
-    - "/usr/sbin"
-    - "/bin"
-    - "/sbin"
-  register: _path_discovery
+- name: "Scan for canonical binary directories (Bulk) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: |-
+    set -eu
+    for d in {{ paths_to_check | join(' ') }}; do
+      if [ -d "$d" ]; then
+        echo "$d"
+      fi
+    done
+  vars:
+    paths_to_check:
+      # 1. Version Managers
+      - "{{ ansible_user_home }}/.pyenv/bin"
+      - "{{ ansible_user_home }}/.rbenv/bin"
+      - "{{ ansible_user_home }}/.nodenv/bin"
+      - "{{ ansible_user_home }}/.ghcup/bin"
+      # 2. User-level & Modern ecosystems
+      - "{{ ansible_user_home }}/.local/bin"
+      - "{{ ansible_user_home }}/go/bin"
+      - "{{ ansible_user_home }}/.cargo/bin"
+      - "{{ ansible_user_home }}/.bun/bin"
+      - "{{ ansible_user_home }}/.deno/bin"
+      - "{{ ansible_user_home }}/.npm-global/bin"
+      - "{{ ansible_user_home }}/.yarn/bin"
+      - "{{ ansible_user_home }}/.pnpm-bin"
+      - "{{ ansible_user_home }}/.krew/bin"
+      - "{{ ansible_user_home }}/.composer/vendor/bin"
+      - "{{ ansible_user_home }}/.config/composer/vendor/bin"
+      - "{{ ansible_user_home }}/.dotnet/tools"
+      - "{{ ansible_user_home }}/.cabal/bin"
+      # 3. macOS Specific
+      - "/opt/homebrew/bin"
+      - "/opt/homebrew/sbin"
+      - "/opt/local/bin"
+      - "/opt/local/sbin"
+      # 4. Standard Unix / Linux
+      - "/usr/local/bin"
+      - "/usr/local/sbin"
+      - "/usr/local/go/bin"
+      - "/usr/bin"
+      - "/usr/sbin"
+      - "/bin"
+      - "/sbin"
+  register: _os_paths_probe
   changed_when: false
+  become: "{{ become_enabled }}"
   tags: ["always"]
 
 - name: "Build canonical os_paths fact {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
-    os_paths: "{{ _path_discovery.results | selectattr('stat.exists') | map(attribute='scanning_dir') | join(':') }}"
+    os_paths: "{{ _os_paths_probe.stdout_lines | join(':') }}"
   tags: ["always"]
 
 # ---------------------------------------------------------------------

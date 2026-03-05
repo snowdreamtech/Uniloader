@@ -35,19 +35,17 @@
 # ---------------------------------------------------------------------
 # Runtime Discovery: detect installed container runtime binaries.
 # ---------------------------------------------------------------------
-- name: "Locate container runtime binaries {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
-  ansible.builtin.command: >
-    /bin/sh -c "PATH={{ os_paths }} command -v {{ runtime_binary }} 2>/dev/null || true"
-  loop:
-    - "docker"
-    - "podman"
-    - "containerd"
-  register: detect_runtimes
+- name: "Locate container runtime binaries (Bulk) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.shell: |-
+    set -eu
+    PATH="{{ os_paths }}"
+    for b in docker podman containerd; do
+      if command -v "$b" >/dev/null 2>&1; then
+        echo "$b"
+      fi
+    done
+  register: _runtimes_probe
   changed_when: false
-  failed_when: false
-  loop_control:
-    loop_var: runtime_binary
-    label: "{{ runtime_binary }}"
   become: "{{ become_enabled }}"
   tags: ["always"]
 
@@ -59,22 +57,10 @@
   ansible.builtin.set_fact:
     container_engine_detected: >-
       {{
-        'docker'
-          if (detect_runtimes.results
-              | selectattr('runtime_binary', 'equalto', 'docker')
-              | map(attribute='rc') | first | default(1, true) == 0)
-        else
-        'podman'
-          if (detect_runtimes.results
-              | selectattr('runtime_binary', 'equalto', 'podman')
-              | map(attribute='rc') | first | default(1, true) == 0)
-        else
-        'containerd'
-          if (detect_runtimes.results
-              | selectattr('runtime_binary', 'equalto', 'containerd')
-              | map(attribute='rc') | first | default(1, true) == 0)
-        else
-        None
+        'docker' if 'docker' in _runtimes_probe.stdout_lines
+        else 'podman' if 'podman' in _runtimes_probe.stdout_lines
+        else 'containerd' if 'containerd' in _runtimes_probe.stdout_lines
+        else None
       }}
   when:
     - container_engine is not defined
