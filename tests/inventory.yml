@@ -5,7 +5,7 @@ all:
       hosts:
         alpine_node:
           ansible_host: 127.0.0.1
-          ansible_port: 2222 # Substitute with actual mapped port via Docker if SSH testing
+          ansible_port: 2222 # Substitute with actual mapped port via Docker for SSH testing
           ansible_connection: docker
           ansible_user: root
           node_tags:

@@ -1,3 +1,4 @@
+---
 # =====================================================================
 # inventory/prod.yml
 #
@@ -22,8 +23,8 @@ all:
   # Connection settings for Production environment
   # ---------------------------------------------------------------------
   vars:
-    # StrictHostKeyChecking is usually not overwritten in production, as mandatory checking is the default.
-    # However, a Bastion/Jump Host is typically configured instead:
+    # StrictHostKeyChecking is not overwritten in production by default.
+    # A Bastion/Jump Host is typically configured instead:
     # ansible_ssh_common_args: >-
     #   -o ProxyCommand="ssh -W %h:%p -q bastion_user@bastion.example.com"
     ansible_user: "ansible"

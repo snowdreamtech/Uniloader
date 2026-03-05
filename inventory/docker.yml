@@ -1,9 +1,10 @@
+---
 # =====================================================================
 # inventory/dev.yml
 #
 # Purpose:
 #   Development environment inventory configuration.
-#   Defines container-based development hosts using the Docker 
+#   Defines container-based development hosts using the Docker
 #   connection plugin for local prototyping and CI/CD validation.
 #
 # Simple Usage:

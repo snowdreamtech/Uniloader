@@ -12,4 +12,5 @@
         app_version: "7.0-alpine"
         app_ports:
           - "6379:6379"
-      # Verifies the generalized input matches the required Docker/Podman FQCN modules behind the scenes.
+      # Verifies the generalized input matches the required
+      # Docker/Podman FQCN modules behind the scenes.

@@ -1,9 +1,10 @@
+---
 # =====================================================================
 # inventory/localhost.yml
 #
 # Purpose:
 #   Local controller inventory configuration.
-#   Defines the local machine as a managed host for orchestration 
+#   Defines the local machine as a managed host for orchestration
 #   tasks that must run on the Ansible controller.
 #
 # Simple Usage:
