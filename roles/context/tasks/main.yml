@@ -31,16 +31,16 @@
 - ansible.builtin.import_tasks: facts_os.yml
 
 # ---------------------------------------------------------------------
-# Stage 2: Context (Identity, Permissions, Tags)
-# ---------------------------------------------------------------------
-- ansible.builtin.import_tasks: facts_context.yml
-
-# ---------------------------------------------------------------------
-# Stage 3: System Capabilities (Init, WSL, Localhost)
+# Stage 2: System Capabilities (Init, WSL, Localhost)
 # ---------------------------------------------------------------------
 - ansible.builtin.import_tasks: detect_system.yml
 
 # ---------------------------------------------------------------------
-# Stage 4: Container Runtime Detection
+# Stage 3: Container Runtime Detection
 # ---------------------------------------------------------------------
 - ansible.builtin.import_tasks: detect_container.yml
+
+# ---------------------------------------------------------------------
+# Stage 4: Context (Identity, Permissions, Tags)
+# ---------------------------------------------------------------------
+- ansible.builtin.import_tasks: facts_context.yml
