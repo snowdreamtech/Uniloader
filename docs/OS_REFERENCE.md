@@ -62,9 +62,6 @@ This document provides a comprehensive mapping between `ansible_os_family` and `
 | **Flatcar**                     | `Flatcar`                             | `emerge` (int)         | Immutable Container Host              |
 | **NixOS**                       | `NixOS`                               | `nix`                  | Functional, declarative Linux         |
 | **Void**                        | `Void`                                | `xbps`                 | Void Linux (runit-based)              |
-| **ClearLinux**                  | `Clear`                               | `swupd`                | Intel performance-oriented OS         |
-| **ClearLinux**                  | `Clear Linux OS`                      | `swupd`                | Intel Clear Linux                     |
-| **ClearLinux**                  | `Clear Linux Mix`                     | `swupd`                | Clear Linux Custom Mix                |
 | **Solus**                       | `Solus`                               | `eopkg`                | Independent desktop distro            |
 | **OpenWrt**                     | `OpenWrt`                             | `opkg`                 | Embedded/Network Devices              |
 | **Linux**                       | `Talos`                               | `talosctl`             | API-driven Kubernetes OS              |

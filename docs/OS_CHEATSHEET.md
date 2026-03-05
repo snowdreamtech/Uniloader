@@ -15,7 +15,6 @@ This cheatsheet is condensed from the complete `OS_REFERENCE.md`. It provides a 
 | **Gentoo** / **Flatcar**        | `emerge`                    | Gentoo and derivatives (Note: Flatcar is an immutable system).                                          |
 | **NixOS**                       | `nix`                       | Declarative, functional Linux.                                                                          |
 | **Void**                        | `xbps`                      | Void Linux.                                                                                             |
-| **ClearLinux**                  | `swupd`                     | Intel Clear Linux OS.                                                                                   |
 | **Solus**                       | `eopkg`                     | Solus OS.                                                                                               |
 | **OpenWrt**                     | `opkg`                      | Embedded and router firmware environments.                                                              |
 | **Linux**                       | `talosctl`                  | Specifically Talos (API-driven Kubernetes OS).                                                          |
