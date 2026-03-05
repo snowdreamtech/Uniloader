@@ -1,0 +1,17 @@
+---
+
+# ---------------------------------------------------------------------
+# Controller: Execute specialized venv and runtime setup for the 
+# Ansible Control Node.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "python_control_node.yml"
+  when: 
+    - "'control' in (node_tags | default([], true))"
+    
+# ---------------------------------------------------------------------
+# Managed: Execute minimal Python detection and installer for 
+# standard inventory hosts.
+# ---------------------------------------------------------------------
+- ansible.builtin.include_tasks: "python_managed_node.yml"
+  when: 
+    - "'managed' in (node_tags | default([], true)) or 'control' not in (node_tags | default([], true))"

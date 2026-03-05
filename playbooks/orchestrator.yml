@@ -18,16 +18,16 @@
 
 - name: "ULS Core Orchestrator"
   hosts: all
-  gather_facts: false   # Python may not exist yet; bootstrap role will handle discovery
+  gather_facts: false # Python may not exist yet; bootstrap role will handle discovery
 
   pre_tasks:
-    - ansible.builtin.include_role:
-        name: "native"
-        tasks_from: "timer_loader"
-      vars:
-        timer_action: "start"
-        timer_name: "playbook"
-        module_name: "orchestrator"
+    # - ansible.builtin.include_role:
+    #     name: "native"
+    #     tasks_from: "timer_loader"
+    #   vars:
+    #     timer_action: "start"
+    #     timer_name: "playbook"
+    #     module_name: "orchestrator"
 
     - name: "Initialize user vault"
       ansible.builtin.include_role:
@@ -61,20 +61,20 @@
   roles:
     - role: "orchestrator"
 
-  post_tasks:
-    # Provide visual confirmation of successful initialization
-    - ansible.builtin.include_role:
-        name: "native"
-        tasks_from: "log_loader"
-      vars:
-        label: "PLAYBOOK"
-        msg: "Initialization completed successfully on {{ inventory_hostname }}"
+  # post_tasks:
+  #   # Provide visual confirmation of successful initialization
+  #   - ansible.builtin.include_role:
+  #       name: "native"
+  #       tasks_from: "log_loader"
+  #     vars:
+  #       label: "PLAYBOOK"
+  #       msg: "Initialization completed successfully on {{ inventory_hostname }}"
 
-    # End the execution timer and log total duration
-    - ansible.builtin.include_role:
-        name: "native"
-        tasks_from: "timer_loader"
-      vars:
-        timer_action: "end"
-        timer_name: "playbook"
-        module_name: "orchestrator"
+  #   # End the execution timer and log total duration
+  #   - ansible.builtin.include_role:
+  #       name: "native"
+  #       tasks_from: "timer_loader"
+  #     vars:
+  #       timer_action: "end"
+  #       timer_name: "playbook"
+  #       module_name: "orchestrator"

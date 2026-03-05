@@ -1,0 +1,93 @@
+# =====================================================================
+# roles/native/tasks/requirements_loader.yml
+#
+# Purpose:
+#   Automatic generation of the 'requirements.yml' file for Ansible 
+#   collections. Centralizes the collection list for consistency 
+#   across environments.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: requirements_loader
+#     vars:
+#       python_venv_path: "/opt/ansible-venv"
+#       ansible_collections: ["community.docker"]
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: requirements_loader
+#     vars:
+#       python_venv_path: "/home/deploy/venv"
+#       ansible_collections: ["community.docker", "ansible.posix", "kubernetes.core"]
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure mandatory variables for venv path and collection 
+# lists are provided.
+# ---------------------------------------------------------------------
+- name: "Ensure python_venv_path is provided {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "python_venv_path must be provided to requirements_loader"
+  when:
+    - python_venv_path is not defined
+      or python_venv_path | trim | length == 0
+  changed_when: false
+  tags: ["always"]
+
+- name: "Ensure ansible_collections is provided {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "ansible_collections must be provided and non-empty"
+  when:
+    - ansible_collections is not defined or ansible_collections | length == 0
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Configuration: Locate the requirements file within the venv directory.
+# ---------------------------------------------------------------------
+- name: "Set requirements_path inside venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.set_fact:
+    requirements_path: "{{ python_venv_path }}/requirements.yml"
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Preparation: Ensure the target directory for the requirements file exists.
+# ---------------------------------------------------------------------
+- name: "Ensure requirements.yml parent directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.file:
+    path: "{{ python_venv_path }}"
+    state: "directory"
+    mode: "0755"
+  become: true
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# Execution: Generate the requirements.yml file in standard YAML format.
+# ---------------------------------------------------------------------
+- name: "Generate requirements.yml {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    dest: "{{ requirements_path }}"
+    mode: "0644"
+    content: |
+      ---
+      collections:
+      {% for item in ansible_collections %}
+        - name: "{{ item }}"
+      {% endfor %}
+  become: true
+
+# ---------------------------------------------------------------------
+# Audit: Log the successful generation of the requirements file.
+# ---------------------------------------------------------------------
+- ansible.builtin.debug:
+    msg: |
+      [ REQUIREMENTS ]
+      requirements.yml generated at {{ requirements_path }}
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]

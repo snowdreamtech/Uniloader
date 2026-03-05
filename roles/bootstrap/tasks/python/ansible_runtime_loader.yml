@@ -1,0 +1,82 @@
+# =====================================================================
+# roles/native/tasks/ansible_runtime_loader.yml
+#
+# Purpose:
+#   Installation and maintenance of the Ansible core and collections.
+#   Ensures that 'ansible-core' is present in the specified
+#   virtual environment and installs any additional collections
+#   requested via variables.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: ansible_runtime_loader
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: native
+#       tasks_from: ansible_runtime_loader
+#     vars:
+#       ansible_core_version: "2.14.0"
+#       ansible_collections: ["community.docker", "ansible.posix"]
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Validation: Ensure the current Python interpreter is a virtual
+# environment (venv). This loader is NOT intended for system-wide
+# ansible installations.
+# ---------------------------------------------------------------------
+- name: "Ensure ansible_python_interpreter points to venv python {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.fail:
+    msg: "ansible_python_interpreter must point to a venv python before running ansible_runtime_loader. Expected pattern: */bin/python3, Current value: {{ ansible_python_interpreter | default('undefined') }}"
+  when:
+    - ansible_python_interpreter is not defined
+      or ansible_python_interpreter | trim | length == 0
+      or ansible_python_interpreter is not regex("bin/python3$")
+  changed_when: false
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Installation: Deploy the specified or latest version of ansible-core.
+# ---------------------------------------------------------------------
+- name: "Install ansible-core (latest) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install ansible-core"
+  when:
+    - ansible_core_version is not defined
+      or ansible_core_version | trim | length == 0
+  become: true
+  changed_when: false
+
+- name: "Install ansible-core (specific version) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: "{{ ansible_python_interpreter }} -m pip install ansible-core=={{ ansible_core_version }}"
+  when:
+    - ansible_core_version is defined
+      and ansible_core_version | trim | length > 0
+  become: true
+  changed_when: false
+
+# ---------------------------------------------------------------------
+# Collections: Install additional Ansible collections using the
+# galaxy module interface.
+# ---------------------------------------------------------------------
+- name: "Install ansible collections {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.command: >-
+    {{ ansible_python_interpreter }} -m ansible_galaxy collection install {{ collection_name }}
+  loop: "{{ ansible_collections }}"
+  loop_control:
+    loop_var: collection_name
+  when:
+    - ansible_collections is defined
+    - ansible_collections | length > 0
+  become: true
+  changed_when: false
+# ---------------------------------------------------------------------
+# Audit: Log the successful initialization of the Ansible runtime.
+# ---------------------------------------------------------------------
+# - ansible.builtin.include_role:
+#     name: "native"
+#     tasks_from: "log_loader"
+#   vars:
+#     label: "ANSIBLE_RUNTIME"
+#     msg: "Ansible runtime installation completed using {{ ansible_python_interpreter }}"
