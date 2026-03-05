@@ -1,0 +1,15 @@
+---
+# =====================================================================
+# inventory/group_vars/test/services.yml
+#
+# Purpose:
+#   Variables specific to the test environment.
+#   Used for automated CI/CD pipelines and unit testing of Ansible
+#   roles and playbooks.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Testing Hooks:
+# ---------------------------------------------------------------------
+enable_debug: true
+install_dev_tools: false
