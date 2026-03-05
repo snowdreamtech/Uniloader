@@ -44,6 +44,17 @@
 
     # 1. Setup fundamental environment.
     - role: "bootstrap"
+    # vars:
+    #   force: true
+
+    # 2. Setup fundamental environment.
+    - role: "context"
+
+    # # 3. Setup fundamental environment.
+    # - role: "init"
+
+    # # 4. Setup fundamental environment.
+    # - role: "base"
 
     # # 2. Deploy Native App Test.
     # - role: "apps/native/helloworld"
