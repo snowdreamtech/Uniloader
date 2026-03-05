@@ -1,0 +1,53 @@
+---
+# roles/home/tasks/main.yml
+
+# ---------------------------------------------------------------------
+# Validation: Ensure home_action is valid
+# ---------------------------------------------------------------------
+- name: "Validate home_action parameter"
+  ansible.builtin.assert:
+    that:
+      - home_action is defined
+      - home_action in ['restore', 'decrypt', 'encrypt']
+    fail_msg: "home_action must be one of: restore, decrypt, encrypt. Got: {{ home_action | default('undefined') }}"
+    success_msg: "home_action validated: {{ home_action }}"
+  tags: ["always"]
+
+# ---------------------------------------------------------------------
+# Load encrypted variables from vault
+# ---------------------------------------------------------------------
+- name: Load encrypted variables
+  ansible.builtin.include_vars:
+    file: vault.yml
+  failed_when: false # Allow missing vault file (fallback to other unlock methods)
+  no_log: true
+  tags: ["always"]
+
+- name: Pre-flight checks
+  ansible.builtin.include_tasks: preflight.yml
+  tags: ["always"]
+
+- name: Include restore tasks
+  ansible.builtin.include_tasks: restore.yml
+  when: home_action == 'restore'
+  tags: ["always"]
+
+- name: Include VS Code configuration tasks
+  ansible.builtin.include_tasks: vscode.yml
+  when: home_action == 'restore'
+  tags: ["always"]
+
+- name: Include Antigravity configuration tasks
+  ansible.builtin.include_tasks: antigravity.yml
+  when: home_action == 'restore'
+  tags: ["always"]
+
+- name: Include decrypt tasks
+  ansible.builtin.include_tasks: decrypt.yml
+  when: home_action == 'decrypt'
+  tags: ["always"]
+
+- name: Include encrypt tasks
+  ansible.builtin.include_tasks: encrypt.yml
+  when: home_action == 'encrypt'
+  tags: ["always"]

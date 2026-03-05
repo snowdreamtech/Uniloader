@@ -1,0 +1,271 @@
+---
+# roles/home/tasks/restore.yml
+- name: Find gpg files in source directory
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  ansible.builtin.find:
+    paths: "{{ home_src_path }}"
+    patterns: "*.gpg"
+    recurse: "{{ home_restore_recurse }}"
+    hidden: "{{ home_restore_hidden }}"
+  register: found_gpg_files
+  when: (home_restore_gpg | bool) and (home_files is not defined)
+  run_once: true
+
+- name: Resolve home_files paths for restore (gpg)
+  ansible.builtin.set_fact:
+    _resolved_file:
+      path: "{{ home_src_path }}/{{ item }}"
+  loop: "{{ home_files }}"
+  register: resolved_restore_files
+  when: (home_restore_gpg | bool) and (home_files is defined)
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Check if specific files/directories exist for restore (gpg)
+  ansible.builtin.stat:
+    path: "{{ item.ansible_facts._resolved_file.path }}"
+  loop: "{{ resolved_restore_files.results }}"
+  register: home_restore_item_stats
+  when: (home_restore_gpg | bool) and (home_files is defined)
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Check if .gpg variant exists for restore
+  ansible.builtin.stat:
+    path: "{{ item.ansible_facts._resolved_file.path }}.gpg"
+  loop: "{{ resolved_restore_files.results }}"
+  register: home_restore_gpg_item_stats
+  when: (home_restore_gpg | bool) and (home_files is defined)
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Find gpg files in directories specified in home_files for restore
+  ansible.builtin.find:
+    paths: "{{ item.item.ansible_facts._resolved_file.path }}"
+    patterns: "*.gpg"
+    recurse: "{{ home_restore_recurse }}"
+    hidden: "{{ home_restore_hidden }}"
+  loop: "{{ home_restore_item_stats.results }}"
+  loop_control:
+    label: "{{ item.item.ansible_facts._resolved_file.path }}"
+  register: directory_restore_gpg_files
+  when: 
+    - (home_restore_gpg | bool)
+    - (home_files is defined)
+    - item.stat.exists
+    - item.stat.isdir
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Set home_gpg_files from home_files (Recursive)
+  ansible.builtin.set_fact:
+    home_gpg_files:
+      files: "{{ 
+        (
+          home_restore_gpg_item_stats.results 
+          | selectattr('stat.exists', 'equalto', true) 
+          | map(attribute='stat') 
+          | list
+        ) 
+        + 
+        (
+          directory_restore_gpg_files.results 
+          | selectattr('files', 'defined') 
+          | map(attribute='files') 
+          | flatten 
+          | list
+        )
+      }}"
+  when: (home_restore_gpg | bool) and (home_files is defined)
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Set home_gpg_files from find result
+  ansible.builtin.set_fact:
+    home_gpg_files: "{{ found_gpg_files }}"
+  when: (home_restore_gpg | bool) and (home_files is not defined)
+  delegate_to: localhost
+  run_once: true
+
+- name: Ensure remote directory structure exists
+  ansible.builtin.file:
+    path: "{{ home_dest_path }}/{{ (gpg_item.path | relpath(home_src_path) | regex_replace('\\.gpg$', '')) | dirname }}"
+    state: directory
+    mode: '0700'
+  loop: "{{ home_gpg_files.files | default([]) }}"
+  loop_control:
+    loop_var: gpg_item
+    label: "{{ gpg_item.path | relpath(home_src_path) }}"
+  when: 
+    - gpg_item.path | relpath(home_src_path) != ".gitkeep.gpg"
+    - (gpg_item.path | relpath(home_src_path) | dirname) != "."
+
+- name: Restore decrypted files to remote
+  ansible.builtin.copy:
+    content: "{{ lookup('pipe', 'gpg --quiet --batch --yes -d ' + gpg_item.path | quote + ' | base64') | b64decode }}"
+    dest: "{{ home_dest_path }}/{{ gpg_item.path | relpath(home_src_path) | regex_replace('\\.gpg$', '') }}"
+    mode: '0600'
+  loop: "{{ home_gpg_files.files | default([]) }}"
+  loop_control:
+    loop_var: gpg_item
+    label: "{{ gpg_item.path | relpath(home_src_path) }}"
+  no_log: true
+  when: 
+    - gpg_item.path | relpath(home_src_path) != ".gitkeep.gpg"
+
+- name: Define restore exclusion list
+  ansible.builtin.set_fact:
+    restore_excludes:
+      - "*.gpg"
+      - ".git"
+      - ".gitignore"
+      - ".gitmodules"
+      - ".gitattributes"
+      - ".gitkeep"
+      - "README.md"
+      - "LICENSE"
+      - ".DS_Store"
+      - "._*"
+      - "Thumbs.db"
+      - "Desktop.ini"
+      - "*~"
+      - "*.swp"
+      - "*.bak"
+      - "*.tmp"
+      - ".idea"
+      - ".vscode"
+      - "*.iml"
+      - "*.log"
+      - "__pycache__"
+      - "*.pyc"
+      - "*.retry"
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+  run_once: true
+  when: home_restore_plaintext | bool
+
+- name: Find unencrypted files in source directory
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  ansible.builtin.find:
+    paths: "{{ home_src_path }}"
+    file_type: file
+    recurse: "{{ home_restore_recurse }}"
+    hidden: "{{ home_restore_hidden }}"
+    excludes: "{{ restore_excludes }}"
+  register: found_raw_files
+  when: (home_restore_plaintext | bool) and (home_files is not defined)
+  run_once: true
+
+- name: Resolve home_files paths for restore (plaintext)
+  ansible.builtin.set_fact:
+    _resolved_file:
+      path: "{{ home_src_path }}/{{ item }}"
+  loop: "{{ home_files }}"
+  register: resolved_restore_raw_files
+  when: (home_restore_plaintext | bool) and (home_files is defined)
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Check if specific plaintext files/directories exist for restore
+  ansible.builtin.stat:
+    path: "{{ item.ansible_facts._resolved_file.path }}"
+  loop: "{{ resolved_restore_raw_files.results }}"
+  register: home_restore_raw_stats
+  when: (home_restore_plaintext | bool) and (home_files is defined)
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Find files in directories specified in home_files for restore (plaintext)
+  ansible.builtin.find:
+    paths: "{{ item.item.ansible_facts._resolved_file.path }}"
+    file_type: file
+    recurse: "{{ home_restore_recurse }}"
+    hidden: "{{ home_restore_hidden }}"
+    excludes: "{{ restore_excludes }}"
+  loop: "{{ home_restore_raw_stats.results }}"
+  loop_control:
+    label: "{{ item.item.ansible_facts._resolved_file.path }}"
+  register: directory_restore_raw_files
+  when: 
+    - (home_restore_plaintext | bool)
+    - (home_files is defined)
+    - item.stat.exists
+    - item.stat.isdir
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Set home_raw_files from home_files (Recursive)
+  ansible.builtin.set_fact:
+    home_raw_files:
+      files: "{{ 
+        (home_restore_raw_stats.results | selectattr('stat.exists', 'equalto', true) | selectattr('stat.isdir', 'equalto', false) | map(attribute='item.ansible_facts._resolved_file') | list) 
+        + 
+        (directory_restore_raw_files.results | selectattr('files', 'defined') | map(attribute='files') | flatten | list) 
+      }}"
+  when: (home_restore_plaintext | bool) and (home_files is defined)
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Set home_raw_files from find result
+  ansible.builtin.set_fact:
+    home_raw_files: "{{ found_raw_files }}"
+  when: (home_restore_plaintext | bool) and (home_files is not defined)
+  delegate_to: localhost
+  run_once: true
+
+- name: Ensure remote directory structure exists for specific raw files
+  ansible.builtin.file:
+    path: "{{ home_dest_path }}/{{ (raw_item.path | relpath(home_src_path)) | dirname }}"
+    state: directory
+    mode: '0700'
+  loop: "{{ home_raw_files.files | default([]) }}"
+  loop_control:
+    loop_var: raw_item
+    label: "{{ raw_item.path | relpath(home_src_path) }}"
+  when: 
+    - (raw_item.path | relpath(home_src_path) | dirname) != "."
+
+- name: Restore unencrypted files to remote
+  ansible.builtin.copy:
+    src: "{{ raw_item.path }}"
+    dest: "{{ home_dest_path }}/{{ raw_item.path | relpath(home_src_path) }}"
+    mode: '0600'
+  loop: "{{ home_raw_files.files | default([]) }}"
+  loop_control:
+    loop_var: raw_item
+    label: "{{ raw_item.path | relpath(home_src_path) }}"
+
+- name: Fix file permissions using helper scripts
+  ansible.builtin.script:
+    cmd: "{{ role_path }}/files/{{ script_item.script }} {{ (home_dest_path == '~') | ternary('', script_item.dest) }}"
+  loop:
+    - { script: 'fix-ssh-permissions.sh', dest: "{{ home_dest_path }}/.ssh" }
+    - { script: 'fix-gpg-permissions.sh', dest: "{{ home_dest_path }}/.gnupg" }
+    - { script: 'fix-default-permissions.sh', dest: "{{ home_dest_path }}" }
+  loop_control:
+    loop_var: script_item
+  when: 
+    - home_action == 'restore'
+
+- name: "Install pinentry-wrapper to /usr/local/bin"
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/pinentry-wrapper"
+    dest: "/usr/local/bin/pinentry-wrapper"
+    mode: '0755'
+  become: "{{ become_enabled }}"
+  when: home_action == 'restore'

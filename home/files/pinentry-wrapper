@@ -1,0 +1,120 @@
+#!/usr/bin/env sh
+#
+# pinentry-wrapper
+#
+# A cross-platform wrapper to automatically select the best available
+# pinentry program based on the operating system and environment.
+#
+
+set -u
+
+# Function: check if a command exists in PATH
+has_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Function: check if a specific file path is executable
+has_file() {
+    if [ -x "$1" ]; then
+        echo "$1"
+        return 0
+    fi
+    return 1
+}
+
+detect_pinentry() {
+    OS="$(uname -s)"
+    CANDIDATE=""
+
+    # 1. macOS Specific Checks
+    if [ "$OS" = "Darwin" ]; then
+        # Check for MacPorts pinentry-mac
+        if [ -z "$CANDIDATE" ]; then
+            CANDIDATE=$(has_file "/Applications/MacPorts/pinentry-mac.app/Contents/MacOS/pinentry-mac")
+        fi
+        
+        # Check for Homebrew pinentry-mac (Apple Silicon & Intel)
+        if [ -z "$CANDIDATE" ]; then
+            CANDIDATE=$(has_file "/opt/homebrew/bin/pinentry-mac")
+        fi
+        if [ -z "$CANDIDATE" ]; then
+            CANDIDATE=$(has_file "/usr/local/bin/pinentry-mac")
+        fi
+
+        # Check in PATH
+        if [ -z "$CANDIDATE" ] && has_cmd "pinentry-mac"; then
+            CANDIDATE="pinentry-mac"
+        fi
+        
+        # Check for pinentry-touchid
+        if [ -z "$CANDIDATE" ] && has_cmd "pinentry-touchid"; then
+            CANDIDATE="pinentry-touchid"
+        fi
+    fi
+
+    # 2. Windows (MinGW/MSYS/Cygwin) Checks
+    if echo "$OS" | grep -qE '^(MINGW|MSYS|CYGWIN)'; then
+        # Check in PATH first
+        if [ -z "$CANDIDATE" ] && has_cmd "pinentry.exe"; then
+            CANDIDATE="pinentry.exe"
+        fi
+        
+        # Check standard Gpg4win paths
+        if [ -z "$CANDIDATE" ]; then
+            CANDIDATE=$(has_file "/c/Program Files (x86)/GnuPG/bin/pinentry.exe")
+        fi
+        if [ -z "$CANDIDATE" ]; then
+            CANDIDATE=$(has_file "/c/Program Files/GnuPG/bin/pinentry.exe")
+        fi
+    fi
+
+    # 3. Linux/WSL/General GUI Checks
+    if [ "$OS" = "Linux" ]; then
+        # WSL Specific: Check for Windows pinentry if native ones might fail or be desired
+        # (Optional: prioritize Windows GUI over simple TTY if strictly desired, but standard Linux GUI takes precedence if DISPLAY set)
+        if grep -qEi "(Microsoft|WSL)" /proc/version 2>/dev/null; then
+             if [ -z "$CANDIDATE" ]; then
+                CANDIDATE=$(has_file "/mnt/c/Program Files (x86)/GnuPG/bin/pinentry.exe")
+            fi
+            if [ -z "$CANDIDATE" ]; then
+                CANDIDATE=$(has_file "/mnt/c/Program Files/GnuPG/bin/pinentry.exe")
+            fi
+        fi
+
+        # Only prioritize GUI if DISPLAY is set
+        if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then
+            if [ -z "$CANDIDATE" ] && has_cmd "pinentry-gnome3"; then
+                CANDIDATE="pinentry-gnome3"
+            fi
+            if [ -z "$CANDIDATE" ] && has_cmd "pinentry-qt"; then
+                CANDIDATE="pinentry-qt"
+            fi
+            if [ -z "$CANDIDATE" ] && has_cmd "pinentry-x11"; then
+                CANDIDATE="pinentry-x11"
+            fi
+        fi
+    fi
+
+    # 3. Terminal/Fallback Checks
+    if [ -z "$CANDIDATE" ]; then
+        if has_cmd "pinentry-curses"; then
+            CANDIDATE="pinentry-curses"
+        elif has_cmd "pinentry-tty"; then
+            CANDIDATE="pinentry-tty"
+        elif has_cmd "pinentry"; then
+            CANDIDATE="pinentry"
+        fi
+    fi
+
+    echo "$CANDIDATE"
+}
+
+PINENTRY_PROGRAM=$(detect_pinentry)
+
+if [ -n "$PINENTRY_PROGRAM" ]; then
+    # Pass all arguments to the selected pinentry program
+    exec "$PINENTRY_PROGRAM" "$@"
+else
+    echo "Error: No suitable pinentry program found." >&2
+    exit 1
+fi

@@ -1,0 +1,63 @@
+# roles/home/tasks/preflight.yml
+
+- name: Check if GPG key is unlocked
+  ansible.builtin.command:
+    cmd: "gpg --quiet --batch --no-tty --clearsign --local-user \"{{ home_gpg_recipient }}\" --output /dev/null /dev/null"
+  register: gpg_check
+  # We ignore errors here because we want to try unlocking next if this fails
+  failed_when: false
+  changed_when: false
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  when: home_action != 'encrypt' and not ansible_check_mode
+  tags: ["always"]
+  run_once: true
+
+- name: Attempt to unlock GPG key using provided passphrase
+  ansible.builtin.shell: |
+    PATH={{ os_paths }}
+    set -euo pipefail
+    echo "" | gpg --batch --no-tty --pinentry-mode loopback --passphrase "{{ home_gpg_passphrase }}" --clearsign --local-user "{{ home_gpg_recipient }}" --output /dev/null
+
+  register: gpg_unlock_attempt
+  failed_when: false # We handle failure in the next task
+  changed_when: gpg_unlock_attempt.rc == 0
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  no_log: true # PROTECT THE PASSPHRASE
+  when: 
+    - home_action != 'encrypt'
+    - not ansible_check_mode
+    - gpg_check.rc != 0
+    - home_gpg_passphrase is defined
+    - home_gpg_passphrase | length > 0
+  tags: ["always"]
+  run_once: true
+
+- name: Verify GPG key status
+  ansible.builtin.assert:
+    that:
+      - gpg_check.rc == 0 or (gpg_unlock_attempt is defined and gpg_unlock_attempt.rc is defined and gpg_unlock_attempt.rc == 0)
+    fail_msg: |
+      GPG key is locked and no valid passphrase provided.
+      
+      GPG check result: {{ gpg_check.rc | default('not run') }}
+      Unlock attempt result: {{ gpg_unlock_attempt.get('rc', 'not attempted') }}
+      
+      Option 1 (Recommended): Run the helper script which handles interactive unlocking:
+        ./scripts/home.sh {{ home_action | default('restore') }}
+      
+      Option 2 (Manual): Unlock the key in your terminal before running playbook:
+        echo "test" | gpg --clearsign
+      
+      Option 3 (CI/CD): Provide the passphrase via extra vars:
+        -e "home_gpg_passphrase=$GPG_PASSPHRASE"
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  when: home_action != 'encrypt' and not ansible_check_mode
+  tags: ["always"]
+  run_once: true
+

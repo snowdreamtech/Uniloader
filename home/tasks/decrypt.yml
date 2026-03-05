@@ -1,0 +1,274 @@
+---
+# =====================================================================
+# roles/home/tasks/decrypt.yml
+#
+# Purpose:
+#   Decrypt all GPG-encrypted files in the local home directory.
+#   Validates decryption completeness and optionally removes .gpg files.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: home
+#     vars:
+#       home_action: decrypt
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: home
+#     vars:
+#       home_action: decrypt
+#       home_keep_encrypted: true  # Keep .gpg files after decryption
+#
+# =====================================================================
+- name: Find gpg files in local home directory
+  ansible.builtin.find:
+    paths: "{{ home_src_path }}"
+    patterns: "*.gpg"
+    recurse: "{{ home_decrypt_recurse }}"
+    hidden: "{{ home_decrypt_hidden }}"
+  register: found_gpg_files
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+  run_once: true
+  when: home_files is not defined
+
+- name: Resolve home_files paths for decryption
+  ansible.builtin.set_fact:
+    _resolved_file:
+      path: "{{ home_src_path }}/{{ item }}"
+  loop: "{{ home_files }}"
+  register: resolved_home_files
+  when: home_files is defined
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Check if specific files/directories exist for decryption
+  ansible.builtin.stat:
+    path: "{{ item.ansible_facts._resolved_file.path }}"
+  loop: "{{ resolved_home_files.results }}"
+  register: home_item_stats
+  when: home_files is defined
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Check if .gpg variant exists
+  ansible.builtin.stat:
+    path: "{{ item.ansible_facts._resolved_file.path }}.gpg"
+  loop: "{{ resolved_home_files.results }}"
+  register: home_gpg_item_stats
+  when: home_files is defined
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Find gpg files in directories specified in home_files
+  ansible.builtin.find:
+    paths: "{{ item.item.ansible_facts._resolved_file.path }}"
+    patterns: "*.gpg"
+    recurse: "{{ home_decrypt_recurse }}"
+    hidden: "{{ home_decrypt_hidden }}"
+  loop: "{{ home_item_stats.results }}"
+  loop_control:
+    label: "{{ item.item.ansible_facts._resolved_file.path }}"
+  register: directory_gpg_files
+  when: 
+    - home_files is defined
+    - item.stat.exists
+    - item.stat.isdir
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Set remote_gpg_files from home_files (Recursive)
+  ansible.builtin.set_fact:
+    remote_gpg_files:
+      files: "{{ 
+        (
+          home_gpg_item_stats.results 
+          | selectattr('stat.exists', 'equalto', true) 
+          | map(attribute='stat') 
+          | list
+        ) 
+        + 
+        (
+          directory_gpg_files.results 
+          | selectattr('files', 'defined') 
+          | map(attribute='files') 
+          | flatten 
+          | list
+        )
+      }}"
+  when: home_files is defined
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Update match count for recursive decrypted files
+  ansible.builtin.set_fact:
+    remote_gpg_files:
+      files: "{{ remote_gpg_files.files }}"
+      matched: "{{ remote_gpg_files.files | length }}"
+  when: home_files is defined
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+
+- name: Set remote_gpg_files from find result
+  ansible.builtin.set_fact:
+    remote_gpg_files: "{{ found_gpg_files }}"
+  when: home_files is not defined
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+
+- name: Report files to be decrypted
+  ansible.builtin.debug:
+    msg: "Found {{ remote_gpg_files.matched }} GPG files to decrypt in {{ home_src_path }}"
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  run_once: true
+
+- name: List files to be decrypted
+  ansible.builtin.debug:
+    msg: "{{ remote_gpg_files.files | map(attribute='path') | list }}"
+  no_log: true
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  run_once: true
+
+- name: Decrypt files in local home directory
+  ansible.builtin.shell: |
+    set -euo pipefail
+    INPUT_FILE="{{ decrypt_item.path }}"
+    DECRYPTED_FILE="${INPUT_FILE%.gpg}"
+    
+    gpg --quiet --batch --yes -o "${DECRYPTED_FILE}" -d "${INPUT_FILE}"
+    
+    if [ ! -s "${DECRYPTED_FILE}" ]; then
+      echo "ERROR: Decrypted file is empty or does not exist"
+      exit 1
+    fi
+  loop: "{{ remote_gpg_files.files }}"
+  loop_control:
+    loop_var: decrypt_item
+    label: "{{ decrypt_item.path }}"
+  register: decrypt_results
+  no_log: true
+  failed_when: decrypt_results.rc != 0
+  changed_when: decrypt_results.rc == 0
+  when: not ansible_check_mode
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  run_once: true
+
+- name: Verify all decrypted files exist and are non-empty
+  ansible.builtin.stat:
+    path: "{{ decrypt_item.path | regex_replace('\\.gpg$', '') }}"
+  loop: "{{ remote_gpg_files.files }}"
+  loop_control:
+    loop_var: decrypt_item
+    label: "{{ decrypt_item.path | regex_replace('\\.gpg$', '') }}"
+  register: decrypted_files_stat
+  failed_when: not decrypted_files_stat.stat.exists or decrypted_files_stat.stat.size == 0
+  when: not ansible_check_mode
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+  run_once: true
+
+- name: Count verified decrypted files
+  ansible.builtin.set_fact:
+    decrypted_count: "{{ decrypted_files_stat.results | selectattr('stat.exists', 'equalto', true) | list | length }}"
+  when: not ansible_check_mode
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+  run_once: true
+
+- name: Validate decryption completeness
+  ansible.builtin.assert:
+    that:
+      - decrypted_count | int == remote_gpg_files.matched | int
+    fail_msg: "Decryption count mismatch: expected {{ remote_gpg_files.matched }}, got {{ decrypted_count }}"
+    success_msg: "All {{ decrypted_count }} files successfully decrypted and verified"
+  when: not ansible_check_mode
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+  run_once: true
+
+- name: Remove encrypted files after successful decryption
+  ansible.builtin.file:
+    path: "{{ decrypt_item.path }}"
+    state: absent
+  loop: "{{ remote_gpg_files.files }}"
+  loop_control:
+    loop_var: decrypt_item
+    label: "{{ decrypt_item.path }}"
+  when: not (home_keep_encrypted | default(false)) and not ansible_check_mode
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  run_once: true
+
+- name: Final check for encrypted files
+  ansible.builtin.find:
+    paths: "{{ home_src_path }}"
+    patterns: "*.gpg"
+    recurse: "{{ home_decrypt_recurse }}"
+    hidden: "{{ home_decrypt_hidden }}"
+  register: remaining_encrypted
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+  run_once: true
+  when: home_files is not defined
+
+- name: Assert decryption success (Global)
+  ansible.builtin.assert:
+    that: remaining_encrypted.matched == 0
+    fail_msg: "Decryption incomplete! Found {{ remaining_encrypted.matched }} encrypted files remaining: {{ remaining_encrypted.files | map(attribute='path') | list }}"
+  delegate_to: localhost
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  tags: ["always"]
+  run_once: true
+  when: home_files is not defined
+
+- name: Check if specific encrypted files remain
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  loop: "{{ remote_gpg_files.files }}"
+  register: remaining_specific_encrypted_stats
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+  when: 
+    - home_files is defined
+    - not (home_keep_encrypted | default(false))
+
+- name: Assert specific encrypted files are removed
+  ansible.builtin.assert:
+    that: not item.stat.exists
+    fail_msg: "Encrypted file still exists: {{ item.item.path }}"
+  loop: "{{ remaining_specific_encrypted_stats.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.path }}"
+  delegate_to: localhost
+  tags: ["always"]
+  run_once: true
+  when: 
+    - home_files is defined
+    - not (home_keep_encrypted | default(false))
