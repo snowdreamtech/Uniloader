@@ -1,24 +1,23 @@
 # docker-compose.yml
-version: '3.8'
 
 services:
   alpine:
-    image: alpine:latest
-    container_name: uls_test_alpine
+    image: alpine:3.23.3
+    container_name: uls_alpine
     command: tail -f /dev/null
     networks:
       - uls_net
 
   debian:
-    image: debian:bullseye-slim
-    container_name: uls_test_debian
+    image: debian:13.3-slim
+    container_name: uls_debian
     command: tail -f /dev/null
     networks:
       - uls_net
 
   rhel:
-    image: rockylinux:9
-    container_name: uls_test_rhel
+    image: rockylinux/rockylinux:10.1
+    container_name: uls_rhel
     command: tail -f /dev/null
     networks:
       - uls_net
