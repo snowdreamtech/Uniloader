@@ -1,112 +1,87 @@
-[CmdletBinding()]
-param(
-    [string]$Inventory = "localhost",
-    [string]$Playbook = "orchestrator",
-    [string]$Verbosity = "",
-    [string]$VaultVars = "@$HOME\.uniloader\.vault.yml",
-    [string]$VaultPass = "$HOME\.uniloader\.vault_pass",
-    [string[]]$ExtraVars,
-    [string]$HomeAction,
-    [string]$HomeFiles,
-    [switch]$Help
-)
+<#
+.SYNOPSIS
+    Windows smart wrapper for ansible.sh.
+#>
 
-if ($Help) {
-    Write-Host "Usage: .\run.ps1 [OPTIONS]"
-    Write-Host ""
-    Write-Host "Options:"
-    Write-Host "  -Inventory <name>     Inventory name (default: localhost -> inventory\localhost.yml)"
-    Write-Host "  -Playbook <name>      Playbook name (default: orchestrator -> playbooks\orchestrator.yml)"
-    Write-Host "  -Verbosity <level>    Verbosity level (default: none, supports -v, -vv, -vvv, etc.)"
-    Write-Host "  -VaultVars <file>     Path to vault vars file (default: ~\.uniloader\.vault.yml)"
-    Write-Host "  -VaultPass <file>     Path to vault password file (default: ~\.uniloader\.vault_pass)"
-    Write-Host "  -ExtraVars <vars>     Additional extra vars"
-    Write-Host "  -HomeAction <action>  Home role action (encrypt, decrypt, restore). Sets playbook to 'home'."
-    Write-Host "  -HomeFiles <files>    Comma-separated list of files for home role action."
-    Write-Host "  -Help                 Show this help message"
-    exit
+$ErrorActionPreference = "Stop"
+
+# Detect Environment
+$EnvType = $null
+$BashBin = $null
+$PathRegex = "^@?[A-Za-z]:[\\/]"
+
+if (Get-Command "wsl.exe" -ErrorAction SilentlyContinue) {
+    $EnvType = "wsl"
+    $BashBin = "wsl"
+} elseif (Get-Command "bash.exe" -ErrorAction SilentlyContinue) {
+    $EnvType = "gitbash"
+    $BashBin = "bash"
+} else {
+    Write-Host "[ERROR] Environment missing: WSL (Windows Subsystem for Linux) or Git Bash not found." -ForegroundColor Red
+    Write-Host "Ansible requires a POSIX-compatible environment to run on Windows.`n"
+    Write-Host "==========================================================" -ForegroundColor Cyan
+    Write-Host " Recommended Solution (Install WSL):" -ForegroundColor Cyan
+    Write-Host "==========================================================" -ForegroundColor Cyan
+    Write-Host " Open PowerShell as Administrator and run:"
+    Write-Host "     wsl --install"
+    Write-Host " Restart your computer after installation.`n"
+    Write-Host "==========================================================" -ForegroundColor Yellow
+    Write-Host " Alternative Solution (Install Git Bash):" -ForegroundColor Yellow
+    Write-Host "==========================================================" -ForegroundColor Yellow
+    Write-Host " Download and install Git for Windows from:"
+    Write-Host "     https://gitforwindows.org/"
+    Write-Host "==========================================================" -ForegroundColor Yellow
+    exit 1
 }
 
-# Sets paths relative to the script location
+# Resolve target script path
 $ScriptDir = Split-Path $MyInvocation.MyCommand.Path
-$ProjectRoot = Resolve-Path "$ScriptDir\.."
+$BaseName = [System.IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Path)
+$TargetScript = Join-Path $ScriptDir "$BaseName.sh"
 
-# Resolve inventory path
-if ($Inventory -notmatch "[\\/]") {
-    $InventoryPath = Join-Path $ProjectRoot "inventory\$Inventory.yml"
-} else {
-    $InventoryPath = $Inventory
-}
+Function Convert-ToPosixPath {
+    param([string]$WinPath)
 
-# Resolve playbook path
-if ($Playbook -notmatch "[\\/]") {
-    if ($Playbook -notmatch "\.yml$") {
-        $Playbook = "$Playbook.yml"
+    $Prefix = ""
+    $ActualPath = $WinPath
+    if ($WinPath -match "^@") {
+        $Prefix = "@"
+        $ActualPath = $WinPath.Substring(1)
     }
-    $PlaybookPath = Join-Path $ProjectRoot "playbooks\$Playbook"
-} else {
-    $PlaybookPath = $Playbook
+
+    if ($EnvType -eq "wsl") {
+        # wslpath requires -m or -u for non-existent strings, but -u works best
+        $Converted = wsl.exe wslpath -u $ActualPath
+        if ($LASTEXITCODE -eq 0 -and $Converted) { return $Prefix + $Converted }
+    } elseif ($EnvType -eq "gitbash") {
+        $WinPathFwd = $ActualPath -replace "\\", "/"
+        $Converted = bash.exe -c "cygpath -u '$WinPathFwd'"
+        if ($LASTEXITCODE -eq 0 -and $Converted) { return $Prefix + $Converted }
+    }
+    return $WinPath
 }
 
-# Check if files exist
-if (-not (Test-Path $InventoryPath)) {
-    Write-Error "Inventory file '$InventoryPath' not found."
+$LinuxScriptPath = Convert-ToPosixPath $TargetScript
+
+if ([string]::IsNullOrWhiteSpace($LinuxScriptPath)) {
+    Write-Error "Failed to resolve POSIX path for $BaseName.sh."
     exit 1
 }
-if (-not (Test-Path $PlaybookPath)) {
-    Write-Error "Playbook file '$PlaybookPath' not found."
-    exit 1
+
+$ForwardArgs = @()
+if ($EnvType -eq "wsl") {
+    $ForwardArgs += "bash"
 }
+$ForwardArgs += $LinuxScriptPath
 
-# Activate Virtual Environment
-$VenvInfo = Join-Path $ProjectRoot ".venv\Scripts\Activate.ps1"
-
-if (Test-Path $VenvInfo) {
-    . $VenvInfo
-} else {
-    $SetupScript = Join-Path $ProjectRoot "scripts\setup_venv.ps1"
-    if (Test-Path $SetupScript) {
-        Write-Host "Virtual environment not found. Attempting to create one..."
-        . $SetupScript
+foreach ($arg in $args) {
+    if ($arg -match $PathRegex) {
+        $ForwardArgs += Convert-ToPosixPath $arg
     } else {
-        Write-Error "Virtual environment not found and setup script missing."
-        exit 1
+        $ForwardArgs += $arg
     }
 }
 
-    }
-}
-
-# Process Home Role arguments if present
-if (-not [string]::IsNullOrEmpty($HomeAction)) {
-    $PlaybookPath = Join-Path $ProjectRoot "playbooks\home.yml"
-    $ExtraVars += "home_action=$HomeAction"
-}
-
-if (-not [string]::IsNullOrEmpty($HomeFiles)) {
-    # Convert "file1,file2" -> ["file1","file2"]
-    $FilesArray = $HomeFiles -split ','
-    $JsonStructure = @{ home_files = $FilesArray } | ConvertTo-Json -Compress
-    # PowerShell passing JSON via -e needs careful handling, relying on ConvertTo-Json
-    $ExtraVars += "$JsonStructure"
-}
-
-# Construct arguments list
-$AnsibleArgs = @(
-    "-i", $InventoryPath,
-    $PlaybookPath,
-    $Verbosity,
-    "-e", $VaultVars,
-    "--vault-password-file", $VaultPass
-)
-
-foreach ($Var in $ExtraVars) {
-    $AnsibleArgs += "-e"
-    $AnsibleArgs += $Var
-}
-
-Write-Host "Running: ansible-playbook $AnsibleArgs"
-Write-Host "----------------------------------------------------------------"
-
-# Execute ansible-playbook
-& ansible-playbook $AnsibleArgs
+Write-Host "[Windows] Smart forwarding to $EnvType..." -ForegroundColor DarkGray
+& $BashBin $ForwardArgs
+exit $LASTEXITCODE
