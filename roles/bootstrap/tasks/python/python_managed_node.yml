@@ -4,7 +4,7 @@
 #
 # Purpose:
 #   Detection and installation of Python on standard managed nodes.
-#   Ensures that an interpreter is available for Ansible tasks without 
+#   Ensures that an interpreter is available for Ansible tasks without
 #   the overhead of a full control-node environment.
 #
 # Simple Usage:
@@ -29,11 +29,11 @@
     - include_tasks: "python_detector_loader.yml"
       vars:
         python_required: false
-       
+
     # 2. If no interpreter was found, trigger the specialized installer loader.
     - include_tasks: "python_installer_loader.yml"
       when:
-        - (ansible_python_interpreter is not defined) or 
+        - (ansible_python_interpreter is not defined) or
           (ansible_python_interpreter | trim | length == 0)
 
     # 3. Second pass: re-run detection and enforce that Python MUST be present.
@@ -43,13 +43,13 @@
 
     # 4. Virtual Environment: Create the dedicated venv for Ansible execution.
     - include_tasks: "python_venv_loader.yml"
-        
+
     # 5. Runtime: Install essential Python packages into the venv.
     - include_tasks: "python_runtime_loader.yml"
 
 # ---------------------------------------------------------------------
-# Direct Activation: Ensure the Ansible interpreter always points 
-# to the virtual environment, regardless of whether it was just 
+# Direct Activation: Ensure the Ansible interpreter always points
+# to the virtual environment, regardless of whether it was just
 # installed or already existed.
 # ---------------------------------------------------------------------
 - name: "Activate Python venv (Set interpreter) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"

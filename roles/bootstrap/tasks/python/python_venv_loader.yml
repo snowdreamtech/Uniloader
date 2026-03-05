@@ -4,7 +4,7 @@
 #
 # Purpose:
 #   Creation and configuration of a Python virtual environment.
-#   Sets up the directory structure, initializes the venv using 
+#   Sets up the directory structure, initializes the venv using
 #   the shell command, and configures the local pip mirror.
 #
 # Simple Usage:
@@ -50,7 +50,7 @@
   tags: ["always"]
 
 # ---------------------------------------------------------------------
-# Validation: Ensure a working Python interpreter is currently 
+# Validation: Ensure a working Python interpreter is currently
 # defined to perform the venv creation.
 # ---------------------------------------------------------------------
 - name: "Ensure ansible_python_interpreter is available {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -63,7 +63,7 @@
   tags: ["always"]
 
 # ---------------------------------------------------------------------
-# Preparation: Ensure the parent directory for the virtual 
+# Preparation: Ensure the parent directory for the virtual
 # environment exists with correct permissions.
 # ---------------------------------------------------------------------
 - name: "Ensure venv parent directory exists {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -86,7 +86,7 @@
   changed_when: false
 
 # ---------------------------------------------------------------------
-# Configuration: Point the global ansible_python_interpreter to the 
+# Configuration: Point the global ansible_python_interpreter to the
 # newly created virtual environment.
 # ---------------------------------------------------------------------
 - name: "Set ansible_python_interpreter to venv python {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
@@ -97,7 +97,7 @@
   tags: ["always"]
 
 # ---------------------------------------------------------------------
-# Configuration: Deploy a local pip.conf to accelerate package 
+# Configuration: Deploy a local pip.conf to accelerate package
 # installation via a mirror.
 # ---------------------------------------------------------------------
 - name: "Write pip.conf into venv {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
