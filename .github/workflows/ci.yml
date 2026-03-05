@@ -2,7 +2,25 @@
 name: CI
 
 "on":
-  workflow_dispatch: # Disabled: manual trigger only
+  push:
+    branches:
+      - "main"
+      - "dev"
+      - "feat/**"
+      - "branch/**"
+      - "feature/**"
+      - "fix/**"
+      - "pr/**"
+  pull_request:
+    branches:
+      - "main"
+      - "dev"
+      - "feat/**"
+      - "branch/**"
+      - "feature/**"
+      - "fix/**"
+      - "pr/**"
+  workflow_dispatch:
 
 jobs:
   lint:
