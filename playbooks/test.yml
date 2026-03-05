@@ -22,18 +22,6 @@
   gather_facts: false
 
   # ---------------------------------------------------------------------
-  # Pre-tasks: Execution metrics initialization.
-  # ---------------------------------------------------------------------
-  pre_tasks:
-    # - ansible.builtin.include_role:
-    #     name: "native"
-    #     tasks_from: "timer_loader"
-    #   vars:
-    #     timer_action: "start"
-    #     timer_name: "playbook"
-    #     module_name: "test"
-
-  # ---------------------------------------------------------------------
   # Test Pipeline: Deploy native and container apps.
   # ---------------------------------------------------------------------
   roles:
@@ -62,22 +50,3 @@
 
     # # 3. Deploy Container App Tests.
     # - role: "apps/container/official/helloworld"
-
-  # ---------------------------------------------------------------------
-  # Post-tasks: Audit and reporting.
-  # ---------------------------------------------------------------------
-  post_tasks:
-    # - ansible.builtin.include_role:
-    #     name: "native"
-    #     tasks_from: "log_loader"
-    #   vars:
-    #     label: "TEST"
-    #     msg: "Integrated tests completed on {{ inventory_hostname }}"
-
-    # - ansible.builtin.include_role:
-    #     name: "native"
-    #     tasks_from: "timer_loader"
-    #   vars:
-    #     timer_action: "end"
-    #     timer_name: "playbook"
-    #     module_name: "test"

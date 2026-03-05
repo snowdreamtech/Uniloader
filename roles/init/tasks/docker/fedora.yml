@@ -8,7 +8,7 @@
 #   - No implicit boolean logic
 #   - No unnecessary logs
 #   - Structured task sections
-#   - Reuse of standardized loaders (package_loader, app, group_loader, service_loader, log_loader)
+#   - Reuse of standardized loaders (package_loader, app, group_loader, service_loader)
 #
 # Usage Example:
 #

@@ -140,9 +140,6 @@
 # ---------------------------------------------------------------------
 # Output: Print the formatted facts to the console.
 # ---------------------------------------------------------------------
-- ansible.builtin.include_role:
-    name: "native"
-    tasks_from: "log_loader"
-  vars:
-    label: "FACTS_{{ facts_mode | upper }}"
-    msg: "{{ facts_output }}"
+- name: "Print facts output {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.debug:
+    msg: "[FACTS_{{ facts_mode | upper }}] {{ facts_output }}"

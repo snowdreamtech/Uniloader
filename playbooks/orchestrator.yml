@@ -5,8 +5,7 @@
 # Purpose:
 #   Orchestrator Playbook.
 #   This playbook detects, resolves, and executes scenarios dynamically.
-#   It initializes the environment by running a 'native' timer loader,
-#   then hands off control to the 'orchestrator' role.
+#   It hands off control to the 'orchestrator' role.
 #
 # Author: Native AI Team
 #
@@ -22,14 +21,6 @@
   gather_facts: false # Python may not exist yet; bootstrap role will handle discovery
 
   pre_tasks:
-    # - ansible.builtin.include_role:
-    #     name: "native"
-    #     tasks_from: "timer_loader"
-    #   vars:
-    #     timer_action: "start"
-    #     timer_name: "playbook"
-    #     module_name: "orchestrator"
-
     - name: "Initialize user vault"
       ansible.builtin.include_role:
         name: "native"
@@ -61,21 +52,3 @@
 
   roles:
     - role: "orchestrator"
-
-  # post_tasks:
-  #   # Provide visual confirmation of successful initialization
-  #   - ansible.builtin.include_role:
-  #       name: "native"
-  #       tasks_from: "log_loader"
-  #     vars:
-  #       label: "PLAYBOOK"
-  #       msg: "Initialization completed successfully on {{ inventory_hostname }}"
-
-  #   # End the execution timer and log total duration
-  #   - ansible.builtin.include_role:
-  #       name: "native"
-  #       tasks_from: "timer_loader"
-  #     vars:
-  #       timer_action: "end"
-  #       timer_name: "playbook"
-  #       module_name: "orchestrator"

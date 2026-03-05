@@ -27,33 +27,8 @@
   gather_facts: false # Python may not exist yet; bootstrap role will handle discovery
 
   # ---------------------------------------------------------------------
-  # Pre-tasks: Execution metrics initialization
-  # ---------------------------------------------------------------------
-  # ---------------------------------------------------------------------
-  # Pre-tasks: Execution metrics initialization
-  # ---------------------------------------------------------------------
-  # pre_tasks:
-  #   - ansible.builtin.include_role:
-  #       name: "native"
-  #       tasks_from: "timer_loader"
-
-  # ---------------------------------------------------------------------
   # Core Roles Pipeline
   # ---------------------------------------------------------------------
   roles:
     # 1. Bootstrap: Install Python and fix minimal OS-level issues
     - role: "bootstrap"
-
-  # ---------------------------------------------------------------------
-  # Post-tasks: Cleanup and Reporting
-  # ---------------------------------------------------------------------
-  # ---------------------------------------------------------------------
-  # Post-tasks: Cleanup and Reporting
-  # ---------------------------------------------------------------------
-  # post_tasks:
-  #   - ansible.builtin.include_role:
-  #       name: "native"
-  #       tasks_from: "log_loader"
-  #   - ansible.builtin.include_role:
-  #       name: "native"
-  #       tasks_from: "timer_loader"
