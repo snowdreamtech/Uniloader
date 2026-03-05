@@ -60,7 +60,7 @@
 # --- Validation ---
 # ---------------------------------------------------------------------
 
-# WHY: Specific tasks (assert) must not have names per .aiconfig.
+# WHY: Specific tasks (assert) must not have names per project coding standards.
 # Adding tags: ["always"] to ensure validation runs even when using filters.
 - ansible.builtin.assert:
     that:

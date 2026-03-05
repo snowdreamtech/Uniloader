@@ -4,11 +4,7 @@
 
 # Unified Loader System - Enterprise Ansible Framework
 
-[![Compliance](https://img.shields.io/badge/compliance-100%25-brightgreen)](/.aiconfig/AUDIT_REPORT.md)
-[![FQCN](https://img.shields.io/badge/FQCN-enforced-blue)](.aiconfig/ai_ansible.en.md)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-
-> **🤖 FOR AI ASSISTANTS**: Before working on this project, you **MUST** read [`.aiconfig/README.md`](.aiconfig/README.md) and complete the onboarding workflow (`/onboarding`). All AI-generated code must stricty comply with the standards defined in `.aiconfig/`. Failure to do so will result in non-compliant code generation.
 
 A production-grade, cross-distribution Ansible framework implementing the **Unified Loader System** architecture. Supports Alpine, Debian/Ubuntu, and RHEL/CentOS with consistent APIs across native packages and container runtimes.
 
@@ -21,7 +17,6 @@ A production-grade, cross-distribution Ansible framework implementing the **Unif
 - **Loader Architecture**: Modular, reusable components with standardized interfaces
 - **Enterprise-Grade**: Full audit logging, idempotency, and safety guarantees
 - **Self-Documenting**: Every loader includes Simple + Comprehensive usage examples
-- **AI-Optimized**: Strict `.aiconfig` standards for AI-assisted development
 
 ---
 
@@ -30,10 +25,9 @@ A production-grade, cross-distribution Ansible framework implementing the **Unif
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [Node Tags](#node-tags)
-- [Development](#development)
-- [Best Practices](#best-practices)
-- [Compliance](#compliance)
-- [Contributing](#contributing)
+- **Development**: [Development](#development)
+- **Best Practices**: [Best Practices](#best-practices)
+- **Contributing**: [Contributing](#contributing)
 
 ---
 
@@ -277,23 +271,7 @@ ansible-playbook -i inventory/dev.yml playbooks/base/init.yml --check
 
 ## Best Practices
 
-### 1. Use the Compliance Audit Script
-
-Before committing new loaders or making significant changes:
-
-```bash
-bash .aiconfig/audit_compliance.sh
-```
-
-This checks for:
-
-- ✅ Complete file headers (Simple + Comprehensive Usage)
-- ✅ FQCN compliance
-- ✅ Task naming conventions
-- ✅ Prohibited attribute patterns
-- ✅ Conditional logic safety
-
-### 2. Follow the Loader Template
+### 1. Follow the Loader Template
 
 Every new loader MUST include:
 
@@ -449,34 +427,6 @@ When creating new loaders, use these as templates:
 
 ---
 
-## Compliance
-
-This project maintains **100% compliance** with the standards defined in [`.aiconfig/`](.aiconfig/):
-
-| Standard             | Status  | Details                        |
-| :------------------- | :------ | :----------------------------- |
-| FQCN Usage           | ✅ 100% | All modules fully qualified    |
-| Task Naming          | ✅ 100% | Double quotes + os_fingerprint |
-| Header Documentation | ✅ 95%  | Complete API references        |
-| Attribute Safety     | ✅ 100% | No prohibited patterns         |
-| Conditional Logic    | ✅ 98%  | Safe type checking             |
-| Idempotency          | ✅ 100% | All mutations marked           |
-
-**Latest Audit**: See [.aiconfig/AUDIT_REPORT.md](.aiconfig/AUDIT_REPORT.md)
-
-### Running Compliance Checks
-
-```bash
-
-# Full project audit
-
-bash .aiconfig/audit_compliance.sh
-
-# View detailed report
-
-cat .aiconfig/compliance_report.txt
-```
-
 ---
 
 ## Contributing
@@ -484,20 +434,7 @@ cat .aiconfig/compliance_report.txt
 ### For Human Developers
 
 1. Read [STANDARDS.md](STANDARDS.md) and [STANDARDS_zh-CN.md](STANDARDS_zh-CN.md)
-2. Review [.aiconfig/ai_ansible.en.md](.aiconfig/ai_ansible.en.md) for coding rules
-3. Run `bash .aiconfig/audit_compliance.sh` before committing
-4. Ensure all new loaders have Simple + Comprehensive usage examples
-
-### For AI Assistants
-
-This project is **AI-optimized** with strict standards in `.aiconfig/`:
-
-- [ai_ansible.en.md](.aiconfig/ai_ansible.en.md) - Ansible-specific rules
-- [ai_rules.en.md](.aiconfig/ai_rules.en.md) - General behavior rules
-- [ai_style.en.md](.aiconfig/ai_style.en.md) - Code style requirements
-- [ai_context.json](.aiconfig/ai_context.json) - Project context
-
-**All AI-generated code MUST comply with these standards.**
+2. Ensure all new loaders have Simple + Comprehensive usage examples
 
 ### Code Review Checklist
 
@@ -509,15 +446,12 @@ This project is **AI-optimized** with strict standards in `.aiconfig/`:
 - [ ] Shell/command tasks have `changed_when` and `failed_when`
 - [ ] Privilege escalation uses `become: "{{ become_enabled }}"`
 - [ ] English-only comments in code files
-- [ ] Compliance audit passes
 
 ---
 
 ## Additional Resources
 
-- **Architecture**: [.aiconfig/AUDIT_REPORT.md](.aiconfig/AUDIT_REPORT.md)
 - **Standards**: [STANDARDS.md](STANDARDS.md) | [STANDARDS_zh-CN.md](STANDARDS_zh-CN.md)
-- **AI Rules**: [.aiconfig/](.aiconfig/)
 - **Examples**: [roles/](roles/) - Every loader is self-documenting
 
 ---

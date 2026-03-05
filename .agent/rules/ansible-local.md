@@ -177,23 +177,7 @@ Standard data directory locations for this project:
 - Dev overrides: `inventory/group_vars/dev/`
 - Volume base directories MUST be created in `roles/container/tasks/container_loader.yml`, NOT in `init`.
 
-## 9. Session Initialization Protocol
-
-At the start of every AI session in this repository, read the following files in order:
-
-1. `.aiconfig/ai_context.json` — project context and permanent rules
-2. `.aiconfig/ai_rules.en.md` — global AI behavior rules
-3. `.aiconfig/ai_ansible.en.md` — Ansible engineering standards
-4. `.aiconfig/DOCUMENTATION_STANDARD.md` — documentation structure requirements
-5. `.aiconfig/MARKDOWN_STYLE_GUIDE.md` — Markdown style guide
-
-After reading, confirm understanding of:
-
-- Four core pillars: **Auditable, Overridable, Extensible, Lean**
-- Loader architecture: **Facts → Privileges → Roles → Orchestrator**
-- Bilingual documentation requirements (EN + zh-CN)
-
-## 10. Bilingual Documentation & Commit Workflow
+## 9. Bilingual Documentation & Commit Workflow
 
 - ALL documentation artifacts (README, Implementation Plans, Walkthroughs) MUST be generated as **two separate files**: English (`.en.md` or `README.md`) and Chinese (`_zh-CN.md` or `README_zh-CN.md`).
 - Generating only one language version is **PROHIBITED**.
@@ -208,9 +192,8 @@ When the user enters `提交代码`, `提交`, `commit`, `git commit`, or `git c
 3. Generate a full English Conventional Commits message.
 4. Execute `git add`, `git commit`, and push for the main project.
 
-## 11. Compliance & Quality Assurance
+## 10. Compliance & Quality Assurance
 
-- **Audit Script Execution**: Before committing new loaders or making significant changes, you MUST run the compliance audit script: `bash .aiconfig/audit_compliance.sh`.
 - **Code Review Checklist**:
   1. File header with Purpose, Simple Usage, and Comprehensive Usage
   2. All modules use FQCN (`ansible.builtin.*`, `community.*`, `containers.*`)
@@ -219,9 +202,8 @@ When the user enters `提交代码`, `提交`, `commit`, `git commit`, or `git c
   5. Shell/command tasks have `changed_when` and `failed_when`
   6. Privilege escalation uses `become: "{{ become_enabled }}"`
   7. English-only comments in code files
-  8. Compliance audit passes
 
-## 12. Loader File Template & Documentation
+## 11. Loader File Template & Documentation
 
 - **Mandatory Header Template**: Every new loader task file MUST include a standardized documentation header block at the top:
   - **Purpose**: A clear description of what the loader does.
@@ -229,12 +211,12 @@ When the user enters `提交代码`, `提交`, `commit`, `git commit`, or `git c
   - **Comprehensive Usage**: Complete API reference with ALL available parameters and realistic values, including `become_enabled: true` if applicable.
 - **Dual Examples Requirement**: Providing only one example is PROHIBITED.
 
-## 13. Dynamic Privilege Escalation (become_enabled)
+## 12. Dynamic Privilege Escalation (become_enabled)
 
 - **Variable-Driven Escalation**: ALL tasks requiring privilege escalation MUST use `become: "{{ become_enabled }}"` instead of hardcoded `become: true`.
 - **Purpose**: This ensures seamless execution across different contexts (Container environments which don't need become, Root user connections, and Regular user connections).
 - **Exceptions**: Only tasks within `roles/bootstrap/` are permitted to use a hardcoded `become: true` because they handle the initial raw system setup.
 
-## 14. Prohibited Patterns (Strict)
+## 13. Prohibited Patterns (Strict)
 
 - **Include Directives Restrictions**: NEVER use `delegate_to` or `run_once` on `include_role`, `include_tasks`, or `import_*` directives. Apply these attributes to the individual tasks _inside_ the included/imported files instead. This prevents Ansible parser errors and unpredictable variable scoping.
