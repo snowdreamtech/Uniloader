@@ -23,8 +23,8 @@
 
 - name: "Set discovery facts: is_posix_system {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
-    is_posix_system: "{{ raw_uname_probe.stdout | trim != 'Windows' }}"
-    is_windows_system: "{{ raw_uname_probe.stdout | trim == 'Windows' }}"
+    is_posix_system: "{{ (raw_uname_probe.stdout | trim | length > 0) and (raw_uname_probe.stdout | trim != 'Windows') }}"
+    is_windows_system: "{{ (raw_uname_probe.stdout | trim == 'Windows') or (raw_uname_probe.stdout | trim | length == 0) }}"
   tags: ["always"]
 
 # =====================================================================
