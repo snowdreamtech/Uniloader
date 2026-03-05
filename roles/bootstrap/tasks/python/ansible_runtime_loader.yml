@@ -71,12 +71,3 @@
     - ansible_collections | length > 0
   become: true
   changed_when: false
-# ---------------------------------------------------------------------
-# Audit: Log the successful initialization of the Ansible runtime.
-# ---------------------------------------------------------------------
-# - ansible.builtin.include_role:
-#     name: "native"
-#     tasks_from: "log_loader"
-#   vars:
-#     label: "ANSIBLE_RUNTIME"
-#     msg: "Ansible runtime installation completed using {{ ansible_python_interpreter }}"
