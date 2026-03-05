@@ -1,6 +1,6 @@
 ---
 # =====================================================================
-# roles/common/bootstrap/tasks/main.yml
+# roles/bootstrap/tasks/main.yml
 #
 # Purpose:
 #   Bootstrap entry point.
@@ -22,8 +22,8 @@
 
 - name: "Set discovery facts: is_posix_system {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
   ansible.builtin.set_fact:
-    is_posix_system: "{{ (raw_uname_probe.rc | default(0)) == 0 }}"
-    is_windows_system: "{{ (raw_uname_probe.rc | default(0)) != 0 }}"
+    is_posix_system: "{{ raw_uname_probe.stdout | trim != 'Windows' }}"
+    is_windows_system: "{{ raw_uname_probe.stdout | trim == 'Windows' }}"
   tags: ["always"]
 
 # =====================================================================
