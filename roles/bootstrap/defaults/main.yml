@@ -26,5 +26,18 @@ os_paths: >-
 # ---------------------------------------------------------------------
 # Path: Default locations for bootstrap flag and virtual environment.
 # ---------------------------------------------------------------------
-bootstrap_flag_path: "/opt/.ansible_bootstrap_done"
-python_venv_path: "/opt/venv/ansible"
+bootstrap_flag_path: >-
+  {%- set os_name = current_os_name | default(ansible_system | default('Linux', true), true) -%}
+  {%- if os_name == 'Windows' or os_name == 'Win32NT' -%}
+    C:\.ansible_bootstrap_done
+  {%- else -%}
+    /opt/.ansible_bootstrap_done
+  {%- endif -%}
+
+python_venv_path: >-
+  {%- set os_name = current_os_name | default(ansible_system | default('Linux', true), true) -%}
+  {%- if os_name == 'Windows' or os_name == 'Win32NT' -%}
+    C:\ansible-venv
+  {%- else -%}
+    /opt/venv/ansible
+  {%- endif -%}
