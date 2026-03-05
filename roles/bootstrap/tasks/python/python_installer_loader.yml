@@ -85,6 +85,7 @@
       apk)
         apk update || true
         apk add --no-cache python3 py3-pip
+        apk add --no-cache python3-venv || apk add --no-cache py3-venv || true
         ;;
 
       apt)
@@ -120,14 +121,17 @@
 
       pacman)
         pacman -Sy --noconfirm python python-pip
+        pacman -Sy --noconfirm python-venv || true
         ;;
 
       zypper)
         zypper --non-interactive install python311 python311-pip || zypper --non-interactive install python3 python3-pip
+        zypper --non-interactive install python311-venv || zypper --non-interactive install python3-venv || true
         ;;
 
       xbps)
         xbps-install -Sy python3 python3-pip
+        xbps-install -Sy python3-venv || true
         ;;
 
       emerge)
