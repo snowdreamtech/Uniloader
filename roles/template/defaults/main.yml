@@ -1,0 +1,51 @@
+---
+# =====================================================================
+# roles/template/defaults/main.yml
+#
+# Purpose:
+#   Boilerplate default variables for role scaffolding.
+#   Provides a structured baseline for service control, basic
+#   configurations, file paths, and advanced settings.
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Service Control:
+# Determines the lifecycle state of the managed application.
+# ---------------------------------------------------------------------
+my_app_enabled: true
+my_app_service_state: "started"
+
+# ---------------------------------------------------------------------
+# Basic Configuration:
+# Core application settings including network ports and accounts.
+# ---------------------------------------------------------------------
+my_app_port: 8080
+my_app_user: "app_user"
+my_app_version: "1.2.0"
+
+# ---------------------------------------------------------------------
+# File Paths:
+# Standard directory hierarchy for deployment and logging.
+# ---------------------------------------------------------------------
+my_app_install_dir: "/opt/my_app"
+my_app_config_path: "/etc/my_app/config.conf"
+my_app_log_dir: "/var/log/my_app"
+
+# ---------------------------------------------------------------------
+# Package Management:
+# Dependencies required for the role implementation.
+# ---------------------------------------------------------------------
+my_app_packages:
+  - "package-a"
+  - "package-b"
+
+# ---------------------------------------------------------------------
+# Advanced Settings:
+# Grouped configuration parameters for fine-grained control.
+# ---------------------------------------------------------------------
+my_app_settings:
+  timeout: 30
+  log_level: "info"
+  max_connections: 100
+  support_ssl: false

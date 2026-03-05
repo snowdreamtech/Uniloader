@@ -1,0 +1,14 @@
+---
+# =====================================================================
+# roles/template/handlers/main.yml
+#
+# Purpose:
+#   Global notification handlers for the template role.
+#   Add service restart/reload handlers here as the role grows.
+#
+# =====================================================================
+
+- name: "Restart myapp {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.service:
+    name: "myapp"
+    state: "restarted"

@@ -1,0 +1,60 @@
+---
+# =====================================================================
+# roles/template/tasks/alpine.yml
+#
+# Purpose:
+#   Handles application deployment specifically for Alpine Linux systems.
+#   Uses the apk package manager and ensures proper file permissions.
+#
+# Simple Usage:
+#   - ansible.builtin.include_tasks:
+#       file: "alpine.yml"
+#     vars:
+#       package_list: ["curl"]
+#       config_path: "/etc/myapp.conf"
+#       script_path: "/usr/bin/run.sh"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_tasks:
+#       file: "alpine.yml"
+#     vars:
+#       package_list: ["curl", "git", "vim"]
+#       package_state: "latest"
+#       config_path: "/etc/myapp.conf"
+#       script_path: "/usr/bin/myapp-start"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Install required packages using the native Alpine package manager (apk)
+# ---------------------------------------------------------------------
+- name: "Install packages (Alpine) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.apk:
+    name: "{{ package_list }}"
+    state: "{{ package_state }}"
+    update_cache: true
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Deploy the configuration file from a Jinja2 template
+# ---------------------------------------------------------------------
+- name: "Deploy config {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "example.conf.j2"
+    dest: "{{ config_path }}"
+    mode: "0644"
+    owner: "root"
+    group: "root"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Copy executable scripts to the target destination
+# ---------------------------------------------------------------------
+- name: "Copy script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    src: "example.sh"
+    dest: "{{ script_path }}"
+    mode: "0755"
+    owner: "root"
+    group: "root"
+  become: "{{ become_enabled }}"

@@ -1,0 +1,16 @@
+---
+# =====================================================================
+# roles/template/vars/alpine.yml
+#
+# Purpose:
+#   Alpine Linux specific variable overrides.
+#
+# =====================================================================
+
+package_list:
+  - "curl"
+  - "git"
+  - "htop"
+
+config_path: "/etc/myapp/config.conf"
+script_path: "/usr/local/bin/example.sh"

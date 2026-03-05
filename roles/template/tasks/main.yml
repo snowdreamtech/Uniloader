@@ -1,0 +1,31 @@
+---
+# =====================================================================
+# roles/template/tasks/main.yml
+#
+# Purpose:
+#   Entry point for the template role. This file delegates OS-specific
+#   task loading to the os_loader in the native role.
+#
+# Simple Usage:
+#   - ansible.builtin.include_role:
+#       name: "template"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_role:
+#       name: "template"
+#     vars:
+#       package_list: ["bash"]
+#       config_path: "/etc/profile.d/custom.sh"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Invoke the os_loader to load the appropriate .yml file (debian/redhat/alpine)
+# based on the target system's OS family.
+# ---------------------------------------------------------------------
+- name: "Load OS-specific tasks {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.include_role:
+    name: "native"
+    tasks_from: "os_loader"
+  vars:
+    module_name: "template"

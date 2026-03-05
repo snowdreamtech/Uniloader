@@ -1,0 +1,59 @@
+---
+# =====================================================================
+# roles/template/tasks/redhat.yml
+#
+# Purpose:
+#   Handles application deployment specifically for RHEL-family systems.
+#   Uses the yum/dnf package manager and ensures proper file permissions.
+#
+# Simple Usage:
+#   - ansible.builtin.include_tasks:
+#       file: "redhat.yml"
+#     vars:
+#       package_list: ["wget"]
+#       config_path: "/etc/myapp.conf"
+#       script_path: "/usr/bin/run.sh"
+#
+# Comprehensive Usage:
+#   - ansible.builtin.include_tasks:
+#       file: "redhat.yml"
+#     vars:
+#       package_list: ["wget", "vim", "iotop"]
+#       package_state: "latest"
+#       config_path: "/etc/myapp.conf"
+#       script_path: "/usr/local/bin/myapp-check"
+#
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Install required packages using the native RHEL package manager (yum/dnf)
+# ---------------------------------------------------------------------
+- name: "Install packages (RHEL) {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.yum:
+    name: "{{ package_list }}"
+    state: "{{ package_state }}"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Deploy the configuration file from a Jinja2 template
+# ---------------------------------------------------------------------
+- name: "Deploy config {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.template:
+    src: "example.conf.j2"
+    dest: "{{ config_path }}"
+    mode: "0644"
+    owner: "root"
+    group: "root"
+  become: "{{ become_enabled }}"
+
+# ---------------------------------------------------------------------
+# Copy executable scripts to the target destination
+# ---------------------------------------------------------------------
+- name: "Copy script {{ '(' ~ os_fingerprint ~ ')' if os_fingerprint is defined else '' }}"
+  ansible.builtin.copy:
+    src: "example.sh"
+    dest: "{{ script_path }}"
+    mode: "0755"
+    owner: "root"
+    group: "root"
+  become: "{{ become_enabled }}"
