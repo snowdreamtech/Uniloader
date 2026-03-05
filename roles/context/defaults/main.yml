@@ -4,16 +4,16 @@
 #
 # Purpose:
 #   Global default variables for the native infrastructure layer.
-#   Contains the enterprise-grade node_tags_map for deriving boolean 
-#   architectural facts, and repository management command templates 
+#   Contains the enterprise-grade node_tags_map for deriving boolean
+#   architectural facts, and repository management command templates
 #   for RedHat-family distributions.
 #
 # Simple Usage:
-#   These defaults are automatically loaded when the 'native' role 
+#   These defaults are automatically loaded when the 'native' role
 #   is included or referenced.
 #
 # Comprehensive Usage:
-#   Override specific repo commands or tag mappings in group_vars 
+#   Override specific repo commands or tag mappings in group_vars
 #   to customize infrastructure behavior per-environment.
 #
 # =====================================================================
@@ -26,7 +26,7 @@ tag_metadata:
   total_tags: 286        # ← Added kubespray_host
   categories: 16
 
-  
+
   # Mutually exclusive tag groups
   conflicts:
     - [prod, dev, test, stage]  # Environment conflicts
@@ -34,19 +34,19 @@ tag_metadata:
     - [stateful, stateless]     # State conflicts
     - [immutable, mutable]      # Mutability conflicts
     - [ephemeral, long_running] # Lifecycle conflicts
-  
+
   # Deprecated tags (will be removed in future versions)
   deprecated:
     db_master: "Use db_primary instead (deprecated since v2.0)"
     db_slave: "Use db_replica instead (deprecated since v2.0)"
     k8s_master: "Use k8s_control_plane instead (deprecated since v2.0)"
-  
+
   # Required combinations
   requires:
     k8s_worker: [k8s_node]           # k8s_worker requires k8s_node
     k8s_control_plane: [k8s_node]    # k8s_control_plane requires k8s_node
     db_replica: [db]                 # db_replica requires db
-  
+
   # Recommended combinations
   recommends:
     prod: [monitored, backup_enabled, ha]
@@ -63,7 +63,7 @@ tag_map:
   # Category: environment
   # Mutually Exclusive: yes (only one primary environment)
   # =====================================================================
-  
+
   # 1.1 Standard Environments
   dev:        is_dev        # Development environment
   test:       is_test       # Testing environment
@@ -71,19 +71,19 @@ tag_map:
   uat:        is_uat        # User acceptance testing
   stage:      is_stage      # Staging environment
   prod:       is_prod       # Production environment
-  
+
   # 1.2 Special Environments
   sandbox:    is_sandbox    # Sandbox/playground
   lab:        is_lab        # Laboratory/research
   demo:       is_demo       # Demo/showcase
   training:   is_training   # Training environment
-  
+
   # 1.3 Deployment Strategies
   canary:     is_canary     # Canary deployment
   blue:       is_blue       # Blue-green (blue)
   green:      is_green      # Blue-green (green)
   ab_test:    is_ab_test    # A/B testing
-  
+
   # 1.4 Disaster Recovery
   dr:           is_dr           # Disaster recovery
   dr_primary:   is_dr_primary   # DR primary site
@@ -94,14 +94,14 @@ tag_map:
   # Category: network
   # Mutually Exclusive: partial (see subcategories)
   # =====================================================================
-  
+
   # 2.1 Network Connectivity Type
   open_network:       is_open_network       # Open internet access
   restricted_network: is_restricted_network # Restricted (proxy/VPN required)
   isolated_network:   is_isolated_network   # Isolated (no external access)
   dmz_network:        is_dmz_network        # DMZ zone
   airgap:             is_airgap             # Air-gapped network
-  
+
   # 2.2 Network Speed/Performance (mutually exclusive)
   ultra_fast: is_ultra_fast # Ultra-fast (10G+, InfiniBand)
   fast:       is_fast       # Fast (datacenter, LAN)
@@ -123,7 +123,7 @@ tag_map:
   load_balanced:      is_load_balanced      # Behind load balancer
   cdn_enabled:        is_cdn_enabled        # CDN enabled
   rate_limited:       is_rate_limited       # Rate limiting enabled
-  
+
   # 2.5 NAT & Gateway
   nated:        is_nated        # Behind NAT
   vpn_gateway:  is_vpn_gateway  # VPN gateway
@@ -138,12 +138,12 @@ tag_map:
   loopback_ip:    is_loopback_ip    # Loopback IP
   link_local_ip:  is_link_local_ip  # Link-local IP
   cgnat:          is_cgnat_ip       # Carrier-grade NAT
-  
+
   # 2.7 IP Protocol (mutually exclusive)
   ipv4_only:  is_ipv4_only  # IPv4 only
   ipv6_only:  is_ipv6_only  # IPv6 only
   dual_stack: is_dual_stack # IPv4 and IPv6
-  
+
   # 2.8 Special IP Addressing
   multicast:     is_multicast_ip     # Multicast IP
   broadcast:     is_broadcast_ip     # Broadcast IP
@@ -169,7 +169,7 @@ tag_map:
   # Category: infrastructure_subtype
   # Mutually Exclusive: no
   # =====================================================================
-  
+
   # 4.1 Edge Computing
   edge_5g:      is_edge_5g      # 5G edge
   edge_gateway: is_edge_gateway # Edge gateway
@@ -202,21 +202,21 @@ tag_map:
   # Category: application_role
   # Mutually Exclusive: no (can have multiple roles)
   # =====================================================================
-  
+
   # 5.1 Frontend & API
   web:       is_web_node      # Web server
   api:       is_api_node      # API server
   frontend:  is_frontend_node # Frontend app
   cdn:       is_cdn_node      # CDN node
   gateway:   is_gateway_node  # API gateway
-  
+
   # 5.2 Backend & Processing
   backend:   is_backend_node   # Backend app
   worker:    is_worker_node    # Background worker
   scheduler: is_scheduler_node # Job scheduler
   cron:      is_cron_node      # Cron jobs
   batch:     is_batch_node     # Batch processing
-  
+
   # 5.3 Data Tier
   db:         is_db_node    # Database
   db_primary: is_db_primary # DB primary/master
@@ -227,7 +227,7 @@ tag_map:
   db_write:   is_db_write   # Write node
   cache:      is_cache_node # Cache server
   search:     is_search_node # Search engine
-  
+
   # 5.4 Messaging & Streaming
   queue:     is_queue_node     # Message queue
   broker:    is_broker_node    # Message broker
@@ -235,7 +235,7 @@ tag_map:
   kafka:     is_kafka_node     # Kafka node
   rabbitmq:  is_rabbitmq_node  # RabbitMQ node
   pulsar:    is_pulsar_node    # Apache Pulsar
-  
+
   # 5.5 Storage
   storage: is_storage_node # Storage server
   nas:     is_nas_node     # NAS
@@ -243,7 +243,7 @@ tag_map:
   object:  is_object_node  # Object storage
   block:   is_block_node   # Block storage
   file:    is_file_node    # File storage
-  
+
   # 5.6 Infrastructure Services
   dns:  is_dns_node  # DNS server
   dhcp: is_dhcp_node # DHCP server
@@ -251,7 +251,7 @@ tag_map:
   ldap: is_ldap_node # LDAP server
   ad:   is_ad_node   # Active Directory
   mail: is_mail_node # Mail server
-  
+
   # 5.7 Security & Access
   bastion:  is_bastion_node  # Bastion host
   jump:     is_jump_node     # Jump server
@@ -260,7 +260,7 @@ tag_map:
   ips:      is_ips_node      # IPS
   waf:      is_waf_node      # WAF
   vpn:      is_vpn_node      # VPN server
-  
+
   # 5.8 Monitoring & Observability
   monitor:  is_monitor_node  # Monitoring
   logging:  is_logging_node  # Log aggregation
@@ -268,7 +268,7 @@ tag_map:
   tracing:  is_tracing_node  # Distributed tracing
   apm:      is_apm_node      # APM
   alerting: is_alerting_node # Alerting
-  
+
   # 5.9 CI/CD & DevOps
   ci:       is_ci_node       # CI server
   cd:       is_cd_node       # CD server
@@ -287,14 +287,14 @@ tag_map:
   # 6. Container & Orchestration
   # Category: container_orchestration
   # =====================================================================
-  
+
   # 6.1 Container Runtime
   container:        is_container         # Generic container
   docker_container: is_docker_container  # Docker container
   podman_container: is_podman_container  # Podman container
   lxc_container:    is_lxc_container     # LXC container
   lxd_container:    is_lxd_container     # LXD container
-  
+
   # 6.2 Container Host
   docker_host:     is_docker_host     # Docker host
   podman_host:     is_podman_host     # Podman host
@@ -305,7 +305,7 @@ tag_map:
   k3s_host:        is_k3s_host       # K3s host
   kubeadm_host:    is_kubeadm_host    # Kubeadm host
   kubespray_host:  is_kubespray_host  # Kubespray host
-  
+
   # 6.3 Kubernetes
   k8s_node:          is_k8s_node          # K8s node
   k8s_control_plane: is_k8s_control_plane # K8s control plane
@@ -313,7 +313,7 @@ tag_map:
   k8s_master:        is_k8s_master        # K8s master (deprecated)
   k8s_etcd:          is_k8s_etcd          # K8s etcd
   k8s_ingress:       is_k8s_ingress       # K8s ingress controller
-  
+
   # 6.4 Other Orchestration
   swarm_manager: is_swarm_manager # Docker Swarm manager
   swarm_worker:  is_swarm_worker  # Docker Swarm worker
@@ -326,7 +326,7 @@ tag_map:
   # 7. Hardware Capabilities
   # Category: hardware
   # =====================================================================
-  
+
   # 7.1 Compute Accelerators
   has_gpu:           is_gpu_node      # GPU hardware
   has_nvidia_driver: is_nvidia_driver # NVIDIA driver
@@ -336,7 +336,7 @@ tag_map:
   has_tpu:           is_tpu_node      # TPU
   high_cpu:          is_high_cpu      # High CPU count
   high_memory:       is_high_memory   # High memory
-  
+
   # 7.2 Storage Hardware
   ssd:    is_ssd_node  # SSD storage
   nvme:   is_nvme_node # NVMe storage
@@ -346,7 +346,7 @@ tag_map:
   raid1:  is_raid1     # RAID 1
   raid5:  is_raid5     # RAID 5
   raid10: is_raid10    # RAID 10
-  
+
   # 7.3 Network Hardware
   high_bandwidth: is_high_bandwidth # High bandwidth
   infiniband:     is_infiniband     # InfiniBand
@@ -355,7 +355,7 @@ tag_map:
   ib_fdr:         is_ib_fdr         # InfiniBand FDR
   ib_edr:         is_ib_edr         # InfiniBand EDR
   ib_hdr:         is_ib_hdr         # InfiniBand HDR
-  
+
   # 7.4 CPU Architecture
   x86_64:  is_x86_64  # x86_64/AMD64
   amd64:   is_amd64   # AMD64 (alias)
@@ -365,7 +365,7 @@ tag_map:
   riscv:   is_riscv   # RISC-V
   ppc64le: is_ppc64le # PowerPC 64-bit LE
   s390x:   is_s390x   # IBM Z
-  
+
   # 7.5 Special Hardware
   has_containerd: is_containerd_node # Containerd runtime
   has_fpga:       is_fpga_node       # FPGA
@@ -378,7 +378,7 @@ tag_map:
   # Category: cloud_provider
   # Mutually Exclusive: yes (primary provider)
   # =====================================================================
-  
+
   # Major cloud providers
   aws:          is_aws          # AWS
   gcp:          is_gcp          # GCP
@@ -389,7 +389,7 @@ tag_map:
   oracle_cloud: is_oracle_cloud # Oracle Cloud
   oci:          is_oci          # OCI (alias)
   huaweicloud:  is_huaweicloud  # Huawei Cloud
-  
+
   # Alternative cloud providers
   digitalocean: is_digitalocean # DigitalOcean
   linode:       is_linode       # Linode/Akamai
@@ -397,14 +397,14 @@ tag_map:
   hetzner:      is_hetzner      # Hetzner
   ovh:          is_ovh          # OVH Cloud
   scaleway:     is_scaleway     # Scaleway
-  
+
   # Enterprise platforms
   ibm_cloud:  is_ibm_cloud  # IBM Cloud
   vmware:     is_vmware     # VMware Cloud
   openstack:  is_openstack  # OpenStack
   cloudstack: is_cloudstack # CloudStack
   proxmox:    is_proxmox    # Proxmox
-  
+
   # On-premises
   on_prem:       is_on_prem       # On-premises
   private_cloud: is_private_cloud # Private cloud
@@ -413,13 +413,13 @@ tag_map:
   # 9. Geographic Region
   # Category: geographic_region
   # =====================================================================
-  
+
   # 9.1 Greater China
   cn_mainland: is_in_cn_mainland # Mainland China
   cn_hongkong: is_in_cn_hongkong # Hong Kong
   cn_taiwan:   is_in_cn_taiwan   # Taiwan
   cn_macau:    is_in_cn_macau    # Macau
-  
+
   # 9.2 Asia Pacific
   asia_pacific: is_in_asia_pacific # Asia Pacific
   ap_southeast: is_in_ap_southeast # Southeast Asia
@@ -433,7 +433,7 @@ tag_map:
   thailand:     is_in_thailand     # Thailand
   vietnam:      is_in_vietnam      # Vietnam
   indonesia:    is_in_indonesia    # Indonesia
-  
+
   # 9.3 Americas
   north_america: is_in_north_america # North America
   us_east:       is_in_us_east       # US East
@@ -443,7 +443,7 @@ tag_map:
   south_america: is_in_south_america # South America
   brazil:        is_in_brazil        # Brazil
   mexico:        is_in_mexico        # Mexico
-  
+
   # 9.4 Europe
   europe:      is_in_europe      # Europe
   eu_west:     is_in_eu_west     # Western Europe
@@ -455,13 +455,13 @@ tag_map:
   france:      is_in_france      # France
   netherlands: is_in_netherlands # Netherlands
   ireland:     is_in_ireland     # Ireland
-  
+
   # 9.5 Middle East & Africa
   middle_east: is_in_middle_east # Middle East
   africa:      is_in_africa      # Africa
   uae:         is_in_uae         # UAE
   saudi:       is_in_saudi       # Saudi Arabia
-  
+
   # 9.6 Multi-region
   global:       is_global       # Global
   multi_region: is_multi_region # Multi-region
@@ -470,13 +470,13 @@ tag_map:
   # 10. Security & Compliance
   # Category: security_compliance
   # =====================================================================
-  
+
   # 10.1 Security Hardening
   hardened:      is_hardened_node # Security-hardened
   cis_hardened:  is_cis_hardened  # CIS hardened
   stig_hardened: is_stig_hardened # STIG hardened
   nist_hardened: is_nist_hardened # NIST hardened
-  
+
   # 10.2 Compliance Standards
   compliance: is_compliance_node # Compliance-required
   pci_dss:    is_pci_dss         # PCI DSS
@@ -489,14 +489,14 @@ tag_map:
   iso9001:    is_iso9001         # ISO 9001
   fedramp:    is_fedramp         # FedRAMP
   fisma:      is_fisma           # FISMA
-  
+
   # 10.3 Security Features
   encrypted:    is_encrypted    # Encryption enabled
   tls_required: is_tls_required # TLS required
   mtls:         is_mtls         # Mutual TLS
   selinux:      is_selinux      # SELinux enabled
   apparmor:     is_apparmor     # AppArmor enabled
-  
+
   # 10.4 Access Control
   mfa_required: is_mfa_required # MFA required
   sso_enabled:  is_sso_enabled  # SSO enabled
@@ -560,7 +560,7 @@ tag_map:
   # 15. Database & Data Platform
   # Category: database
   # =====================================================================
-  
+
   # Relational databases
   mysql:      is_mysql      # MySQL
   mariadb:    is_mariadb    # MariaDB
@@ -568,19 +568,19 @@ tag_map:
   postgresql: is_postgresql # PostgreSQL (alias)
   oracle_db:  is_oracle_db  # Oracle Database
   mssql:      is_mssql      # Microsoft SQL Server
-  
+
   # NoSQL databases
   mongodb:   is_mongodb   # MongoDB
   redis:     is_redis     # Redis
   cassandra: is_cassandra # Cassandra
   couchdb:   is_couchdb   # CouchDB
   dynamodb:  is_dynamodb  # DynamoDB
-  
+
   # Search & Analytics
   elasticsearch: is_elasticsearch # Elasticsearch
   opensearch:    is_opensearch    # OpenSearch
   solr:          is_solr          # Solr
-  
+
   # Time-series & Specialized
   influxdb:    is_influxdb    # InfluxDB
   timescaledb: is_timescaledb # TimescaleDB
