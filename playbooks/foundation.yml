@@ -1,5 +1,5 @@
 # =====================================================================
-# File: playbooks/bootstrap.yml
+# File: playbooks/foundation.yml
 #
 # Purpose:
 #   Enterprise Server Initialization Playbook.
@@ -10,10 +10,10 @@
 #     - Tuning sysctl, limits, and timezones.
 #
 # Simple Usage:
-#   ansible-playbook playbooks/base/init.yml
+#   ansible-playbook playbooks/foundation.yml
 #
 # Comprehensive Usage:
-#   ansible-playbook -i inventory/prod.yml playbooks/base/init.yml --limit webservers --extra-vars "ansible_user=admin"
+#   ansible-playbook -i inventory/prod.yml playbooks/foundation.yml --limit webservers --extra-vars "ansible_user=admin"
 #
 # Dependencies:
 #   - common/bootstrap
@@ -21,7 +21,7 @@
 #   - common/base
 # =====================================================================
 
-- name: "ULS Framework Bootstrap"
+- name: "Initialize new servers"
   hosts: all
   gather_facts: false   # Python may not exist yet; bootstrap role will handle discovery
 
@@ -42,8 +42,13 @@
   # Core Roles Pipeline
   # ---------------------------------------------------------------------
   roles:
-    # 1. Bootstrap: Install Python and fix minimal OS-level issues
     - role: "bootstrap"
+
+    - role: "context"
+
+    - role: "init"
+    
+    - role: "base"
 
   # ---------------------------------------------------------------------
   # Post-tasks: Cleanup and Reporting

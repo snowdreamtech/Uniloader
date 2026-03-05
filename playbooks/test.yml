@@ -1,0 +1,65 @@
+# =====================================================================
+# playbooks/test/test.yml
+#
+# Purpose:
+#   Integration test playbook for verifying core functionalities.
+#   Executes a full lifecycle test including:
+#     - OS Bootstrapping.
+#     - Native application deployment (HelloWorld).
+#     - Container application deployment (Official and Snowdreamtech).
+#
+# Simple Usage:
+#   ansible-playbook playbooks/test/test.yml
+#
+# Comprehensive Usage:
+#   ansible-playbook -i inventory/test.yml playbooks/test/test.yml -vv
+#
+# =====================================================================
+
+- name: "Run system-wide integration tests"
+  hosts: all
+  gather_facts: false
+
+  # ---------------------------------------------------------------------
+  # Pre-tasks: Execution metrics initialization.
+  # ---------------------------------------------------------------------
+  pre_tasks:
+    - ansible.builtin.include_role:
+        name: "native"
+        tasks_from: "timer_loader"
+      vars:
+        timer_action: "start"
+        timer_name: "playbook"
+        module_name: "test"
+
+  # ---------------------------------------------------------------------
+  # Test Pipeline: Deploy native and container apps.
+  # ---------------------------------------------------------------------
+  roles:
+    # 1. Setup fundamental environment.
+    - role: "bootstrap"
+
+    # 2. Deploy Native App Test.
+    - role: "apps/native/helloworld"
+
+    # 3. Deploy Container App Tests.
+    - role: "apps/container/official/helloworld"
+
+  # ---------------------------------------------------------------------
+  # Post-tasks: Audit and reporting.
+  # ---------------------------------------------------------------------
+  post_tasks:
+    - ansible.builtin.include_role:
+        name: "native"
+        tasks_from: "log_loader"
+      vars:
+        label: "TEST"
+        msg: "Integrated tests completed on {{ inventory_hostname }}"
+
+    - ansible.builtin.include_role:
+        name: "native"
+        tasks_from: "timer_loader"
+      vars:
+        timer_action: "end"
+        timer_name: "playbook"
+        module_name: "test"

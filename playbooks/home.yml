@@ -1,0 +1,6 @@
+---
+- name: Manage Home Environment
+  hosts: all
+  roles:
+    - role: home
+
